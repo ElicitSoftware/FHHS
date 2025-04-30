@@ -384,6 +384,7 @@ INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section
 INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value) VALUES (nextval('survey.metadata_seq'), 1,NULL, 38, NULL, 5, NULL);
 INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value) VALUES (nextval('survey.metadata_seq'), 1,NULL, 4, NULL, 6, NULL);
 INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value) VALUES (nextval('survey.metadata_seq'), 1,NULL, 4, NULL, 5, 'Alive');
+INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value) VALUES (nextval('survey.metadata_seq'), 1,NULL, 39, NULL, 6, NULL);
 INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value) VALUES (nextval('survey.metadata_seq'), 1,NULL, 40, NULL, 6, NULL);
 INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value) VALUES (nextval('survey.metadata_seq'), 1,NULL, 40, NULL, 5, 'Deceased');
 INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value) VALUES (nextval('survey.metadata_seq'), 1,NULL, 9, NULL, 7, NULL);
