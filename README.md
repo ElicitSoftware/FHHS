@@ -19,7 +19,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/elicitsoftware/elicit">
-    <img src="images/stacked.png" alt="Logo" width="25%" >
+    <img src="images/stacked.png" alt="Logo" width="15%" >
   </a>
 <h3 align="center">Family Health History Survey (FHHS)</h3>
   <p>Copyright © 2025 The Regents of the University of Michigan</p>
@@ -119,11 +119,11 @@ Don't forget to give the project a star! Thanks again!
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Top contributors:
+<!-- ### Top contributors:
 
 <a href="https://github.com/ElicitSoftware/FHHS/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=ElicitSoftware/FHHS" alt="contrib.rocks image" />
-</a>
+</a> -->
 
 <!-- LICENSE -->
 ## License
