@@ -19,7 +19,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/elicitsoftware/elicit">
-    <img src="images/formal.png" alt="Logo" width="50%" >
+    <img src="images/stacked.png" alt="Logo" width="25%" >
   </a>
 <h3 align="center">Family Health History Survey (FHHS)</h3>
   <p>Copyright © 2025 The Regents of the University of Michigan</p>
@@ -149,7 +149,7 @@ Project Link: [https://github.com/ElicitSoftware/FHHS](https://github.com/Elicit
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-<a href="https://www.michiganmedicine.org"><img src="https://www.michiganmedicine.org/themes/custom/outline_frontend/logo-enterprise.svg" height="30"></a><br/>
+<a href="https://www.michiganmedicine.org"><img src="images/Rogel-Cancer_Logo-Horizontal-CMYK.png" height="30"></a><br/>
 <br/>
 <a href="https://info.mightstudy.org"><img src="images/MiGHT-shortlogo.png" height="50"></a><br/>
 <br/>
