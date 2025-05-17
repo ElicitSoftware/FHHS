@@ -132,9 +132,9 @@ Distributed under the PolyForm Noncommercial License 1.0.0. See `LICENSE.txt` fo
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Journal Articles
-
-<p>Stoffel, E. M. and J. M. Carethers (2020). <a href="https://www-annualreviews-org.proxy.lib.umich.edu/doi/10.1146/annurev-med-052318-101009?url_ver=Z39.88-2003&amp;rfr_id=ori%3Arid%3Acrossref.org&amp;rfr_dat=cr_pub++0pubmed">&#8220;Current Approaches to Germline Cancer Genetic Testing.&#8221;</a> Annu Rev Med <b>71</b>: 85-102.</p>
+## News and Journal Articles
+Elicit Software supported the MiGHT Study. You can read more about that study here.<br/>
+https://info.mightstudy.org/news/index.html
 
 <!-- CONTACT -->
 ## Contact
