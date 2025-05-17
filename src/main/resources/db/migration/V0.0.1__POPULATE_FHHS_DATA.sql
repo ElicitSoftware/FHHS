@@ -8,7 +8,6 @@
 -- <https://polyformproject.org/licenses/noncommercial/1.0.0>
 -- ***LICENSE_END***
 ---
-
 -- SURVEYS --
 INSERT INTO survey.surveys(id, display_order, name, title, description, initial_display_key, post_survey_url)
 VALUES (nextval('survey.surveys_seq'), 1,'Family History Survey', 'Family History', 'Family Cancer History Survey', '0001-0001-0000-0001-0000-0000-0000', NULL);
@@ -163,7 +162,7 @@ INSERT INTO survey.questions(id, survey_id, type_id, text, short_text, tool_tip,
 INSERT INTO survey.questions(id, survey_id, type_id, text, short_text, tool_tip, required, min_value, max_value, validation_text, select_group_id, mask, placeholder, default_value, variant) VALUES (nextval('survey.questions_seq'),1,10, 'What is {S1''s|your} race? (Choose all that apply)', 'Race', '', true, NULL, NULL, 'Please select one or more values.', 15, NULL, 'Race', NULL, NULL);
 INSERT INTO survey.questions(id, survey_id, type_id, text, short_text, tool_tip, required, min_value, max_value, validation_text, select_group_id, mask, placeholder, default_value, variant) VALUES (nextval('survey.questions_seq'),1,8, 'Please specify other race?', 'Other Race', '', true, NULL, NULL, 'Please enter the other race.', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO survey.questions(id, survey_id, type_id, text, short_text, tool_tip, required, min_value, max_value, validation_text, select_group_id, mask, placeholder, default_value, variant) VALUES (nextval('survey.questions_seq'),1,7, 'Do you consider {S1 to be|yourself} LatinX? ', 'LatinX', '', true, NULL, NULL, 'Please select a value.', 16, NULL, NULL, NULL, NULL);
--- SECTIONS -- 
+-- SECTIONS --
 INSERT INTO survey.sections(id, survey_id, display_order, name, dimension_name, description) VALUES (0, 1, 0, '', '','');
 INSERT INTO survey.sections(id, survey_id, display_order, name, dimension_name, description) VALUES (nextval('survey.sections_seq'),1,1, 'Introduction', 'Introduction', 'Description of the survey');
 INSERT INTO survey.sections(id, survey_id, display_order, name, dimension_name, description) VALUES (nextval('survey.sections_seq'),1,2, 'Demographics','Demographics', 'Who is taking the survey');
@@ -324,7 +323,7 @@ INSERT INTO survey.steps(id, survey_id, display_order, name, dimension_name, des
 INSERT INTO survey.steps(id, survey_id, display_order, name, dimension_name, description) VALUES(nextval('survey.steps_seq'),1,13,'Paternal Grandfather', 'Paternal Grandfather','{G1''s|Your} Paternal Grandfather');
 INSERT INTO survey.steps(id, survey_id, display_order, name, dimension_name, description) VALUES(nextval('survey.steps_seq'),1,14,'Father''s Siblings', 'Father''s Sibling','Paternal Aunts and Uncles');
 INSERT INTO survey.steps(id, survey_id, display_order, name, dimension_name, description) VALUES(nextval('survey.steps_seq'),1,15,'Thank you', 'Thank you', 'end');
--- STEPS SECTIONS -- 
+-- STEPS SECTIONS --
 INSERT INTO survey.steps_sections(id, survey_id, step_id, step_display_order, section_id, section_display_order, display_key) VALUES(nextval('survey.steps_sections_seq'),1,1, 1, 1, 1, '0001-0001-0000-0001-0000-0000-0000');
 INSERT INTO survey.steps_sections(id, survey_id, step_id, step_display_order, section_id, section_display_order, display_key) VALUES(nextval('survey.steps_sections_seq'),1,2, 2, 2, 1, '0001-0002-0000-0001-0000-0000-0000');
 INSERT INTO survey.steps_sections(id, survey_id, step_id, step_display_order, section_id, section_display_order, display_key) VALUES(nextval('survey.steps_sections_seq'),1,3, 3, 3, 1, '0001-0003-0000-0001-0000-0000-0000');
@@ -451,7 +450,7 @@ INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section
 INSERT INTO survey.metadata(id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value) VALUES (nextval('survey.metadata_seq'), 1,NULL, 53, NULL, 68, NULL);
 -- POST SURVEY ACTIONS --
 -- see prod or dev
--- RELATIONSHIPS -- 
+-- RELATIONSHIPS --
 INSERT INTO survey.relationships(id, survey_id, upstream_step_id, upstream_sq_id, downstream_step_id, downstream_s_id, downstream_sq_id, operator_id, action_id, description, token, reference_value, default_upstream_value, override_upstream_value) VALUES (nextval('survey.relationships_seq'), 1, 1, 1, 2, NULL, NULL, 5, 1, 'Show Demographics', NULL, '', '', NULL);
 INSERT INTO survey.relationships(id, survey_id, upstream_step_id, upstream_sq_id, downstream_step_id, downstream_s_id, downstream_sq_id, operator_id, action_id, description, token, reference_value, default_upstream_value, override_upstream_value) VALUES (nextval('survey.relationships_seq'),1, 2, 2, 2, 2, 3, 3, 1, 'Show Patient Name', NULL, 'Not Patient', '', NULL);
 INSERT INTO survey.relationships(id, survey_id, upstream_step_id, upstream_sq_id, downstream_step_id, downstream_s_id, downstream_sq_id, operator_id, action_id, description, token, reference_value, default_upstream_value, override_upstream_value) VALUES (nextval('survey.relationships_seq'),1, 2, 2, 3, 3, NULL, 5, 1, 'Show Family', NULL, '', '', NULL);
