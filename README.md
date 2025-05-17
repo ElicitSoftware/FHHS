@@ -8,41 +8,28 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-[![Contributors][contributors-shield]][contributors-url]
+<!-- [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![project_license][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+[![project_license][license-shield]][https://polyformproject.org/licenses/noncommercial/1.0.0]
+[![LinkedIn][linkedin-shield]][linkedin-url] -->
 
-<!-- PROJECT LOGO 
+<!-- Powered by Michigan -->
 <br />
 <div align="center">
-  <a href="https://github.com/github_username/repo_name">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+  <a href="https://github.com/elicitsoftware/elicit">
+    <img src="images/formal.png" alt="Logo" width="50%" >
   </a>
--->
-
 <h3 align="center">Family Health History Survey (FHHS)</h3>
-  <p align="left">
-    The Family Health History Survey was designed and developed by <a href="https://www.michiganmedicine.org/">Michigan Medicine</a> for use in the <a href="https://info.mightstudy.org/">Michigan Genetic Hereditary Testing Study</a>. It gathers a 3 generation cancer history. The data collected is used to generate a visual pedigree using R's <a href="https://cran.r-project.org/web/packages/kinship2/index.html">Kinship2 package</a>. 
-  </p>
-
-  <p align="left"> 
-    It will also calculate a Lynch syndrome prediction based on the <a href="https://premm.dfci.harvard.edu/">PREMM5 Model</a>
-  </p> 
-  <p>Copyright © 2025 The Regents of the University of Michigan - Elicit Software LLC</p>
+  <p>Copyright © 2025 The Regents of the University of Michigan</p>
 </div>
-
 <!-- TABLE OF CONTENTS -->
 <details>
   <summary>Table of Contents</summary>
   <ol>
     <li>
-      <!-- <a href="#about-the-project">About The Project</a> -->
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
+      <a href="#built-with">Built With</a></li>
     </li>
     <li>
       <a href="#getting-started">Getting Started</a>
@@ -52,7 +39,7 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
+    <!-- <li><a href="#roadmap">Roadmap</a></li> -->
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -60,70 +47,41 @@
   </ol>
 </details>
 
-
-
 <!-- ABOUT THE PROJECT -->
 ## About The Project
+  <p align="left">
+    The Family Health History Survey was designed and developed by <a href="https://www.michiganmedicine.org/">Michigan Medicine</a> for use in the <a href="https://info.mightstudy.org/">Michigan Genetic Hereditary Testing Study</a>. It gathers a 3 generation cancer history. The data collected is used to generate a visual pedigree using R's <a href="https://cran.r-project.org/web/packages/kinship2/index.html">Kinship2 package</a>.
+  </br>
+  </br>
+    It will also calculate a Lynch syndrome prediction based on the Dana-Farber Cancer Institute's <a href="https://premm.dfci.harvard.edu/">PREMM5 Model</a>
+  </p>
 
-<!-- [![Product Name Screen Shot][product-screenshot]](https://example.com) -->
+<!-- [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
 Here's a blank template to get started. To avoid retyping too much info, do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`, `project_license`
+ -->
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
 
-* [![Java][Java]][Java-url]
-* [![Quarkus][Quarkus.io]][Quarkus-url]
-* [![Vaadin][Vaadin.com]][Vaadin-url]
-* [![Postgresql][Postgresql.com]][Postgresql-url]
-* [![Maven][Maven.org]][Maven-url]
-* [![Docker][Docker.com]][Docker-url]
+[![Java][Java]][Java-url]
+[![Quarkus][Quarkus.io]][Quarkus-url]
+[![Vaadin][Vaadin.com]][Vaadin-url]
+[![Postgresql][Postgresql.com]][Postgresql-url]
+[![Maven][Maven.org]][Maven-url]
+[![Docker][Docker.com]][Docker-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
 ## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
-
-### Installation
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-   ```sh
-   git clone https://github.com/github_username/repo_name.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-5. Change git remote url to avoid accidental pushes to base project
-   ```sh
-   git remote set-url origin github_username/repo_name
-   git remote -v # confirm the changes
-   ```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
+FHHS runs in <a href=https://github.com/ElicitSoftware/>Elicit Software</a> a modular survey system for building and runing complex surveys.
+This project was built with <a href=http://docker.com>Docker</a> and can be run locally with <a href=https://docs.docker.com/compose/>docker compose</a>. After installing Docker please download the docker-compose.yml and follow the instructions in that file.
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-
+After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any token (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
 <div align="center"><image src="samplePedigree.png" height=600></div>
 <div align="center"><image src="premm5Sample.png" height=200></div>
 
@@ -132,19 +90,18 @@ This is an example of how to list things you need to use the software and how to
 
 
 
-<!-- ROADMAP -->
+<!-- ROADMAP
 ## Roadmap
 
 - [ ] Feature 1
 - [ ] Feature 2
 - [ ] Feature 3
     - [ ] Nested Feature
+ -->
 
-See the [open issues](https://github.com/github_username/repo_name/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/ElicitSoftware/FHHS/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -164,16 +121,14 @@ Don't forget to give the project a star! Thanks again!
 
 ### Top contributors:
 
-<a href="https://github.com/github_username/repo_name/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=github_username/repo_name" alt="contrib.rocks image" />
+<a href="https://github.com/ElicitSoftware/FHHS/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ElicitSoftware/FHHS" alt="contrib.rocks image" />
 </a>
-
-
 
 <!-- LICENSE -->
 ## License
 
-Distributed under the project_license. See `LICENSE.txt` for more information.
+Distributed under the PolyForm Noncommercial License 1.0.0. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -184,12 +139,11 @@ Distributed under the project_license. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Matthew Demerath - m.demerath@elicitsoftware.com
 
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
+Project Link: [https://github.com/ElicitSoftware/FHHS](https://github.com/ElicitSoftware/FHHS)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- ACKNOWLEDGMENTS -->
@@ -197,7 +151,7 @@ Project Link: [https://github.com/github_username/repo_name](https://github.com/
 
 <a href="https://www.michiganmedicine.org"><img src="https://www.michiganmedicine.org/themes/custom/outline_frontend/logo-enterprise.svg" height="30"></a><br/>
 <br/>
-<a href="https://info.mightstudy.org"><img src="MiGHT-shortlogo.png" height="50"></a><br/>
+<a href="https://info.mightstudy.org"><img src="images/MiGHT-shortlogo.png" height="50"></a><br/>
 <br/>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -206,16 +160,16 @@ Project Link: [https://github.com/github_username/repo_name](https://github.com/
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/github_username/repo_name.svg?style=for-the-badge
-[contributors-url]: https://github.com/github_username/repo_name/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/github_username/repo_name.svg?style=for-the-badge
-[forks-url]: https://github.com/github_username/repo_name/network/members
-[stars-shield]: https://img.shields.io/github/stars/github_username/repo_name.svg?style=for-the-badge
-[stars-url]: https://github.com/github_username/repo_name/stargazers
-[issues-shield]: https://img.shields.io/github/issues/github_username/repo_name.svg?style=for-the-badge
-[issues-url]: https://github.com/github_username/repo_name/issues
-[license-shield]: https://img.shields.io/github/license/github_username/repo_name.svg?style=for-the-badge
-[license-url]: https://github.com/github_username/repo_name/blob/master/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/ElicitSoftware/FHHS.svg?style=for-the-badge
+[contributors-url]: https://github.com/ElicitSoftware/FHHS/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/ElicitSoftware/FHHS.svg?style=for-the-badge
+[forks-url]: https://github.com/ElicitSoftware/FHHS/network/members
+[stars-shield]: https://img.shields.io/github/stars/ElicitSoftware/FHHS.svg?style=for-the-badge
+[stars-url]: https://github.com/ElicitSoftware/FHHS/stargazers
+[issues-shield]: https://img.shields.io/github/issues/ElicitSoftware/FHHS.svg?style=for-the-badge
+[issues-url]: https://github.com/ElicitSoftware/FHHS/issues
+[license-shield]: https://img.shields.io/github/license/ElicitSoftware/FHHS.svg?style=for-the-badge
+[license-url]: https://github.com/ElicitSoftware/FHHS/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username
 [product-screenshot]: images/screenshot.png
