@@ -16,8 +16,6 @@ VALUES (nextval('survey.surveys_seq'), 1,'Family History Survey', 'Family Histor
 -- in the create script and change they dynamic generation in survey to if not exists.
 -- Dimensions
 
-
-
 INSERT INTO survey.dimensions(id, name) VALUES (nextval('survey.dimensions_seq'), 'age');
 INSERT INTO survey.dimensions(id, name) VALUES (nextval('survey.dimensions_seq'),'cancer');
 INSERT INTO survey.dimensions(id, name) VALUES (nextval('survey.dimensions_seq'),'multiple_cancers');
