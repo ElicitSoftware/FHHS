@@ -29,7 +29,7 @@
   <summary>Table of Contents</summary>
   <ol>
     <li>
-      <a href="#built-with">Built With</a></li>
+      <a href="#built-with">Built With</a>
     </li>
     <li>
       <a href="#getting-started">Getting Started</a>
@@ -53,7 +53,7 @@
     The Family Health History Survey was designed and developed by <a href="https://www.michiganmedicine.org/">Michigan Medicine</a> for use in the <a href="https://info.mightstudy.org/">Michigan Genetic Hereditary Testing Study</a>. It gathers three generations of cancer history. The data collected is used to generate a visual pedigree using R's <a href="https://cran.r-project.org/web/packages/kinship2/index.html">Kinship2 package</a>.
   </br>
   </br>
-    It will also calculate a Lynch syndrome prediction based on the Dana-Farber Cancer Institute's <a href="https://premm.dfci.harvard.edu/">PREMM5 Model</a>
+    It will also calculate a Lynch syndrome prediction based on the Dana-Farber Cancer Institute's <a href="https://premm.dfci.harvard.edu/">PREMM5 Model</a>.
   </p>
 
 <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com)
@@ -76,8 +76,8 @@ Here's a blank template to get started. To avoid retyping too much info, do a se
 
 <!-- GETTING STARTED -->
 ## Getting Started
-FHHS runs in <a href=https://github.com/ElicitSoftware/>Elicit Software</a> a modular survey system for building and runing complex surveys.
-This project was built with <a href=http://docker.com>Docker</a> and can be run locally with <a href=https://docs.docker.com/compose/>docker compose</a>. After installing Docker please download the docker-compose.yml and follow the instructions in that file.
+FHHS runs in <a href="https://github.com/ElicitSoftware/">Elicit Software</a>, a modular survey system for building and running complex surveys.
+This project was built with <a href="http://docker.com">Docker</a> and can be run locally with <a href="https://docs.docker.com/compose/">Docker Compose</a>. After installing Docker, please download the docker-compose.yml file and follow the instructions in that file.
 
 <!-- USAGE EXAMPLES -->
 ## Usage
@@ -108,7 +108,7 @@ See the [open issues](https://github.com/ElicitSoftware/FHHS/issues) for a full 
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement."
 Don't forget to give the project a star! Thanks again!
 
 1. Fork the Project
@@ -133,7 +133,7 @@ Distributed under the PolyForm Noncommercial License 1.0.0. See `LICENSE.txt` fo
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## News and Journal Articles
-Elicit Software supported the MiGHT Study. You can read more about that study here.<br/>
+Elicit Software supported the MiGHT Study. You can read more about the study here.<br/>
 https://info.mightstudy.org/news/index.html
 
 <!-- CONTACT -->
