@@ -149,7 +149,7 @@ Project Link: [https://github.com/ElicitSoftware/FHHS](https://github.com/Elicit
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-<a href="https://www.michiganmedicine.org"><img src="images/Rogel-Cancer_Logo-Horizontal-CMYK.png" height="30"></a><br/>
+<!-- <a href="https://www.michiganmedicine.org"><img src="images/Rogel-Cancer_Logo-Horizontal-CMYK.png" height="30"></a><br/> -->
 <br/>
 <a href="https://info.mightstudy.org"><img src="images/MiGHT-shortlogo.png" height="50"></a><br/>
 <br/>
