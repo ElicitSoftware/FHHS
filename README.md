@@ -50,10 +50,20 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
   <p align="left">
-    The Family Health History Survey was designed and developed by <a href="https://www.michiganmedicine.org/">Michigan Medicine</a> for use in the <a href="https://info.mightstudy.org/">Michigan Genetic Hereditary Testing Study</a>. It collects cancer history across three generations. The data are used to generate a visual pedigree using R's <a href="https://cran.r-project.org/web/packages/kinship2/index.html">Kinship2 package</a>.
-  </br>
-  </br>
-    The survey also calculates a Lynch syndrome risk prediction using the Dana-Farber Cancer Institute's <a href="https://premm.dfci.harvard.edu/">PREMM5 Model</a>.
+    The Family Health History Survey was designed and developed by <a href="https://www.michiganmedicine.org/">Michigan Medicine</a> for use in the <a href="https://info.mightstudy.org/">Michigan Genetic Hereditary Testing Study</a>. It is an adaptable survey that collects information helpful in assessing an individual's risk of hereditary cancer syndromes according to national guidelines within the United States. The FHHS guides participants through the collection of first- and second-degree biological relatives for whom they have health knowledge, and creates a personal and family cancer report with a pedigree that is downloadable for both participants and clinicians. The clinician report incorporates the Prediction Model for Gene Mutations (<a href="https://premm.dfci.harvard.edu/">PREMM5 Model</a>) for enhanced risk assessment.
+    </p>
+    <p>
+    The tool collects information on cancer types and ages at diagnosis, as well as the current age or age at death for the participant and the following biological relatives:
+    <ul>
+      <li>children</li>
+      <li>siblings (full and half)</li>
+      <li>parents and parents' siblings</li>
+      <li>grandparents (maternal and paternal)</li>
+    </ul>
+    </p> 
+    <p>
+    The Elicit software package allows practices and researchers to use and maintain the FHHS on their own IT infrastructure for completely self-managed, secure data collection and analysis.<br>
+    The data are used to generate a visual pedigree using R's <a href="https://cran.r-project.org/web/packages/kinship2/index.html">Kinship2 package</a>.
   </p>
 
 <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com)
@@ -82,8 +92,8 @@ This project was built with <a href="http://docker.com">Docker</a> and can be ru
 <!-- USAGE EXAMPLES -->
 ## Usage
 After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any token (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
-<div align="center"><image src="samplePedigree.png" height=600></div>
-<div align="center"><image src="premm5Sample.png" height=200></div>
+<div align="center"><image src="images/samplePedigree.png" height=600></div>
+<div align="center"><image src="images/premm5Sample.png" height=200></div>
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
