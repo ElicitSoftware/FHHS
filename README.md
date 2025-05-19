@@ -63,7 +63,7 @@
     </p> 
     <p>
     The Elicit software package allows practices and researchers to use and maintain the FHHS on their own IT infrastructure for completely self-managed, secure data collection and analysis.<br>
-    The data are used to generate a visual pedigree using R's <a href="https://cran.r-project.org/web/packages/kinship2/index.html">Kinship2 package</a>.
+    The surveys are used to generate a visual pedigree using R's <a href="https://cran.r-project.org/web/packages/kinship2/index.html">Kinship2 package</a>.
   </p>
 
 <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com)
