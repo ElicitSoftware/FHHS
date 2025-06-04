@@ -62,12 +62,6 @@ public class Service {
         pdf.styles = getPDFStyles();
         pdf.content = getPDFContent(innerHTML, family.hasMultipleCancers());
 
-        //Add the * footer only if needed.
-        String footer = "<p class=ped_footer> <span style=\"color:green;\">green = respondent</span><br> <span style=\"color:red;\">red = family member with cancer</span>";
-        if (family.hasMultipleCancers()) {
-            footer += "<br>* Indicates multiple diagnoses of the same cancer type.</>";
-        }
-        innerHTML += footer;
         return new ReportResponse("Patient Pedigree", innerHTML, pdf);
 
     }
