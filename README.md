@@ -60,7 +60,7 @@
       <li>parents and parents' siblings</li>
       <li>grandparents (maternal and paternal)</li>
     </ul>
-    </p> 
+    </p>
     <p>
     The Elicit software package allows practices and researchers to use and maintain the FHHS on their own IT infrastructure for completely self-managed, secure data collection and analysis.<br>
     The surveys are used to generate a visual pedigree using R's <a href="https://cran.r-project.org/web/packages/kinship2/index.html">Kinship2 package</a>.
