@@ -50,7 +50,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
   <p align="left">
-    The Family Health History Survey was designed and developed by <a href="https://www.michiganmedicine.org/">Michigan Medicine</a> for use in the <a href="https://info.mightstudy.org/">Michigan Genetic Hereditary Testing Study</a>. It is an adaptable survey that collects information helpful in assessing an individual's risk of hereditary cancer syndromes according to national guidelines within the United States. The FHHS guides participants through the collection of first- and second-degree biological relatives for whom they have health knowledge, and creates a personal and family cancer report with a pedigree that is downloadable for both participants and clinicians. The clinician report incorporates the Prediction Model for Gene Mutations (<a href="https://premm.dfci.harvard.edu/">PREMM5 Model</a>) for enhanced risk assessment.
+    The Family Health History Survey was designed and developed by <a href="https://www.michiganmedicine.org/">Michigan Medicine</a> for use in the <a href="https://info.mightstudy.org/">Michigan Genetic Hereditary Testing Study</a>. It is an adaptable survey that collects information helpful in assessing an individual's risk of hereditary cancer syndromes according to national guidelines within the United States. The FHHS guides participants through the collection of first- and second-degree biological relatives for whom they have health knowledge, and creates a personal and family cancer report with a pedigree that is downloadable for both participants and clinicians.
     </p>
     <p>
     The tool collects information on cancer types and ages at diagnosis, as well as the current age or age at death for the participant and the following biological relatives:
@@ -93,7 +93,6 @@ This project was built with <a href="http://docker.com">Docker</a> and can be ru
 ## Usage
 After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any token (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
 <div align="center"><image src="images/samplePedigree.png" height=600></div>
-<div align="center"><image src="images/premm5Sample.png" height=200></div>
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
