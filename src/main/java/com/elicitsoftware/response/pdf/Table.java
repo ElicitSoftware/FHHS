@@ -11,8 +11,34 @@ package com.elicitsoftware.response.pdf;
  * ***LICENSE_END***
  */
 
+/**
+ * Represents a table structure for PDF document generation.
+ * <p>
+ * This class defines the basic structure of a table including headers,
+ * column widths, and body content. It's used as part of the PDF content
+ * generation process to create structured tabular data in reports.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 public class Table {
-    public String[] headers;;
+
+    /**
+     * Array of header labels for the table columns.
+     */
+    public String[] headers;
+
+    /**
+     * Array of column widths for controlling table layout.
+     * Values typically represent width in points or relative proportions.
+     */
     public float[] widths;
+
+    /**
+     * Two-dimensional array containing the table body content.
+     * First dimension represents rows, second dimension represents columns.
+     */
     public String[][] body;
 }

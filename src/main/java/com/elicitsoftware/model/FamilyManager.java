@@ -21,38 +21,157 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
 
+/**
+ * Manages family structure and relationships for family history health surveys.
+ * <p>
+ * This class is responsible for building and organizing complete family structures
+ * from survey data. It processes family member information including relationships,
+ * cancer history, demographics, and vital status to create comprehensive family
+ * trees used for pedigree generation and analysis.
+ * </p>
+ * <p>
+ * The class supports various family relationship types including immediate family
+ * (parents, siblings, children), extended family (aunts, uncles, grandparents),
+ * and complex relationships (step-siblings, spouses).
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 @RequestScoped
 public class FamilyManager {
+
+    /**
+     * Default value used when age is unknown.
+     */
     private static final String UKN_AGE = "unk. age";
+
+    /**
+     * String constant representing boolean true in survey data.
+     */
     private static final String STRING_TRUE = "true";
+
+    /**
+     * Gender constant for male family members.
+     */
     private static final String MALE = "Male";
+
+    /**
+     * Gender constant for female family members.
+     */
     private static final String FEMALE = "Female";
 
-    // These family members are collections
+    // Family member collections for one-to-many relationships
+    /**
+     * Collection of the proband's children organized by identifier.
+     */
     private final LinkedHashMap<String, Person> Children = new LinkedHashMap<>();
+
+    /**
+     * Collection of the proband's siblings organized by identifier.
+     */
     private final LinkedHashMap<String, Person> Siblings = new LinkedHashMap<>();
+
+    /**
+     * Collection of maternal aunts and uncles organized by identifier.
+     */
     private final LinkedHashMap<String, Person> MaternalAuntsUncles = new LinkedHashMap<>();
+
+    /**
+     * Collection of paternal aunts and uncles organized by identifier.
+     */
     private final LinkedHashMap<String, Person> PaternalAuntsUncles = new LinkedHashMap<>();
+
+    /**
+     * The complete family structure containing all relationships and data.
+     */
     Family family = null;
-    // These family members are limited to one.
+
+    // Single-instance family members
+    /**
+     * The primary study participant (proband).
+     */
     private Person Proband = null;
+
+    /**
+     * The proband's mother.
+     */
     private Person Mother = null;
+
+    /**
+     * The proband's father.
+     */
     private Person Father = null;
+
+    /**
+     * The proband's maternal grandmother.
+     */
     private Person MaternalGrandmother = null;
+
+    /**
+     * The proband's maternal grandfather.
+     */
     private Person MaternalGrandfather = null;
+
+    /**
+     * The proband's paternal grandmother.
+     */
     private Person PaternalGrandmother = null;
+
+    /**
+     * The proband's paternal grandfather.
+     */
     private Person PaternalGrandfather = null;
-    // For step siblings we need to add an their parent.
+
+    // Additional family members for complex relationships
+    /**
+     * Unknown mother figure for step-sibling relationships.
+     */
     private Person UnknownMother = null;
+
+    /**
+     * Unknown father figure for step-sibling relationships.
+     */
     private Person UnknownFather = null;
-    // Add Proband's Spouse
+
+    /**
+     * Unknown husband/spouse figure for relationship modeling.
+     */
     private Person UnknownHusband = null;
+
+    /**
+     * Unknown wife/spouse figure for relationship modeling.
+     */
     private Person UnknownWife = null;
 
+    /**
+     * Retrieves all family history data for a specific respondent.
+     * <p>
+     * Queries the database for all family member records associated with the
+     * given respondent ID, sorted by relationship type and survey step.
+     * </p>
+     *
+     * @param respondentId the unique identifier of the survey respondent
+     * @return a list of FactFHHSView objects containing family member data
+     */
     public List<FactFHHSView> findByRespondentid(long respondentId) {
         return FactFHHSView.find("respondent_id =?1", Sort.by("relationship").and("step"), respondentId).list();
     }
 
+    /**
+     * Builds and returns a complete Family object for the specified respondent.
+     * <p>
+     * This method coordinates the entire family-building process:
+     * <ol>
+     *   <li>Retrieves all family member data from the database</li>
+     *   <li>Processes each family member's information and relationships</li>
+     *   <li>Assembles the complete family structure</li>
+     * </ol>
+     *
+     * @param id the respondent ID to build the family for
+     * @return a complete Family object containing all family members and relationships
+     */
     public Family getFamily(long id) {
         FamilyManager fm = new FamilyManager();
 
@@ -62,6 +181,19 @@ public class FamilyManager {
         return fm.getFamily();
     }
 
+    /**
+     * Processes a list of family member data and builds the family structure.
+     * <p>
+     * This method iterates through each family member's survey data and:
+     * <ul>
+     *   <li>Creates Person objects with demographic information</li>
+     *   <li>Sets cancer history and multiple cancer indicators</li>
+     *   <li>Establishes family relationships</li>
+     *   <li>Handles special relationship cases (step-siblings, etc.)</li>
+     * </ul>
+     *
+     * @param rows list of FactFHHSView objects containing raw family member data
+     */
     public void addFamily(List<FactFHHSView> rows) {
         for (FactFHHSView fact : rows) {
             try {
@@ -542,6 +674,16 @@ public class FamilyManager {
         }
     }
 
+    /**
+     * Constructs the complete family object containing all family members.
+     * <p>
+     * This method is called after all family members have been processed and
+     * their relationships established. It compiles the final family structure
+     * used for pedigree generation.
+     * </p>
+     *
+     * @return the complete Family object representing the proband's family
+     */
     public Family getFamily() {
 
         setIDs();

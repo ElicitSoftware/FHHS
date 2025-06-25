@@ -33,18 +33,51 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * REST service for generating proband (respondent) summary reports.
+ * <p>
+ * This service provides endpoints for creating comprehensive reports about
+ * study participants (probands). It generates both HTML and PDF formats
+ * of the respondent summary, including family history health survey data.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 @Path("/proband")
 @RequestScoped
 public class Service {
 
+    /**
+     * String buffer for building PDF table content.
+     */
     private StringBuffer pdfTableSB = null;
 
+    /**
+     * The default title for respondent summary reports.
+     */
     private static String TITLE = "Respondent Summary";
 
+    /**
+     * Default constructor.
+     */
     public Service() {
         super();
     }
 
+    /**
+     * Generates a comprehensive report for a specific proband/respondent.
+     * <p>
+     * This endpoint retrieves family history health survey data for the specified
+     * respondent and generates both HTML and PDF format reports. The report includes
+     * all relevant proband information in a structured table format.
+     * </p>
+     *
+     * @param req the report request containing the respondent ID
+     * @return a ReportResponse containing the title, HTML content, and PDF document
+     * @throws jakarta.ws.rs.WebApplicationException if the user lacks proper authorization
+     */
     @Path("/report")
     @POST
     @RolesAllowed("proband-user")
@@ -98,6 +131,17 @@ public class Service {
         return new ReportResponse(TITLE, innerHTML.toString(), pdf);
     }
 
+    /**
+     * Sets a single row of data in the PDF table structure.
+     * <p>
+     * This helper method populates the table body array with label and value
+     * data from a Row object at the specified index position.
+     * </p>
+     *
+     * @param row the Row object containing label and value data
+     * @param table the Table object to populate
+     * @param index the zero-based index position for this row in the table
+     */
     private void setPDFTableRow(Row row, Table table, int index) {
         table.body[index][0] = row.getLabel();
         table.body[index][1] = row.getValue();

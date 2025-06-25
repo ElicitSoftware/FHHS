@@ -2,8 +2,9 @@ package com.elicitsoftware.casummary;
 
 /*-
  * ***LICENSE_START***
- * Elicit FHHS
- * %%
+ * Elicit FHHS     * </ul>
+     *
+     * @param req the report request containing the respondent ID%%
  * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
  * %%
  * PolyForm Noncommercial License 1.0.0
@@ -29,17 +30,61 @@ import jakarta.ws.rs.*;
 import java.util.*;
 import java.util.Map.Entry;
 
+/**
+ * REST service for generating comprehensive cancer summary reports.
+ * <p>
+ * This service creates detailed cancer summary reports that aggregate and present
+ * cancer history information across all family members. It organizes cancer data
+ * by type and family member, showing ages at diagnosis and multiple cancer
+ * occurrences in a structured, easy-to-read format.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 @Path("casummary")
 @RequestScoped
 public class Service {
 
+    /**
+     * Default value used when age information is unknown.
+     */
     private static final String UKN_AGE = "Unknown";
+
+    /**
+     * String buffer for building PDF table content.
+     */
     private StringBuffer pdfTableSB = null;
+
+    /**
+     * Default title for cancer summary reports.
+     */
+    private static String TITLE = "Cancer Summary";
+
+    /**
+     * Default constructor.
+     */
     public Service() {
         super();
     }
-    private static String TITLE = "Cancer Summary";
 
+    /**
+     * Generates a comprehensive cancer summary report for a specific respondent.
+     * <p>
+     * This endpoint creates a detailed cancer summary that:
+     * <ul>
+     *   <li>Aggregates cancer history across all family members</li>
+     *   <li>Organizes information by cancer type</li>
+     *   <li>Shows family member relationships and ages at diagnosis</li>
+     *   <li>Indicates multiple cancer occurrences</li>
+     *   <li>Provides both HTML and PDF format outputs</li>
+     * </ul>
+     *
+     * @param req the report request containing the respondent ID
+     * @return a ReportResponse containing the title, HTML content, and PDF document
+     * @throws jakarta.ws.rs.WebApplicationException if the user lacks proper authorization
+     */
     @Path("/report")
     @POST
     @RolesAllowed("cssummary-user")

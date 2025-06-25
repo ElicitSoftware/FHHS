@@ -11,62 +11,303 @@ package com.elicitsoftware.model;
  * ***LICENSE_END***
  */
 
+/**
+ * Represents an individual family member in the family history health survey system.
+ * <p>
+ * This class models a family member with comprehensive health information including
+ * demographics, family relationships, cancer history, and pedigree positioning data.
+ * It supports detailed cancer tracking with both occurrence indicators and multiple
+ * cancer occurrence flags for complex medical histories.
+ * </p>
+ * <p>
+ * The class integrates with pedigree generation systems by providing formatted
+ * output that includes quadrant-based cancer indicators used in family tree
+ * visualizations.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 public class FamilyMember {
+
+    /**
+     * Unique identifier for this family member within the family structure.
+     */
     public int ID;
-    // default to other
+
+    /**
+     * Gender/sex indicator using numeric codes.
+     * Default value is 3 (other/unknown).
+     */
     public int Sex = 3;
+
+    /**
+     * Age of the family member as a string.
+     */
     public String Age = "";
+
+    /**
+     * ID reference to this member's father.
+     * 0 indicates no father information available.
+     */
     public int Dadid = 0;
+
+    /**
+     * ID reference to this member's mother.
+     * 0 indicates no mother information available.
+     */
     public int Momid = 0;
+
+    /**
+     * Shared parent indicator for tracking sibling relationships.
+     */
     public int SharedParent;
+
+    /**
+     * Vital status indicator (alive, deceased, unknown).
+     */
     public int Status;
+
+    // Cancer occurrence fields
+    /**
+     * Bladder cancer occurrence and age information.
+     */
     public String Bladder_Cancer;
+
+    /**
+     * Breast cancer occurrence and age information.
+     */
     public String Breast_Cancer;
+
+    /**
+     * Colorectal cancer occurrence and age information.
+     */
     public String Colon_Rectal_Cancer;
+
+    /**
+     * Endometrial/uterine cancer occurrence and age information.
+     */
     public String Endometrial_Uterine_Cancer;
+
+    /**
+     * Kidney/renal cell cancer occurrence and age information.
+     */
     public String Kidney_Renal_Cell_Cancer;
+
+    /**
+     * Leukemia occurrence and age information.
+     */
     public String Leukemia_Cancer;
+
+    /**
+     * Lung cancer occurrence and age information.
+     */
     public String Lung_Cancer;
+
+    /**
+     * Lymphoma occurrence and age information.
+     */
     public String Lymphoma;
+
+    /**
+     * Melanoma cancer occurrence and age information.
+     */
     public String Melanoma_Cancer;
+
+    /**
+     * Non-melanoma cancer occurrence and age information.
+     */
     public String Non_Melanoma_Cancer;
+
+    /**
+     * Oral/throat cancer occurrence and age information.
+     */
     public String Oral_Throat_Cancer;
+
+    /**
+     * Other cancer occurrence and age information.
+     */
     public String Other_Cancer;
+
+    /**
+     * Specific type of other cancer if applicable.
+     */
     public String Other_Cancer_Type = "";
+
+    /**
+     * Ovarian cancer occurrence and age information.
+     */
     public String Ovarian_Cancer;
+
+    /**
+     * Pancreatic cancer occurrence and age information.
+     */
     public String Pancreatic_Cancer;
+
+    /**
+     * Prostate cancer occurrence and age information.
+     */
     public String Prostate_Cancer;
+
+    /**
+     * Stomach cancer occurrence and age information.
+     */
     public String Stomach_Cancer;
+
+    /**
+     * Testicular cancer occurrence and age information.
+     */
     public String Testicular_Cancer;
+
+    /**
+     * Thyroid cancer occurrence and age information.
+     */
     public String Thyroid_Cancer;
+
+    /**
+     * Unknown cancer type occurrence and age information.
+     */
     public String Unknown_Cancer;
+
+    /**
+     * Ashkenazi Jewish ancestry indicator.
+     */
     public String Ashkenazi;
+
+    /**
+     * Flag indicating if this is an unknown/placeholder family member.
+     */
     public boolean unknown;
+
+    /**
+     * Name of the family member.
+     */
     public String name;
+
+    // Multiple cancer occurrence fields
+    /**
+     * Multiple bladder cancer occurrences indicator.
+     */
     public String Multiple_Bladder_Cancer;
+
+    /**
+     * Multiple breast cancer occurrences indicator.
+     */
     public String Multiple_Breast_Cancer;
+
+    /**
+     * Multiple colorectal cancer occurrences indicator.
+     */
     public String Multiple_Colon_Rectal_Cancer;
+
+    /**
+     * Multiple endometrial/uterine cancer occurrences indicator.
+     */
     public String Multiple_Endometrial_Uterine_Cancer;
+
+    /**
+     * Multiple kidney/renal cell cancer occurrences indicator.
+     */
     public String Multiple_Kidney_Renal_Cell_Cancer;
+
+    /**
+     * Multiple leukemia occurrences indicator.
+     */
     public String Multiple_Leukemia_Cancer;
+
+    /**
+     * Multiple lung cancer occurrences indicator.
+     */
     public String Multiple_Lung_Cancer;
+
+    /**
+     * Multiple lymphoma occurrences indicator.
+     */
     public String Multiple_Lymphoma;
+
+    /**
+     * Multiple melanoma cancer occurrences indicator.
+     */
     public String Multiple_Melanoma_Cancer;
+
+    /**
+     * Multiple non-melanoma cancer occurrences indicator.
+     */
     public String Multiple_Non_Melanoma_Cancer;
+
+    /**
+     * Multiple oral/throat cancer occurrences indicator.
+     */
     public String Multiple_Oral_Throat_Cancer;
+
+    /**
+     * Multiple other cancer occurrences indicator.
+     */
     public String Multiple_Other_Cancer;
+
+    /**
+     * Multiple other cancer type specification.
+     */
     public String Multiple_Other_Cancer_Type = "";
+
+    /**
+     * Multiple ovarian cancer occurrences indicator.
+     */
     public String Multiple_Ovarian_Cancer;
+
+    /**
+     * Multiple pancreatic cancer occurrences indicator.
+     */
     public String Multiple_Pancreatic_Cancer;
+
+    /**
+     * Multiple prostate cancer occurrences indicator.
+     */
     public String Multiple_Prostate_Cancer;
+
+    /**
+     * Multiple stomach cancer occurrences indicator.
+     */
     public String Multiple_Stomach_Cancer;
+
+    /**
+     * Multiple testicular cancer occurrences indicator.
+     */
     public String Multiple_Testicular_Cancer;
+
+    /**
+     * Multiple thyroid cancer occurrences indicator.
+     */
     public String Multiple_Thyroid_Cancer;
 
+    /**
+     * Default constructor for creating a new FamilyMember.
+     */
     public FamilyMember() {
         super();
     }
 
+    /**
+     * Generates a pedigree-formatted string representation of this family member.
+     * <p>
+     * Creates a tab-delimited string containing:
+     * <ul>
+     *   <li>Pedigree ID, member ID, sex, parent IDs, and vital status</li>
+     *   <li>Quadrant-based cancer indicators for visual representation</li>
+     *   <li>Multiple cancer occurrence markers if applicable</li>
+     * </ul>
+     *
+     * The quadrant system organizes cancers by type for visual pedigree display:
+     * <ul>
+     *   <li>Upper Left: Bladder, Breast, Kidney, Melanoma, Non-melanoma</li>
+     *   <li>Upper Right: Colorectal, Oral/throat, Pancreatic, Leukemia</li>
+     *   <li>Lower Left: Endometrial, Prostate, Thyroid, Lung, Lymphoma</li>
+     *   <li>Lower Right: Ovarian, Stomach, Testicular, Other, Unknown</li>
+     * </ul>
+     *
+     * @return a formatted string suitable for pedigree generation tools
+     */
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

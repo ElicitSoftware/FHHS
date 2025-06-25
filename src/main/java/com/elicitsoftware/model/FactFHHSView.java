@@ -19,85 +19,401 @@ import jakarta.persistence.Transient;
 
 import java.util.ArrayList;
 import java.util.List;
+
+/**
+ * Entity representing the consolidated family history health survey view.
+ * <p>
+ * This class maps to the "fact_fhhs_view" database view and contains comprehensive
+ * family member health information including demographics, relationships, and
+ * detailed cancer history data. It serves as the primary data source for generating
+ * family health reports and pedigree charts.
+ * </p>
+ * <p>
+ * The entity includes fields for various cancer types with both occurrence indicators
+ * and age at diagnosis, as well as multiple cancer occurrence flags for complex
+ * medical histories.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 @Entity
 @Table(name = "fact_fhhs_view", schema = "surveyreport")
 public class FactFHHSView extends PanacheEntityBase {
+
+    /**
+     * Constant representing boolean true in survey responses.
+     */
     @Transient
     private static final String TRUE = "true";
 
+    /**
+     * Primary key identifier for this fact record.
+     */
     @Id
     public long id;
+
+    /**
+     * Identifier linking this record to a specific survey respondent.
+     */
     public long respondent_id;
+
+    /**
+     * Name of the family member.
+     */
     public String name;
+
+    /**
+     * Step instance number in the survey progression.
+     */
     public Integer step_instance;
+
+    /**
+     * Age of the family member.
+     */
     public Integer age;
+
+    /**
+     * Ashkenazi Jewish ancestry indicator.
+     */
     public String ashkenazi;
+
+    // Cancer-specific fields with age at diagnosis
+    /**
+     * Age at bladder cancer diagnosis.
+     */
     public Integer bladder_cancer_age;
+
+    /**
+     * Bladder cancer occurrence indicator.
+     */
     public String bladder_cancer;
+
+    /**
+     * Age at breast cancer diagnosis.
+     */
     public Integer breast_cancer_age;
+
+    /**
+     * Breast cancer occurrence indicator.
+     */
     public String breast_cancer;
+
+    /**
+     * Age at colorectal cancer diagnosis.
+     */
     public Integer colon_or_rectal_cancer_age;
+
+    /**
+     * Colorectal cancer occurrence indicator.
+     */
     public String colon_or_rectal_cancer;
+
+    /**
+     * Age at endometrial/uterine cancer diagnosis.
+     */
     public Integer endometrial_or_uterine_cancer_age;
+
+    /**
+     * Endometrial/uterine cancer occurrence indicator.
+     */
     public String endometrial_or_uterine_cancer;
+
+    /**
+     * Gender of the family member.
+     */
     public String gender;
+
+    /**
+     * Generation level in the family tree.
+     */
     public String generation;
+
+    /**
+     * Age at kidney/renal cell cancer diagnosis.
+     */
     public Integer kidney_renal_cell_cancer_age;
+
+    /**
+     * Kidney/renal cell cancer occurrence indicator.
+     */
     public String kidney_renal_cell_cancer;
+
+    /**
+     * Latino/Hispanic ethnicity indicator.
+     */
     public String latinx;
+
+    /**
+     * Age at leukemia diagnosis.
+     */
     public Integer leukemia_age;
+
+    /**
+     * Leukemia occurrence indicator.
+     */
     public String leukemia;
+
+    /**
+     * Age at lung cancer diagnosis.
+     */
     public Integer lung_cancer_age;
+
+    /**
+     * Lung cancer occurrence indicator.
+     */
     public String lung_cancer;
+
+    /**
+     * Age at lymphoma diagnosis.
+     */
     public Integer lymphoma_age;
+
+    /**
+     * Lymphoma occurrence indicator.
+     */
     public String lymphoma;
+
+    /**
+     * Age at melanoma skin cancer diagnosis.
+     */
     public Integer melanoma_skin_cancer_age;
+
+    /**
+     * Melanoma skin cancer occurrence indicator.
+     */
     public String melanoma_skin_cancer;
+
+    // Multiple cancer occurrence indicators
+    /**
+     * Multiple bladder cancer occurrences indicator.
+     */
     public String multiple_bladder_cancers;
+
+    /**
+     * Multiple breast cancer occurrences indicator.
+     */
     public String multiple_breast_cancers;
+
+    /**
+     * Multiple colorectal cancer occurrences indicator.
+     */
     public String multiple_colon_or_rectal_cancers;
+
+    /**
+     * Multiple endometrial/uterine cancer occurrences indicator.
+     */
     public String multiple_endometrial_or_uterine_cancers;
+
+    /**
+     * Multiple kidney/renal cell cancer occurrences indicator.
+     */
     public String multiple_kidney_renal_cell_cancers;
+
+    /**
+     * Multiple leukemia occurrences indicator.
+     */
     public String multiple_leukemias;
+
+    /**
+     * Multiple lung cancer occurrences indicator.
+     */
     public String multiple_lung_cancers;
+
+    /**
+     * Multiple lymphoma occurrences indicator.
+     */
     public String multiple_lymphomas;
+
+    /**
+     * Multiple melanoma skin cancer occurrences indicator.
+     */
     public String multiple_melanoma_skin_cancers;
+
+    /**
+     * Multiple non-melanoma skin cancer occurrences indicator.
+     */
     public String multiple_nonmelanoma_skin_cancers;
+
+    /**
+     * Multiple oral cavity/throat cancer occurrences indicator.
+     */
     public String multiple_oral_cavity_or_throat_cancers;
+
+    /**
+     * Multiple other cancer occurrences indicator.
+     */
     public String multiple_other_cancers;
+
+    /**
+     * Multiple ovarian cancer occurrences indicator.
+     */
     public String multiple_ovarian_cancers;
+
+    /**
+     * Multiple pancreatic cancer occurrences indicator.
+     */
     public String multiple_pancreatic_cancers;
+
+    /**
+     * Multiple prostate cancer occurrences indicator.
+     */
     public String multiple_prostate_cancers;
+
+    /**
+     * Multiple stomach cancer occurrences indicator.
+     */
     public String multiple_stomach_cancers;
+
+    /**
+     * Multiple testicular cancer occurrences indicator.
+     */
     public String multiple_testicular_cancers;
+
+    /**
+     * Multiple thyroid cancer occurrences indicator.
+     */
     public String multiple_thyroid_cancers;
+
+    /**
+     * Age at non-melanoma skin cancer diagnosis.
+     */
     public Integer nonmelanoma_skin_cancer_age;
+
+    /**
+     * Non-melanoma skin cancer occurrence indicator.
+     */
     public String nonmelanoma_skin_cancer;
+
+    /**
+     * Age at oral cavity/throat cancer diagnosis.
+     */
     public Integer oral_cavity_or_throat_cancer_age;
+
+    /**
+     * Oral cavity/throat cancer occurrence indicator.
+     */
     public String oral_cavity_or_throat_cancer;
+
+    /**
+     * Age at other cancer type diagnosis.
+     */
     public Integer other_age;
+
+    /**
+     * Other cancer occurrence indicator.
+     */
     public String other_cancer;
+
+    /**
+     * Specific name/type of other cancer.
+     */
     public String other_cancer_name;
+
+    /**
+     * Age at ovarian cancer diagnosis.
+     */
     public Integer ovarian_cancer_age;
+
+    /**
+     * Ovarian cancer occurrence indicator.
+     */
     public String ovarian_cancer;
+
+    /**
+     * Age at pancreatic cancer diagnosis.
+     */
     public Integer pancreatic_cancer_age;
+
+    /**
+     * Pancreatic cancer occurrence indicator.
+     */
     public String pancreatic_cancer;
+
+    /**
+     * Age at prostate cancer diagnosis.
+     */
     public Integer prostate_cancer_age;
+
+    /**
+     * Prostate cancer occurrence indicator.
+     */
     public String prostate_cancer;
+
+    /**
+     * Race/ethnicity information.
+     */
     public String race;
+
+    /**
+     * Numeric relationship code indicating family relationship type.
+     */
     public Integer relationship;
+
+    /**
+     * Shared parent indicator for sibling relationships.
+     */
     public String shared_parent;
+
+    /**
+     * Type of sibling relationship (full, half, step).
+     */
     public String sibling_type;
+
+    /**
+     * Survey step identifier.
+     */
     public String step;
+
+    /**
+     * Age at stomach cancer diagnosis.
+     */
     public Integer stomach_cancer_age;
+
+    /**
+     * Stomach cancer occurrence indicator.
+     */
     public String stomach_cancer;
+
+    /**
+     * Age at testicular cancer diagnosis.
+     */
     public Integer testicular_cancer_age;
+
+    /**
+     * Testicular cancer occurrence indicator.
+     */
     public String testicular_cancer;
+
+    /**
+     * Age at thyroid cancer diagnosis.
+     */
     public Integer thyroid_cancer_age;
+
+    /**
+     * Thyroid cancer occurrence indicator.
+     */
     public String thyroid_cancer;
+
+    /**
+     * Triple-negative breast cancer indicator.
+     */
     public String triple_negative_breast_cancer;
+
+    /**
+     * Age at unknown cancer type diagnosis.
+     */
     public Integer unknown_cancer_age;
+
+    /**
+     * Unknown cancer type occurrence indicator.
+     */
     public String unknown_cancer;
+
+    /**
+     * Vital status of the family member (alive, deceased, unknown).
+     */
     public String vital_status;
 
     @Transient

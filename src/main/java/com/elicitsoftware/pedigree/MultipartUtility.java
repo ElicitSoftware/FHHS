@@ -24,13 +24,68 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
+
+/**
+ * Utility class for sending multipart/form-data HTTP requests.
+ * <p>
+ * This class provides functionality to create and send HTTP POST requests
+ * with multipart content, specifically designed for uploading files and
+ * form data to external services. It's primarily used for communicating
+ * with pedigree generation services that require file uploads.
+ * </p>
+ * <p>
+ * The class supports adding both text form fields and file uploads to
+ * a single multipart request, making it suitable for complex API interactions.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 public class MultipartUtility {
+
+    /**
+     * Unique boundary string used to separate multipart sections.
+     */
     private final String boundary;
+
+    /**
+     * Line feed constant for proper multipart formatting.
+     */
     private static final String LINE_FEED = "\r\n";
+
+    /**
+     * HTTP connection for the multipart request.
+     */
     private HttpURLConnection httpConn;
+
+    /**
+     * Character encoding used for the request.
+     */
     private String charset;
+
+    /**
+     * Output stream for writing request data.
+     */
     private OutputStream outputStream;
+
+    /**
+     * Print writer for writing text content to the request.
+     */
     private PrintWriter writer;
+
+    /**
+     * Constructs a new MultipartUtility for the specified URL and charset.
+     * <p>
+     * Initializes the HTTP connection with proper headers for multipart
+     * form data transmission. Creates a unique boundary based on the
+     * current timestamp to separate form sections.
+     * </p>
+     *
+     * @param requestURL the target URL for the multipart request
+     * @param charset the character encoding to use for text content
+     * @throws IOException if there are issues establishing the HTTP connection
+     */
     public MultipartUtility(String requestURL, String charset)
             throws IOException {
         this.charset = charset;
@@ -51,6 +106,17 @@ public class MultipartUtility {
         writer = new PrintWriter(new OutputStreamWriter(outputStream, charset),
                 true);
     }
+
+    /**
+     * Adds a text form field to the multipart request.
+     * <p>
+     * Creates a form-data section with the specified name and value,
+     * properly formatted according to multipart/form-data specifications.
+     * </p>
+     *
+     * @param name the name of the form field
+     * @param value the text value of the form field
+     */
     public void addFormField(String name, String value) {
         writer.append("--" + boundary).append(LINE_FEED);
         writer.append("Content-Disposition: form-data; name=\"" + name + "\"")
@@ -63,10 +129,16 @@ public class MultipartUtility {
     }
 
     /**
-     * Adds a upload file section to the request
-     * @param fieldName name attribute in <input type="file" name="..." />
-     * @param uploadFile a File to be uploaded
-     * @throws IOException
+     * Adds a string content as a file upload section to the request.
+     * <p>
+     * Creates a file upload section using string content rather than
+     * an actual file. This is useful for uploading generated content
+     * such as pedigree data strings.
+     * </p>
+     *
+     * @param fieldName name attribute for the file upload field
+     * @param uploadFile string content to upload as file data
+     * @throws IOException if there are issues writing to the output stream
      */
     public void addFilePart(String fieldName, String uploadFile)
             throws IOException {
@@ -95,9 +167,9 @@ public class MultipartUtility {
 
     /**
      * Adds a upload file section to the request
-     * @param fieldName name attribute in <input type="file" name="..." />
+     * @param fieldName name attribute for the file upload field
      * @param uploadFile a File to be uploaded
-     * @throws IOException
+     * @throws IOException if there are issues with file I/O operations
      */
     public void addFilePart(String fieldName, File uploadFile)
             throws IOException {
@@ -142,7 +214,7 @@ public class MultipartUtility {
      * Completes the request and receives response from the server.
      * @return a list of Strings as response in case the server returned
      * status OK, otherwise an exception is thrown.
-     * @throws IOException
+     * @throws IOException if there are issues with network I/O operations
      */
     public List<String> finish() throws IOException {
         List<String> response = new ArrayList<String>();

@@ -30,18 +30,56 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * REST service for generating family pedigree reports and visualizations.
+ * <p>
+ * This service creates comprehensive family pedigree charts showing family
+ * relationships and cancer history. It integrates with external pedigree
+ * generation services to create visual family trees and generates both
+ * HTML and PDF format reports with color-coded cancer indicators.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 @Path("pedigree")
 @RequestScoped
 public class Service {
 
+    /**
+     * Injected FamilyManager for accessing family data and relationships.
+     */
     @Inject
     FamilyManager familyManager;
 
+    /**
+     * URL for the external pedigree generation service.
+     * Configured via the "pedigree.url" application property.
+     */
     @ConfigProperty(name = "pedigree.url")
     private String pedigreeURL;
 
+    /**
+     * Default title for pedigree reports.
+     */
     private static String TITLE = "Pedigree";
 
+    /**
+     * Generates a comprehensive pedigree report including family tree visualization.
+     * <p>
+     * This endpoint creates a detailed family pedigree chart showing:
+     * <ul>
+     *   <li>Family relationships and structure</li>
+     *   <li>Cancer history indicators (color-coded)</li>
+     *   <li>Multiple cancer diagnosis markers</li>
+     *   <li>Visual legend explaining the color coding</li>
+     * </ul>
+     *
+     * @param req the report request containing the respondent ID
+     * @return a ReportResponse containing the title, HTML content, and PDF document
+     * @throws jakarta.ws.rs.WebApplicationException if the user lacks proper authorization
+     */
     @Path("/report")
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -66,6 +104,17 @@ public class Service {
 
     }
 
+    /**
+     * Retrieves family information in a textual format for the specified report request.
+     * <p>
+     * This endpoint returns a string representation of the family's cancer history and
+     * relationships for the given respondent ID. It is primarily used for debugging
+     * and verification purposes.
+     * </p>
+     *
+     * @param req the report request containing the respondent ID
+     * @return a string representation of the family data
+     */
     @Path("/family")
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -76,6 +125,16 @@ public class Service {
         return family.toString();
     }
 
+    /**
+     * Calls the external pedigree service to generate the pedigree chart.
+     * <p>
+     * This method handles the communication with the external service, including
+     * sending the family data and receiving the generated pedigree chart in SVG format.
+     * </p>
+     *
+     * @param family the string representation of the family data
+     * @return the SVG content of the generated pedigree chart
+     */
     private String callPedigree(String family) {
 
         MultipartUtility multipart;
@@ -91,6 +150,21 @@ public class Service {
         }
     }
 
+    /**
+     * Creates the content array for the PDF document including SVG and legend elements.
+     * <p>
+     * This method assembles the various content elements for the PDF:
+     * <ul>
+     *   <li>SVG pedigree chart</li>
+     *   <li>Color legend for respondent identification</li>
+     *   <li>Color legend for cancer indicators</li>
+     *   <li>Multiple diagnosis disclaimer (if applicable)</li>
+     * </ul>
+     *
+     * @param svg the SVG content representing the family pedigree
+     * @param multipleCancers indicates whether any family members have multiple cancer diagnoses
+     * @return array of Content objects for PDF generation
+     */
     private Content[] getPDFContent(String svg, boolean multipleCancers) {
         Content[] content;
 
@@ -121,6 +195,19 @@ public class Service {
 
     }
 
+    /**
+     * Creates a map of style configurations for pedigree PDF formatting.
+     * <p>
+     * Defines custom styles for different elements in the pedigree PDF:
+     * <ul>
+     *   <li>"ped_title": Centered, bold title with larger font size</li>
+     *   <li>"ped_image": Center-aligned style for SVG content</li>
+     *   <li>"ped_green": Green text color for respondent identification</li>
+     *   <li>"ped_red": Red text color for cancer indicators</li>
+     * </ul>
+     *
+     * @return a map containing style configurations for pedigree elements
+     */
     private Map<String, Style> getPDFStyles() {
         HashMap<String, Style> styles = new HashMap<String, Style>();
         Style title = new Style();

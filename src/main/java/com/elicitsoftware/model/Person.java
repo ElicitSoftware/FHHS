@@ -11,53 +11,250 @@ package com.elicitsoftware.model;
  * ***LICENSE_END***
  */
 
+/**
+ * Represents a person in the family history health survey system.
+ * <p>
+ * This class models an individual participant or family member with comprehensive
+ * health information including demographics, relationships, and detailed cancer
+ * history. It maintains both individual cancer occurrence data and multiple
+ * cancer occurrence indicators for various cancer types.
+ * </p>
+ * <p>
+ * The class integrates with a FamilyMember object to maintain consistency
+ * between person-level and family-level data structures.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 public class Person {
 
+    /**
+     * The relationship of this person to the proband/main respondent.
+     */
     private String Relationship;
+
+    /**
+     * Associated family member object for maintaining family-level data consistency.
+     */
     private final FamilyMember familyMember = new FamilyMember();
+
+    /**
+     * Step instance identifier for tracking survey progression.
+     */
     private long StepInstance;
+
+    /**
+     * Age of the person.
+     */
     private String Age;
+
+    /**
+     * Ashkenazi Jewish ancestry indicator.
+     */
     private String Ashkenazi;
+
+    // Cancer history fields
+    /**
+     * Bladder cancer occurrence indicator.
+     */
     private String Bladder_Cancer;
+
+    /**
+     * Breast cancer occurrence indicator.
+     */
     private String Breast_Cancer;
+
+    /**
+     * Colorectal cancer occurrence indicator.
+     */
     private String Colon_Rectal_Cancer;
+
+    /**
+     * Endometrial/uterine cancer occurrence indicator.
+     */
     private String Endometrial_Uterine_Cancer;
+
+    /**
+     * Gender of the person.
+     */
     private String Gender;
+
+    /**
+     * Kidney/renal cell cancer occurrence indicator.
+     */
     private String Kidney_Renal_Cell_Cancer;
+
+    /**
+     * Leukemia cancer occurrence indicator.
+     */
     private String Leukemia_Cancer;
+
+    /**
+     * Lung cancer occurrence indicator.
+     */
     private String Lung_Cancer;
+
+    /**
+     * Lymphoma occurrence indicator.
+     */
     private String Lymphoma;
+
+    /**
+     * Melanoma cancer occurrence indicator.
+     */
     private String Melanoma_Cancer;
+
+    /**
+     * Non-melanoma cancer occurrence indicator.
+     */
     private String Non_Melanoma_Cancer;
+
+    /**
+     * Oral/throat cancer occurrence indicator.
+     */
     private String Oral_Throat_Cancer;
+
+    /**
+     * Other cancer occurrence indicator.
+     */
     private String Other_Cancer;
+
+    /**
+     * Ovarian cancer occurrence indicator.
+     */
     private String Ovarian_Cancer;
+
+    /**
+     * Specific type of other cancer if applicable.
+     */
     private String Other_Cancer_Type;
+
+    /**
+     * Pancreatic cancer occurrence indicator.
+     */
     private String Pancreatic_Cancer;
+
+    /**
+     * Prostate cancer occurrence indicator.
+     */
     private String Prostate_Cancer;
+
+    /**
+     * Shared parent indicator for family relationship tracking.
+     */
     private String SharedParent;
+
+    /**
+     * Stomach cancer occurrence indicator.
+     */
     private String Stomach_Cancer;
+
+    /**
+     * Testicular cancer occurrence indicator.
+     */
     private String Testicular_Cancer;
+
+    /**
+     * Thyroid cancer occurrence indicator.
+     */
     private String Thyroid_Cancer;
+
+    /**
+     * Unknown cancer type occurrence indicator.
+     */
     private String Unknown_Cancer;
+
+    // Multiple cancer occurrence fields
+    /**
+     * Multiple bladder cancer occurrences indicator.
+     */
     private String Multiple_Bladder_Cancer;
+
+    /**
+     * Multiple breast cancer occurrences indicator.
+     */
     private String Multiple_Breast_Cancer;
+
+    /**
+     * Multiple colorectal cancer occurrences indicator.
+     */
     private String Multiple_Colon_Rectal_Cancer;
+
+    /**
+     * Multiple endometrial/uterine cancer occurrences indicator.
+     */
     private String Multiple_Endometrial_Uterine_Cancer;
+
+    /**
+     * Multiple kidney/renal cell cancer occurrences indicator.
+     */
     private String Multiple_Kidney_Renal_Cell_Cancer;
+
+    /**
+     * Multiple leukemia occurrences indicator.
+     */
     private String Multiple_Leukemia_Cancer;
+
+    /**
+     * Multiple lung cancer occurrences indicator.
+     */
     private String Multiple_Lung_Cancer;
+
+    /**
+     * Multiple lymphoma occurrences indicator.
+     */
     private String Multiple_Lymphoma;
+
+    /**
+     * Multiple melanoma occurrences indicator.
+     */
     private String Multiple_Melanoma_Cancer;
+
+    /**
+     * Multiple non-melanoma occurrences indicator.
+     */
     private String Multiple_Non_Melanoma_Cancer;
+
+    /**
+     * Multiple oral/throat cancer occurrences indicator.
+     */
     private String Multiple_Oral_Throat_Cancer;
+
+    /**
+     * Multiple other cancer occurrences indicator.
+     */
     private String Multiple_Other_Cancer;
+
+    /**
+     * Multiple ovarian cancer occurrences indicator.
+     */
     private String Multiple_Ovarian_Cancer;
-    private String Multiple_Other_Cancer_Type;
+
+    /**
+     * Multiple pancreatic cancer occurrences indicator.
+     */
     private String Multiple_Pancreatic_Cancer;
+
+    /**
+     * Multiple prostate cancer occurrences indicator.
+     */
     private String Multiple_Prostate_Cancer;
+
+    /**
+     * Multiple stomach cancer occurrences indicator.
+     */
     private String Multiple_Stomach_Cancer;
+
+    /**
+     * Multiple testicular cancer occurrences indicator.
+     */
     private String Multiple_Testicular_Cancer;
+
+    /**
+     * Multiple thyroid cancer occurrences indicator.
+     */
     private String Multiple_Thyroid_Cancer;
 
     private String Vital_Status;
