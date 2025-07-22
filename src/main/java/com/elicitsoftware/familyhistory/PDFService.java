@@ -23,8 +23,7 @@ import com.elicitsoftware.response.ReportResponse;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.UriInfo;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory;
 import org.apache.batik.bridge.BridgeContext;
 import org.apache.batik.bridge.GVTBuilder;
@@ -94,8 +93,8 @@ public class PDFService {
     float pageHeight;
     float pageWidth;
 
-    @Context
-    UriInfo uriInfo;
+    @ConfigProperty(name = "app.base.url")
+    String baseUrl;
 
     public byte[] generatePDF(long respondentId) {
         try {
@@ -406,18 +405,18 @@ public class PDFService {
                 contentStream.showText(currentDate);
                 contentStream.endText();
 
-                // Base URL (center) - constructed from UriInfo
-                String baseUrl = uriInfo.getBaseUri().toString();
+                // Base URL (center) - from configuration
+                String configuredBaseUrl = baseUrl;
                 // Remove trailing slash if present
-                if (baseUrl.endsWith("/")) {
-                    baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+                if (configuredBaseUrl.endsWith("/")) {
+                    configuredBaseUrl = configuredBaseUrl.substring(0, configuredBaseUrl.length() - 1);
                 }
-                float baseUrlWidth = TEXT_FONT.getStringWidth(baseUrl) / 1000 * 10;
+                float baseUrlWidth = TEXT_FONT.getStringWidth(configuredBaseUrl) / 1000 * 10;
                 float centerX = (mediaBox.getWidth() - baseUrlWidth) / 2;
                 contentStream.beginText();
                 contentStream.setFont(TEXT_FONT, 10);
                 contentStream.newLineAtOffset(centerX, yBottom - 10);
-                contentStream.showText(baseUrl);
+                contentStream.showText(configuredBaseUrl);
                 contentStream.endText();
 
                 // Page numbers (far right)

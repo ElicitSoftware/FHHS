@@ -560,6 +560,9 @@ public class Status extends PanacheEntityBase {
         return finalizedDt;
     }
 
+    public String getFinalized(){
+        return sdf.format(finalizedDt);
+    }
     /**
      * Sets the timestamp when the participant finalized their survey.
      *

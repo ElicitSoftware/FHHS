@@ -10,7 +10,7 @@
 ---
 -- SURVEYS --
 INSERT INTO survey.surveys(id, display_order, name, title, description, initial_display_key, post_survey_url)
-VALUES (nextval('survey.surveys_seq'), 1,'Family History Survey', 'Family History', 'Family Cancer History Survey', '0001-0001-0000-0001-0000-0000-0000', NULL);
+VALUES (nextval('survey.surveys_seq'), 1,'Family History Survey', 'Family History', 'This survey is designed to help you and your healthcare provider better understand your hereditary risk for cancer. By collecting information about your own health and the cancer history of your blood relatives - parents, siblings, children, grandparents, aunts, and uncles - this tool can support decisions about additional testing, personalize treatment, and ultimately improve care for you and your family.', '0001-0001-0000-0001-0000-0000-0000', NULL);
 
 -- This needs to be reworked. The dimension tables are build on the fly. Maybe we should add the ones we want
 -- in the create script and change they dynamic generation in survey to if not exists.

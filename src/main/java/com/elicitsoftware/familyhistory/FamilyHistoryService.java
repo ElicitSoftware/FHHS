@@ -26,25 +26,59 @@ import org.slf4j.LoggerFactory;
 /**
  * REST service for handling family history report generation and upload requests.
  * 
- * This service provides endpoints that can be called by post-survey actions
+ * <p>This service provides endpoints that can be called by post-survey actions
  * to generate and upload family history reports after a survey is completed.
+ * The service handles asynchronous report generation and provides health monitoring
+ * capabilities.</p>
+ * 
+ * <p>The service is designed to be used as part of the Family Health History System (FHHS)
+ * workflow, specifically for processing completed family history surveys and generating
+ * reports that can be uploaded to external systems.</p>
+ * 
+ * @author Elicit Software
+ * @version 1.0
+ * @since 1.0
+ * @see FamilyHistoryReportService
+ * @see ReportRequest
  */
 @Path("/familyhistory")
 @RequestScoped
 public class FamilyHistoryService {
 
+    /**
+     * The logger instance for this service.
+     */
     private static final Logger LOG = LoggerFactory.getLogger(FamilyHistoryService.class);
     
+    /**
+     * Injected service for handling family history report generation and upload operations.
+     */
     @Inject
     FamilyHistoryReportService reportService;
 
     /**
      * Endpoint for generating and uploading a family history report.
-     * This endpoint is designed to be called by post-survey actions
-     * after a family history survey is completed.
      * 
-     * @param request the report generation request
-     * @return HTTP response indicating success or failure
+     * <p>This endpoint is designed to be called by post-survey actions
+     * after a family history survey is completed. It validates the incoming
+     * request, retrieves the associated status record, and initiates
+     * asynchronous report generation and upload.</p>
+     * 
+     * <p>The operation is transactional to ensure data consistency during
+     * the report generation process initiation.</p>
+     * 
+     * @param request the report generation request containing the respondent ID
+     *                and other necessary information for report generation
+     * @return HTTP response indicating success or failure:
+     *         <ul>
+     *         <li>200 OK - Report generation successfully initiated</li>
+     *         <li>400 Bad Request - Missing or invalid respondent ID</li>
+     *         <li>500 Internal Server Error - Unexpected error during processing</li>
+     *         </ul>
+     * @throws IllegalArgumentException if the request parameter is null
+     * @see ReportRequest
+     * @see FamilyHistoryReportResponse
+     * @see FamilyHistoryReportService#generateAndUploadFamilyHistoryReport(Status)
      */
     @Path("/generate")
     @POST
@@ -66,11 +100,8 @@ public class FamilyHistoryService {
 
             Status status = Status.find("respondentId", request.id).firstResult();
 
-            // Use respondent ID as external ID if not provided
-            String externalId = status.getXid() != null ? status.getXid() : String.valueOf(request.id);
-            
             // Start the asynchronous report generation and upload
-            reportService.generateAndUploadFamilyHistoryReport(request.id, externalId);
+            reportService.generateAndUploadFamilyHistoryReport(status);
             
             LOG.info("Family history report generation initiated for respondent: {}", request.id);
             
@@ -88,7 +119,13 @@ public class FamilyHistoryService {
     /**
      * Health check endpoint for the family history service.
      * 
-     * @return HTTP 200 if service is healthy
+     * <p>This endpoint provides a simple health check mechanism to verify
+     * that the family history service is operational and responding to requests.
+     * It can be used by monitoring systems, load balancers, or other services
+     * to determine the health status of this service.</p>
+     * 
+     * @return HTTP 200 response with a success message if the service is healthy
+     * @see FamilyHistoryReportResponse
      */
     @Path("/health")
     @GET
@@ -101,13 +138,43 @@ public class FamilyHistoryService {
 
     /**
      * Response object for family history report operations.
+     * 
+     * <p>This class encapsulates the response data returned by the family history
+     * service endpoints. It provides a standardized way to communicate operation
+     * results, including success status and descriptive messages.</p>
+     * 
+     * @author Elicit Software
+     * @version 1.0
+     * @since 1.0
      */
     public static class FamilyHistoryReportResponse {
+        
+        /**
+         * Descriptive message about the operation result.
+         * This field contains human-readable information about what occurred
+         * during the operation, whether successful or not.
+         */
         public String message;
+        
+        /**
+         * Indicates whether the operation was successful.
+         * {@code true} if the operation completed successfully,
+         * {@code false} if an error occurred.
+         */
         public boolean success;
         
+        /**
+         * Default no-argument constructor.
+         * Creates an instance with default values (null message, false success).
+         */
         public FamilyHistoryReportResponse() {}
         
+        /**
+         * Constructor to create a response with specified message and success status.
+         * 
+         * @param message descriptive message about the operation result
+         * @param success {@code true} if the operation was successful, {@code false} otherwise
+         */
         public FamilyHistoryReportResponse(String message, boolean success) {
             this.message = message;
             this.success = success;
