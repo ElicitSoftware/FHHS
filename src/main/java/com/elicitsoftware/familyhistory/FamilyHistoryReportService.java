@@ -11,10 +11,13 @@ package com.elicitsoftware.familyhistory;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.model.PostSurveyAction;
+import com.elicitsoftware.model.RespondentPSA;
 import com.elicitsoftware.model.Status;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -23,7 +26,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Service for generating family history reports as PDF and XML metadata files
@@ -57,9 +63,23 @@ import java.util.concurrent.CompletableFuture;
 public class FamilyHistoryReportService {
 
     /**
+     * Default constructor for CDI injection.
+     */
+    public FamilyHistoryReportService() {
+        // Default constructor for CDI
+    }
+
+    /**
      * Logger instance for this service.
      */
     private static final Logger LOG = LoggerFactory.getLogger(FamilyHistoryReportService.class);
+
+    /**
+     * Dedicated executor service for async report generation tasks.
+     * This ensures reliable async execution in Docker containers where
+     * the common ForkJoinPool might not work properly.
+     */
+    private ExecutorService asyncExecutor;
 
     /**
      * SFTP server hostname or IP address for file uploads.
@@ -97,6 +117,17 @@ public class FamilyHistoryReportService {
     @ConfigProperty(name = "family.history.sftp.port", defaultValue = "22")
     int sftpPort;
 
+    @ConfigProperty(name = "family.history.async.threads", defaultValue = "2")
+    int asyncThreads;
+
+    /**
+     * Number of threads for the async executor pool.
+     * Configured via the {@code family.history.async.threads} property.
+     * Defaults to 2 threads if not specified.
+     */
+    @ConfigProperty(name = "family.history.upload.psa.id", defaultValue = "1")
+    int psaId;
+
     /**
      * XML template used for generating metadata files.
      * The template supports placeholder substitution using curly braces.
@@ -133,18 +164,18 @@ public class FamilyHistoryReportService {
             """)
     String xmlTemplate;
 
-    /**
-     * Injected SFTP service for handling file uploads to the remote server.
+        /**
+     * Injected SFTP service for file upload operations.
      */
     @Inject
     SftpService sftpService;
 
     /**
-     * Injected PDF service for generating family history reports in PDF format.
+     * Injected PDF service for report generation.
      */
     @Inject
     PDFService pdfService;
-
+    
     /**
      * Initializes the service and logs configuration information.
      * This method is called automatically after dependency injection is complete.
@@ -153,10 +184,42 @@ public class FamilyHistoryReportService {
      */
     @PostConstruct
     void init() {
-        LOG.info("Family History Report Service initialized with SFTP host: {}", sftpHost);
+        // Initialize dedicated executor for async tasks to ensure reliable execution in Docker
+        this.asyncExecutor = Executors.newFixedThreadPool(asyncThreads, r -> {
+            Thread t = new Thread(r, "family-history-async-" + System.currentTimeMillis());
+            t.setDaemon(true);
+            return t;
+        });
+        
+        LOG.info("Family History Report Service initialized with SFTP host: {} and {} async threads", 
+                sftpHost, asyncThreads);
+        
+        // Test SFTP connection during initialization to identify configuration issues early
+        try {
+            boolean connectionTest = sftpService.testConnection();
+            if (connectionTest) {
+                LOG.info("SFTP connection test successful during service initialization");
+            } else {
+                LOG.warn("SFTP connection test failed during service initialization - file uploads may fail");
+            }
+        } catch (Exception e) {
+            LOG.error("SFTP connection test threw exception during service initialization: {}", e.getMessage(), e);
+        }
     }
 
     /**
+     * Cleanup method called when the application shuts down.
+     * Properly shuts down the executor service.
+     */
+    @PreDestroy
+    void destroy() {
+        if (asyncExecutor != null && !asyncExecutor.isShutdown()) {
+            asyncExecutor.shutdown();
+            LOG.info("Family History Report Service async executor shutdown completed");
+        }
+    }
+
+        /**
      * Generates and uploads a family history report asynchronously.
      * 
      * <p>This method orchestrates the complete report generation and upload process:</p>
@@ -166,48 +229,161 @@ public class FamilyHistoryReportService {
      * <li>Uploads both files to the configured SFTP server</li>
      * </ol>
      * 
-     * <p>The operation runs asynchronously using {@link CompletableFuture} to avoid
-     * blocking the calling thread. File names are derived from the external ID (Xid)
-     * in the status record.</p>
+     * <p>The operation runs asynchronously using a dedicated {@link ExecutorService} to ensure
+     * reliable execution in Docker containers where the default ForkJoinPool might not work properly.
+     * File names are derived from the external ID (Xid) in the status record.</p>
      * 
      * <p>The method is transactional to ensure data consistency during the process.</p>
      * 
      * @param status the status record containing respondent information and metadata
      *               required for report generation and file naming
+     * @param psaId the post survey action ID to track the execution status
      * @return a {@link CompletableFuture} that completes when the operation finishes
-     *         successfully or throws a RuntimeException if an error occurs
-     * @throws RuntimeException if report generation or file upload fails
+     * @throws RuntimeException if report generation or upload fails
      * @see #generateFamilyHistoryPdf(Long)
      * @see #generateXmlMetadata(Status)
      * @see SftpService#uploadFile(String, byte[])
      */
-    @Transactional
     public CompletableFuture<Void> generateAndUploadFamilyHistoryReport(Status status) {
-        return CompletableFuture.runAsync(() -> {
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+            // Call the transactional method to do the actual work
             try {
-                LOG.info("Generating family history report for respondent {} with external ID {}",
-                        status.getRespondentId(), status.getXid());
-
-                // Generate PDF report
-                byte[] pdfData = generateFamilyHistoryPdf(status.getRespondentId());
-                String pdfFileName = status.getXid() + ".pdf";
-
-                // Generate XML metadata
-                String xmlMetadata = generateXmlMetadata(status);
-                String xmlFileName = status.getXid() + ".xml";
-
-                // Upload files to SFTP server
-                sftpService.uploadFile(pdfFileName, pdfData);
-                sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
-
-                LOG.info("Successfully uploaded family history report files for external ID: {}", status.getXid());
-
+                doGenerateAndUploadFamilyHistoryReport(status);
             } catch (Exception e) {
                 LOG.error("Failed to generate and upload family history report for respondent {}: {}",
                         status.getRespondentId(), e.getMessage(), e);
                 throw new RuntimeException("Failed to process family history report", e);
             }
+        }, asyncExecutor); // Use dedicated executor instead of default ForkJoinPool
+        
+        // Add exception handling to catch any issues with the CompletableFuture
+        future.whenComplete((result, throwable) -> {
+            // Update RespondentPSA status using a separate transactional method
+            // since this callback executes outside the main transaction context
+            updateRespondentPSAStatus(status.getRespondentId(), throwable);
         });
+        
+        return future;
+    }
+
+    /**
+     * Performs the actual report generation and upload work within a transaction.
+     * This method is called from the async executor to ensure proper transaction handling.
+     * 
+     * @param status the status record containing respondent information
+     * @throws Exception if report generation or upload fails
+     */
+    @Transactional
+    public void doGenerateAndUploadFamilyHistoryReport(Status status) throws Exception {
+        LOG.info("Generating family history report for respondent {} with external ID {}",
+                status.getRespondentId(), status.getXid());
+
+        // Generate PDF report
+        LOG.info("Starting PDF generation for respondent: {}", status.getRespondentId());
+        byte[] pdfData = generateFamilyHistoryPdf(status.getRespondentId());
+        String pdfFileName = status.getXid() + ".pdf";
+        LOG.info("PDF generated successfully: {} ({} bytes)", pdfFileName, pdfData.length);
+
+        // Generate XML metadata
+        LOG.info("Generating XML metadata for respondent: {}", status.getRespondentId());
+        String xmlMetadata = generateXmlMetadata(status);
+        String xmlFileName = status.getXid() + ".xml";
+        LOG.info("XML metadata generated successfully: {} ({} bytes)", xmlFileName, xmlMetadata.length());
+
+        // Upload files to SFTP server
+        LOG.info("Starting SFTP upload for files: {} and {}", pdfFileName, xmlFileName);
+        try {
+            LOG.info("Uploading PDF file: {}", pdfFileName);
+            sftpService.uploadFile(pdfFileName, pdfData);
+            LOG.info("PDF file uploaded successfully: {}", pdfFileName);
+        } catch (Exception e) {
+            LOG.error("Failed to upload PDF file {}: {}", pdfFileName, e.getMessage(), e);
+            throw e;
+        }
+        
+        try {
+            LOG.info("Uploading XML file: {}", xmlFileName);
+            sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
+            LOG.info("XML file uploaded successfully: {}", xmlFileName);
+        } catch (Exception e) {
+            LOG.error("Failed to upload XML file {}: {}", xmlFileName, e.getMessage(), e);
+            throw e;
+        }
+
+        LOG.info("Successfully uploaded family history report files for external ID: {}", status.getXid());
+    }
+
+    /**
+     * Updates the RespondentPSA status tracking record in a separate transaction.
+     * 
+     * <p>This method is called asynchronously from the CompletableFuture completion
+     * callback to update the execution status of a post-survey action. It runs in
+     * its own transaction context to ensure proper database operations.</p>
+     * 
+     * <p>The method will only create/update RespondentPSA records if the psaId
+     * corresponds to a valid post-survey action to avoid foreign key constraint
+     * violations.</p>
+     * 
+     * @param respondentId the respondent ID
+     * @param throwable the exception if the operation failed, null if successful
+     */
+    @Transactional
+    public void updateRespondentPSAStatus(Long respondentId, Throwable throwable) {
+        try {
+            // Skip if psaId is null or 0 to avoid foreign key constraint violations
+            if (this.psaId == 0) {
+                LOG.warn("Skipping RespondentPSA status update for respondent {} - invalid psaId: {}", 
+                        respondentId, psaId);
+                return;
+            }
+            
+            // Verify the post-survey action exists before creating RespondentPSA record
+            Long psaCount = PostSurveyAction.count("id = ?1", psaId);
+            if (psaCount == 0) {
+                LOG.warn("Skipping RespondentPSA status update for respondent {} - " +
+                        "post-survey action {} does not exist", respondentId, psaId);
+                return;
+            }
+            
+            // Find or create RespondentPSA record to track execution status
+            RespondentPSA respondentPSA = RespondentPSA.find("respondentId = ?1 and psaId = ?2", 
+                    respondentId, psaId).firstResult();
+            
+            if (respondentPSA == null) {
+                respondentPSA = new RespondentPSA();
+                respondentPSA.respondentId = respondentId;
+                respondentPSA.psaId = psaId;
+                respondentPSA.status = "STARTED";
+                LOG.debug("Created new RespondentPSA record for respondent {} and PSA {}", 
+                        respondentId, psaId);
+            }
+            
+            if (throwable != null) {
+                LOG.error("CompletableFuture completed exceptionally for respondent {}: {}", 
+                        respondentId, throwable.getMessage(), throwable);
+                        
+                // Update RespondentPSA with error status
+                respondentPSA.status = "FAILED";
+                respondentPSA.error = throwable.getMessage();
+                respondentPSA.finishedDt = OffsetDateTime.now();
+            } else {
+                LOG.info("CompletableFuture completed successfully for respondent {}", respondentId);
+                
+                // Update RespondentPSA with success status
+                respondentPSA.status = "COMPLETED";
+                respondentPSA.error = null;
+                respondentPSA.finishedDt = OffsetDateTime.now();
+            }
+            
+            respondentPSA.persist();
+            LOG.debug("Updated RespondentPSA status to {} for respondent {} and PSA {}", 
+                    respondentPSA.status, respondentId, psaId);
+            
+        } catch (Exception e) {
+            LOG.error("Failed to update RespondentPSA status for respondent {} and PSA {}: {}", 
+                    respondentId, psaId, e.getMessage(), e);
+            // Don't rethrow - this is a status tracking operation that shouldn't fail the main process
+        }
     }
 
     /**
@@ -226,7 +402,7 @@ public class FamilyHistoryReportService {
      *                     family history data for the report
      * @return byte array containing the generated PDF data
      * @throws RuntimeException if PDF generation fails or respondent data cannot be retrieved
-     * @see PDFService#generatePDF(Long)
+     * @see PDFService#generatePDF(long)
      * @see ManagedContext
      */
     @Transactional

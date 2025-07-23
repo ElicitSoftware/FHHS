@@ -46,6 +46,13 @@ import org.slf4j.LoggerFactory;
 public class FamilyHistoryService {
 
     /**
+     * Default constructor for CDI injection.
+     */
+    public FamilyHistoryService() {
+        // Default constructor for CDI
+    }
+
+    /**
      * The logger instance for this service.
      */
     private static final Logger LOG = LoggerFactory.getLogger(FamilyHistoryService.class);
@@ -99,6 +106,16 @@ public class FamilyHistoryService {
             }
 
             Status status = Status.find("respondentId", request.id).firstResult();
+            
+            // Check if status record exists
+            if (status == null) {
+                LOG.warn("No status record found for respondent ID: {}", request.id);
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new FamilyHistoryReportResponse("No status record found for respondent", false))
+                    .build();
+            }
+            
+            LOG.info("Found status record for respondent {}: external ID = {}", request.id, status.getXid());
 
             // Start the asynchronous report generation and upload
             reportService.generateAndUploadFamilyHistoryReport(status);
@@ -116,16 +133,10 @@ public class FamilyHistoryService {
         }
     }
     
-    /**
-     * Health check endpoint for the family history service.
+        /**
+     * Health check endpoint to verify the service is running.
      * 
-     * <p>This endpoint provides a simple health check mechanism to verify
-     * that the family history service is operational and responding to requests.
-     * It can be used by monitoring systems, load balancers, or other services
-     * to determine the health status of this service.</p>
-     * 
-     * @return HTTP 200 response with a success message if the service is healthy
-     * @see FamilyHistoryReportResponse
+     * @return HTTP 200 OK response indicating the service is healthy
      */
     @Path("/health")
     @GET
@@ -134,6 +145,42 @@ public class FamilyHistoryService {
     public Response healthCheck() {
         return Response.ok(new FamilyHistoryReportResponse("Family History Service is healthy", true))
                 .build();
+    }
+    
+    /**
+     * Debug endpoint to check status records for a respondent.
+     * 
+     * @param respondentId the respondent ID to check
+     * @return HTTP response with status information
+     */
+    @Path("/debug/status/{respondentId}")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @PermitAll
+    public Response debugStatus(@PathParam("respondentId") long respondentId) {
+        try {
+            LOG.info("Checking status records for respondent: {}", respondentId);
+            
+            Status status = Status.find("respondentId", respondentId).firstResult();
+            
+            if (status == null) {
+                LOG.warn("No status record found for respondent: {}", respondentId);
+                return Response.ok(new FamilyHistoryReportResponse("No status record found for respondent " + respondentId, false))
+                        .build();
+            }
+            
+            LOG.info("Found status record for respondent {}: XID = {}", respondentId, status.getXid());
+            return Response.ok(new FamilyHistoryReportResponse(
+                    String.format("Status found - ID: %d, XID: %s, RespondentId: %d", 
+                            status.getId(), status.getXid(), status.getRespondentId()), true))
+                    .build();
+                    
+        } catch (Exception e) {
+            LOG.error("Failed to check status for respondent {}: {}", respondentId, e.getMessage(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new FamilyHistoryReportResponse("Error checking status: " + e.getMessage(), false))
+                    .build();
+        }
     }
 
     /**

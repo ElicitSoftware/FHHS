@@ -29,4 +29,10 @@ public class ReportRequest {
      * This ID is used to query the database for relevant family history health survey data.
      */
     public long id;
+    
+    /**
+     * The post survey action ID to track the execution status.
+     * This ID is used to update the RespondentPSA record with success or failure information.
+     */
+    public long psaId;
 }
