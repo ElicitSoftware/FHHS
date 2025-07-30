@@ -237,7 +237,6 @@ public class FamilyHistoryReportService {
      * 
      * @param status the status record containing respondent information and metadata
      *               required for report generation and file naming
-     * @param psaId the post survey action ID to track the execution status
      * @return a {@link CompletableFuture} that completes when the operation finishes
      * @throws RuntimeException if report generation or upload fails
      * @see #generateFamilyHistoryPdf(Long)
