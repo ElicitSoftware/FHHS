@@ -434,11 +434,11 @@ public class FactFHHSView extends PanacheEntityBase {
         title = getTitle();
         //Create a row for each cancer
         if (TRUE.equalsIgnoreCase(bladder_cancer)) {
-            rows.add(new Row(title, "Blader Cancer", bladder_cancer_age));
+            rows.add(new Row(title, "Bladder Cancer", bladder_cancer_age));
         }
 
         if (multiple_bladder_cancers != null) {
-            rows.add(new Row(title, "Multiple Blader Cancers", multiple_bladder_cancers));
+            rows.add(new Row(title, "Multiple Bladder Cancers", multiple_bladder_cancers));
         }
 
         if (TRUE.equalsIgnoreCase(breast_cancer)) {
