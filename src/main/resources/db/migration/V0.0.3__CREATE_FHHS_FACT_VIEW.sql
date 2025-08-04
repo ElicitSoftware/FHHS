@@ -135,6 +135,7 @@ where f3.step_key != 3
     	WHERE f4.section_key = 2
 		and f3.step = f4.step
 		and f3.step_instance = f4.step_instance
+        and f3.respondent_id = f4.respondent_id
 	)
 UNION
 -- Proband 
