@@ -22,9 +22,7 @@ CREATE TABLE IF NOT EXISTS survey.post_survey_actions
     execution_order integer                 NOT NULL DEFAULT 1,
     CONSTRAINT post_survey_actions_pk PRIMARY KEY (id),
     CONSTRAINT post_survey_actions_survey_fk FOREIGN KEY (survey_id)
-        REFERENCES survey.surveys (id) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION
+        REFERENCES survey.surveys (id)
 );
 
 CREATE INDEX IF NOT EXISTS post_survey_actions_survey_index 
@@ -32,25 +30,3 @@ ON survey.post_survey_actions USING btree (survey_id ASC NULLS LAST);
 
 GRANT DELETE, UPDATE, INSERT, SELECT ON TABLE survey.post_survey_actions TO ${survey_user};
 GRANT DELETE, UPDATE, INSERT, SELECT ON TABLE survey.post_survey_actions TO ${surveyadmin_user};
-
--- Insert family history report generation post-survey action for FHHS survey (survey_id = 1)
-INSERT INTO survey.post_survey_actions (id, survey_id, name, description, url, execution_order)
-VALUES (
-    NEXTVAL('survey.post_survey_actions_seq'), 
-    1, 
-    'Generate Family History Report',
-    'Automatically generates a family history PDF report and uploads it to SFTP server after survey completion',
-    'http://host.docker.internal:8082/api/familyhistory/generate',
-    1
-);
-
--- For development environment
-INSERT INTO survey.post_survey_actions (id, survey_id, name, description, url, execution_order)
-VALUES (
-    NEXTVAL('survey.post_survey_actions_seq'), 
-    1, 
-    'Generate Family History Report (Dev)',
-    'Development version of family history report generation',
-    'http://localhost:8082/api/familyhistory/generate',
-    1
-);
