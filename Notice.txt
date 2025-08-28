@@ -1,5 +1,5 @@
 
-Lists of 18 third-party dependencies.
+Lists of 19 third-party dependencies.
      (Revised BSD) JSch (com.jcraft:jsch:0.1.55 - http://www.jcraft.com/jsch/)
      (Apache License, Version 2.0) PDFBox-Graphics2d (de.rototor.pdfbox:graphics2d:3.0.2 - https://github.com/rototor/pdfbox-graphics2d/graphics2d)
      (The Apache Software License, Version 2.0) Quarkus - ArC - Runtime (io.quarkus:quarkus-arc:3.22.3 - https://github.com/quarkusio/quarkus)
@@ -11,6 +11,7 @@ Lists of 18 third-party dependencies.
      (The Apache Software License, Version 2.0) Quarkus - REST Client - Runtime (io.quarkus:quarkus-rest-client:3.22.3 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - REST Client JSON-B (io.quarkus:quarkus-rest-client-jsonb:3.22.3 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - REST - JSON-B - Runtime (io.quarkus:quarkus-rest-jsonb:3.22.3 - https://github.com/quarkusio/quarkus)
+     (The Apache Software License, Version 2.0) Quarkus - Scheduler - Runtime (io.quarkus:quarkus-scheduler:3.22.3 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - SmallRye Health - Runtime (io.quarkus:quarkus-smallrye-health:3.22.3 - https://github.com/quarkusio/quarkus)
      (Apache License, Version 2.0) Apache HttpClient (org.apache.httpcomponents:httpclient:4.5.14 - http://hc.apache.org/httpcomponents-client-ga)
      (Apache License, Version 2.0) Apache HttpCore (org.apache.httpcomponents:httpcore:4.4.16 - http://hc.apache.org/httpcomponents-core-ga)
