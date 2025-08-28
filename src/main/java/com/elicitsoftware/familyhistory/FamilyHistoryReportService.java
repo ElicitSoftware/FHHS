@@ -16,6 +16,7 @@ import com.elicitsoftware.model.RespondentPSA;
 import com.elicitsoftware.model.Status;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
+import io.quarkus.scheduler.Scheduled;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -149,18 +151,11 @@ public class FamilyHistoryReportService {
      * </ul>
      */
     @ConfigProperty(name = "family.history.sftp.xml.template", defaultValue = """
-            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            <umhsdoc2>
-                <imageSource>MiGHT</imageSource>
-                <updateFlag>N</updateFlag>
+            "<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <pdf>
                 <externalSourceId>{RespondentId}</externalSourceId>
                 <mrn>{Xid}</mrn>
-                <formDesignatorNum>38670</formDesignatorNum>
-                <docDate>{Finalized}</docDate>
-                <pages>
-                    <page>{RespondentId}.pdf</page>
-                </pages>
-            </umhsdoc2>
+            </pdf>
             """)
     String xmlTemplate;
 
@@ -265,6 +260,43 @@ public class FamilyHistoryReportService {
         return future;
     }
 
+    @Scheduled(every = "15m")
+    @Transactional
+    void processUnsentUploads(){
+
+        if (psaId != 0) {
+            // Get RespondentPSA records that have failed (status = FAILED and uploadedDt is null)
+            // and haven't exceeded retry limits (tries < 50)
+            List<RespondentPSA> unsentPSAs = RespondentPSA.find("psaId = ?1 AND status = ?2 AND uploadedDt IS NULL AND tries < ?3",
+                    psaId, "FAILED", 50).list();
+            
+            LOG.info("Found {} unsent uploads to retry", unsentPSAs.size());
+            
+            for (RespondentPSA respondentPSA : unsentPSAs) {
+                try {
+                    LOG.info("Retrying upload for respondent {} (attempt {})", 
+                            respondentPSA.respondentId, respondentPSA.tries + 1);
+                    
+                    // Get the status for this respondent
+                    Status status = Status.find("respondentId = ?1", respondentPSA.respondentId).firstResult();
+                    if (status != null) {
+                        // Try the upload again
+                        doGenerateAndUploadFamilyHistoryReport(status);
+                        // Update the RespondentPSA with no error
+                        updateRespondentPSAStatus(respondentPSA.respondentId, null);
+                    } else {
+                        LOG.warn("No status record found for respondent {}, skipping retry", respondentPSA.respondentId);
+                    }
+                } catch (Exception e) {                    
+                    // Update the RespondentPSA with the new failure
+                    updateRespondentPSAStatus(respondentPSA.respondentId, e);
+                }
+            }
+        } else {
+            LOG.warn("No Post Survey Action found with name 'Generate Family History Report'");
+        }
+    }
+
     /**
      * Performs the actual report generation and upload work within a transaction.
      * This method is called from the async executor to ensure proper transaction handling.
@@ -286,7 +318,7 @@ public class FamilyHistoryReportService {
         // Generate XML metadata
         LOG.info("Generating XML metadata for respondent: {}", status.getRespondentId());
         String xmlMetadata = generateXmlMetadata(status);
-        String xmlFileName = status.getXid() + ".xml";
+        String xmlFileName = status.getXid() + "-index.xml";
         LOG.info("XML metadata generated successfully: {} ({} bytes)", xmlFileName, xmlMetadata.length());
 
         // Upload files to SFTP server
@@ -364,16 +396,17 @@ public class FamilyHistoryReportService {
                 // Update RespondentPSA with error status
                 respondentPSA.status = "FAILED";
                 respondentPSA.error = throwable.getMessage();
-                respondentPSA.finishedDt = OffsetDateTime.now();
+
             } else {
                 LOG.info("CompletableFuture completed successfully for respondent {}", respondentId);
                 
                 // Update RespondentPSA with success status
                 respondentPSA.status = "COMPLETED";
                 respondentPSA.error = null;
-                respondentPSA.finishedDt = OffsetDateTime.now();
+                respondentPSA.uploadedDt = OffsetDateTime.now();
             }
-            
+            // Increment the tries value
+            respondentPSA.tries = respondentPSA.tries + 1;
             respondentPSA.persist();
             LOG.debug("Updated RespondentPSA status to {} for respondent {} and PSA {}", 
                     respondentPSA.status, respondentId, psaId);
@@ -459,7 +492,7 @@ public class FamilyHistoryReportService {
         xmlDoc = xmlDoc.replace("{Phone}", status.getPhone());
         xmlDoc = xmlDoc.replace("{DepartmentName}", status.getDepartmentName());
         xmlDoc = xmlDoc.replace("{DepartmentID}", Long.toString(status.getDepartmentId()));
-        xmlDoc = xmlDoc.replace("{Token", status.getToken());
+        xmlDoc = xmlDoc.replace("{Token}", status.getToken());
         xmlDoc = xmlDoc.replace("{Status}", status.getStatus());
         xmlDoc = xmlDoc.replace("{Created}", status.getCreated());
         xmlDoc = xmlDoc.replace("{Finalized}", status.getFinalized());
