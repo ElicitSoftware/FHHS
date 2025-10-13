@@ -30,8 +30,6 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
  * The service implementations may throw {@link jakarta.ws.rs.WebApplicationException} for various
  * error conditions including validation errors, database errors, and service communication failures.
  * These exceptions contain detailed error messages that should be propagated to calling services.
- * 
- * @throws jakarta.ws.rs.WebApplicationException for validation errors, service errors, or communication failures
  */
 @Path("/")
 @RegisterRestClient
