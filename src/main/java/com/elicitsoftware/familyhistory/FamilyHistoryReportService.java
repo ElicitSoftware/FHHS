@@ -91,42 +91,13 @@ public class FamilyHistoryReportService {
     String sftpHost;
 
     /**
-     * Username for SFTP server authentication.
-     * Configured via the {@code family.history.sftp.username} property.
-     */
-    @ConfigProperty(name = "family.history.sftp.username")
-    String sftpUsername;
-
-    /**
-     * Password for SFTP server authentication.
-     * Configured via the {@code family.history.sftp.password} property.
-     */
-    @ConfigProperty(name = "family.history.sftp.password")
-    String sftpPassword;
-
-    /**
-     * Remote path on the SFTP server where files will be uploaded.
-     * Configured via the {@code family.history.sftp.path} property.
-     */
-    @ConfigProperty(name = "family.history.sftp.path")
-    String sftpPath;
-
-    /**
-     * SFTP server port number.
-     * Configured via the {@code family.history.sftp.port} property.
-     * Defaults to port 22 if not specified.
-     */
-    @ConfigProperty(name = "family.history.sftp.port", defaultValue = "22")
-    int sftpPort;
-
-    @ConfigProperty(name = "family.history.async.threads", defaultValue = "2")
-    int asyncThreads;
-
-    /**
      * Number of threads for the async executor pool.
      * Configured via the {@code family.history.async.threads} property.
      * Defaults to 2 threads if not specified.
      */
+    @ConfigProperty(name = "family.history.async.threads", defaultValue = "2")
+    int asyncThreads;
+
     @ConfigProperty(name = "family.history.upload.psa.id", defaultValue = "1")
     int psaId;
 
