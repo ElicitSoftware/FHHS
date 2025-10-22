@@ -74,7 +74,6 @@ public class RespondentPSA extends PanacheEntityBase {
     @CreationTimestamp
     public OffsetDateTime createdDt;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "uploaded_dt")
     public OffsetDateTime uploadedDt;
 
