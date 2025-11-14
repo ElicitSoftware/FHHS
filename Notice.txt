@@ -10,7 +10,6 @@ Lists of 21 third-party dependencies.
      (The Apache Software License, Version 2.0) Quarkus - JDBC - PostgreSQL - Runtime (io.quarkus:quarkus-jdbc-postgresql:3.29.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - Logging - JSON - Runtime (io.quarkus:quarkus-logging-json:3.29.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - Micrometer Registry - Prometheus Runtime (io.quarkus:quarkus-micrometer-registry-prometheus:3.29.1 - https://github.com/quarkusio/quarkus)
-     (The Apache Software License, Version 2.0) Quarkus - OpenTelemetry - Runtime (io.quarkus:quarkus-opentelemetry:3.29.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - REST Client - Runtime (io.quarkus:quarkus-rest-client:3.29.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - REST Client JSON-B (io.quarkus:quarkus-rest-client-jsonb:3.29.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - REST - JSON-B - Runtime (io.quarkus:quarkus-rest-jsonb:3.29.1 - https://github.com/quarkusio/quarkus)

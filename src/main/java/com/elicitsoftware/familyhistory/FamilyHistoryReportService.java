@@ -452,21 +452,32 @@ public class FamilyHistoryReportService {
 
         String xmlDoc = xmlTemplate;
         // Any value in the status document can be included in the xml.
-        xmlDoc = xmlDoc.replace("{Xid}", status.getXid());
+        // Use null-safe replacements to handle missing/null values
+        xmlDoc = xmlDoc.replace("{Xid}", nullSafe(status.getXid()));
         xmlDoc = xmlDoc.replace("{RespondentId}", Long.toString(status.getRespondentId()));
         xmlDoc = xmlDoc.replace("{SurveyId}", Long.toString(status.getSurveyId()));
-        xmlDoc = xmlDoc.replace("{FirstName}", status.getFirstName());
-        xmlDoc = xmlDoc.replace("{LastName}", status.getLastName());
-        xmlDoc = xmlDoc.replace("{MiddleName}", status.getMiddleName());
-        xmlDoc = xmlDoc.replace("{Dob}", status.getDob().toString());
-        xmlDoc = xmlDoc.replace("{Email}", status.getEmail());
-        xmlDoc = xmlDoc.replace("{Phone}", status.getPhone());
-        xmlDoc = xmlDoc.replace("{DepartmentName}", status.getDepartmentName());
+        xmlDoc = xmlDoc.replace("{FirstName}", nullSafe(status.getFirstName()));
+        xmlDoc = xmlDoc.replace("{LastName}", nullSafe(status.getLastName()));
+        xmlDoc = xmlDoc.replace("{MiddleName}", nullSafe(status.getMiddleName()));
+        xmlDoc = xmlDoc.replace("{Dob}", status.getDob() != null ? status.getDob().toString() : "");
+        xmlDoc = xmlDoc.replace("{Email}", nullSafe(status.getEmail()));
+        xmlDoc = xmlDoc.replace("{Phone}", nullSafe(status.getPhone()));
+        xmlDoc = xmlDoc.replace("{DepartmentName}", nullSafe(status.getDepartmentName()));
         xmlDoc = xmlDoc.replace("{DepartmentID}", Long.toString(status.getDepartmentId()));
-        xmlDoc = xmlDoc.replace("{Token}", status.getToken());
-        xmlDoc = xmlDoc.replace("{Status}", status.getStatus());
-        xmlDoc = xmlDoc.replace("{Created}", status.getCreated());
-        xmlDoc = xmlDoc.replace("{Finalized}", status.getFinalized());
+        xmlDoc = xmlDoc.replace("{Token}", nullSafe(status.getToken()));
+        xmlDoc = xmlDoc.replace("{Status}", nullSafe(status.getStatus()));
+        xmlDoc = xmlDoc.replace("{Created}", nullSafe(status.getCreated()));
+        xmlDoc = xmlDoc.replace("{Finalized}", nullSafe(status.getFinalized()));
         return xmlDoc;
+    }
+    
+    /**
+     * Helper method to safely handle null values during string replacement.
+     * 
+     * @param value the value to check for null
+     * @return the original value if not null, empty string otherwise
+     */
+    private String nullSafe(String value) {
+        return value != null ? value : "";
     }
 }
