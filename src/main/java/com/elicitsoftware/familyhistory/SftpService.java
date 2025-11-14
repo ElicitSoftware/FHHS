@@ -18,7 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.util.Optional;
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * Service for handling SFTP file transfers using JSch library.
@@ -31,11 +34,16 @@ import java.io.IOException;
  * <ul>
  *   <li><strong>family.history.sftp.host:</strong> SFTP server hostname</li>
  *   <li><strong>family.history.sftp.username:</strong> SFTP username for authentication</li>
- *   <li><strong>family.history.sftp.password:</strong> SFTP password for authentication</li>
+ *   <li><strong>family.history.sftp.password:</strong> SFTP password for authentication (optional if using private key)</li>
+ *   <li><strong>family.history.sftp.privateKey:</strong> Either a path to private key file OR the actual private key content (PEM format starting with -----BEGIN) for SSH key authentication (optional if using password)</li>
  *   <li><strong>family.history.sftp.path:</strong> Remote directory path for file uploads</li>
  *   <li><strong>family.history.sftp.port:</strong> SFTP server port (default: 22)</li>
  *   <li><strong>family.history.sftp.timeout:</strong> Connection timeout in milliseconds (default: 30000)</li>
  * </ul>
+ * 
+ * <p><strong>Authentication:</strong> The service supports both password and SSH key authentication.
+ * If both password and privateKey are configured, SSH key authentication takes precedence.
+ * The privateKey property accepts either a file path or the direct private key content (PEM format).</p>
  *
  * @author Elicit Software
  * @version 1.0
@@ -53,7 +61,10 @@ public class SftpService {
     String sftpUsername;
     
     @ConfigProperty(name = "family.history.sftp.password")
-    String sftpPassword;
+    Optional<String> sftpPassword;
+    
+    @ConfigProperty(name = "family.history.sftp.privateKey")
+    Optional<String> sftpPrivateKey;
     
     @ConfigProperty(name = "family.history.sftp.path")
     String sftpPath;
@@ -82,14 +93,8 @@ public class SftpService {
         try {
             LOG.debug("Connecting to SFTP server {}:{} for file upload: {}", sftpHost, sftpPort, fileName);
             
-            // Create JSch session
-            JSch jsch = new JSch();
-            session = jsch.getSession(sftpUsername, sftpHost, sftpPort);
-            session.setPassword(sftpPassword);
-            
-            // Disable strict host key checking for Docker environment
-            session.setConfig("StrictHostKeyChecking", "no");
-            session.setTimeout(sftpTimeout);
+            // Create JSch session with authentication
+            session = createAuthenticatedSession();
             
             // Connect to the session
             session.connect();
@@ -191,14 +196,8 @@ public class SftpService {
         try {
             LOG.debug("Testing SFTP connection to {}:{}", sftpHost, sftpPort);
             
-            // Create JSch session
-            JSch jsch = new JSch();
-            session = jsch.getSession(sftpUsername, sftpHost, sftpPort);
-            session.setPassword(sftpPassword);
-            
-            // Disable strict host key checking for Docker environment
-            session.setConfig("StrictHostKeyChecking", "no");
-            session.setTimeout(sftpTimeout);
+            // Create JSch session with authentication
+            session = createAuthenticatedSession();
             
             // Connect to the session
             session.connect();
@@ -247,5 +246,67 @@ public class SftpService {
                 LOG.debug("SSH session disconnected after connection test");
             }
         }
+    }
+    
+    /**
+     * Creates an authenticated JSch session using either password or SSH key authentication.
+     * SSH key authentication takes precedence if both are configured.
+     * 
+     * @return configured and ready-to-connect JSch session
+     * @throws JSchException if session creation or key loading fails
+     */
+    private Session createAuthenticatedSession() throws JSchException {
+        JSch jsch = new JSch();
+        Session session = jsch.getSession(sftpUsername, sftpHost, sftpPort);
+        
+        // Configure authentication method
+        if (sftpPrivateKey.isPresent() && !sftpPrivateKey.get().trim().isEmpty()) {
+            // Use SSH key authentication
+            String privateKeyValue = sftpPrivateKey.get().trim();
+            LOG.debug("Using SSH key authentication with key: {}", 
+                     privateKeyValue.startsWith("-----BEGIN") ? "private key content" : privateKeyValue);
+            
+            try {
+                // Check if the value is a private key content (starts with -----BEGIN) or a file path
+                if (privateKeyValue.startsWith("-----BEGIN")) {
+                    // Direct private key content - add it directly to JSch
+                    byte[] privateKeyBytes = privateKeyValue.getBytes();
+                    jsch.addIdentity("private-key", privateKeyBytes, null, null);
+                    LOG.debug("Successfully loaded SSH private key from direct content");
+                } else {
+                    // File path - load from file
+                    File keyFile = new File(privateKeyValue);
+                    if (!keyFile.isAbsolute()) {
+                        // Make path relative to the application working directory
+                        keyFile = new File(System.getProperty("user.dir"), privateKeyValue);
+                    }
+                    
+                    if (!keyFile.exists()) {
+                        throw new JSchException("Private key file not found: " + keyFile.getAbsolutePath());
+                    }
+                    
+                    jsch.addIdentity(keyFile.getAbsolutePath());
+                    LOG.debug("Successfully loaded SSH private key from: {}", keyFile.getAbsolutePath());
+                }
+                
+            } catch (JSchException e) {
+                LOG.error("Failed to load SSH private key: {}", e.getMessage());
+                throw e;
+            }
+            
+        } else if (sftpPassword.isPresent() && !sftpPassword.get().trim().isEmpty()) {
+            // Use password authentication
+            LOG.debug("Using password authentication");
+            session.setPassword(sftpPassword.get());
+            
+        } else {
+            throw new JSchException("No authentication method configured. Please set either family.history.sftp.password or family.history.sftp.privateKey");
+        }
+        
+        // Disable strict host key checking for Docker environment
+        session.setConfig("StrictHostKeyChecking", "no");
+        session.setTimeout(sftpTimeout);
+        
+        return session;
     }
 }
