@@ -296,15 +296,6 @@ public class FamilyHistoryReportService {
         // Upload files to SFTP server
         LOG.info("Starting SFTP upload for files: {} and {}", pdfFileName, xmlFileName);
         try {
-            LOG.info("Uploading XML file: {}", xmlFileName);
-            sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
-            LOG.info("XML file uploaded successfully: {}", xmlFileName);
-        } catch (Exception e) {
-            LOG.error("Failed to upload XML file {}: {}", xmlFileName, e.getMessage(), e);
-            throw e;
-        }
-
-        try {
             LOG.info("Uploading PDF file: {}", pdfFileName);
             sftpService.uploadFile(pdfFileName, pdfData);
             LOG.info("PDF file uploaded successfully: {}", pdfFileName);
@@ -312,7 +303,14 @@ public class FamilyHistoryReportService {
             LOG.error("Failed to upload PDF file {}: {}", pdfFileName, e.getMessage(), e);
             throw e;
         }
-
+        try {
+            LOG.info("Uploading XML file: {}", xmlFileName);
+            sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
+            LOG.info("XML file uploaded successfully: {}", xmlFileName);
+        } catch (Exception e) {
+            LOG.error("Failed to upload XML file {}: {}", xmlFileName, e.getMessage(), e);
+            throw e;
+        }
         LOG.info("Successfully uploaded family history report files for external ID: {}", status.getXid());
     }
 
