@@ -307,6 +307,7 @@ public class FamilyHistoryReportService {
             LOG.info("Uploading XML file: {}", xmlFileName);
             sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
             LOG.info("XML file uploaded successfully: {}", xmlFileName);
+            LOG.info("XML content: {}", xmlMetadata);
         } catch (Exception e) {
             LOG.error("Failed to upload XML file {}: {}", xmlFileName, e.getMessage(), e);
             throw e;
