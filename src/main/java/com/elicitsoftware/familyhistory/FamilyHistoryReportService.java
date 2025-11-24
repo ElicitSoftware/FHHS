@@ -292,23 +292,24 @@ public class FamilyHistoryReportService {
         String xmlFileName = status.getXid() + "-index.xml";
         LOG.info("XML metadata generated successfully: {} ({} bytes)", xmlFileName, xmlMetadata.length());
 
+
         // Upload files to SFTP server
         LOG.info("Starting SFTP upload for files: {} and {}", pdfFileName, xmlFileName);
-        try {
-            LOG.info("Uploading PDF file: {}", pdfFileName);
-            sftpService.uploadFile(pdfFileName, pdfData);
-            LOG.info("PDF file uploaded successfully: {}", pdfFileName);
-        } catch (Exception e) {
-            LOG.error("Failed to upload PDF file {}: {}", pdfFileName, e.getMessage(), e);
-            throw e;
-        }
-        
         try {
             LOG.info("Uploading XML file: {}", xmlFileName);
             sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
             LOG.info("XML file uploaded successfully: {}", xmlFileName);
         } catch (Exception e) {
             LOG.error("Failed to upload XML file {}: {}", xmlFileName, e.getMessage(), e);
+            throw e;
+        }
+
+        try {
+            LOG.info("Uploading PDF file: {}", pdfFileName);
+            sftpService.uploadFile(pdfFileName, pdfData);
+            LOG.info("PDF file uploaded successfully: {}", pdfFileName);
+        } catch (Exception e) {
+            LOG.error("Failed to upload PDF file {}: {}", pdfFileName, e.getMessage(), e);
             throw e;
         }
 
