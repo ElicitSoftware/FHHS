@@ -184,8 +184,7 @@ public class SftpService {
      * Tests the SFTP connection with the configured settings.
      * 
      * <p>Establishes a connection to the SFTP server, verifies access to the
-     * configured directory, and tests write permissions by creating and deleting
-     * a temporary test file.</p>
+     * configured directory, and checks write permissions without creating files.</p>
      * 
      * @return true if connection is successful and directory is writable, false otherwise
      */
@@ -211,19 +210,21 @@ public class SftpService {
             // Ensure the remote directory exists
             ensureRemoteDirectoryExists(sftpChannel, sftpPath);
             
-            // Change to the target directory
+            // Change to the target directory and verify access
             sftpChannel.cd(sftpPath);
             
-            // Test write access by creating a temporary file
-            String testFileName = ".connection_test_" + System.currentTimeMillis();
-            try (ByteArrayInputStream testData = new ByteArrayInputStream("test".getBytes())) {
-                sftpChannel.put(testData, testFileName);
+            // Check directory permissions to verify write access
+            SftpATTRS attrs = sftpChannel.stat(sftpPath);
+            int permissions = attrs.getPermissions();
+            boolean writable = (permissions & 0200) != 0; // Check owner write permission
+            
+            if (!writable) {
+                LOG.warn("SFTP directory {} is not writable (permissions: {})", sftpPath, 
+                        Integer.toOctalString(permissions));
+                return false;
             }
             
-            // Verify the file exists and then delete it
-            sftpChannel.rm(testFileName);
-            
-            LOG.info("SFTP connection test successful to {}:{}{}", sftpHost, sftpPort, sftpPath);
+            LOG.info("SFTP connection test successful to {}:{}{} (writable)", sftpHost, sftpPort, sftpPath);
             return true;
             
         } catch (JSchException e) {
@@ -231,9 +232,6 @@ public class SftpService {
             return false;
         } catch (SftpException e) {
             LOG.error("SFTP connection test failed - SFTP operation error: {}", e.getMessage(), e);
-            return false;
-        } catch (IOException e) {
-            LOG.error("SFTP connection test failed - I/O error: {}", e.getMessage(), e);
             return false;
         } finally {
             // Clean up resources
