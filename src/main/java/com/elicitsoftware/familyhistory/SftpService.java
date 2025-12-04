@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.util.Optional;
 import java.io.IOException;
 import java.util.Optional;
 
@@ -111,9 +110,9 @@ public class SftpService {
             // Change to the target directory
             sftpChannel.cd(sftpPath);
             
-            // Upload the file
+            // Upload the file using OVERWRITE mode to ensure binary transfer
             try (ByteArrayInputStream inputStream = new ByteArrayInputStream(fileData)) {
-                sftpChannel.put(inputStream, fileName);
+                sftpChannel.put(inputStream, fileName, ChannelSftp.OVERWRITE);
             }
             
             LOG.info("Successfully uploaded file: {} ({} bytes) to SFTP server {}:{}{}", 
