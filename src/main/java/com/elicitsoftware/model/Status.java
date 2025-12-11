@@ -558,6 +558,11 @@ public class Status extends PanacheEntityBase {
         return finalizedDt;
     }
 
+    /**
+     * Gets the finalized timestamp as a formatted string.
+     *
+     * @return formatted finalization date string
+     */
     public String getFinalized(){
         return sdf.format(finalizedDt);
     }

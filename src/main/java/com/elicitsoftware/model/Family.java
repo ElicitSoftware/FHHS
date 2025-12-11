@@ -32,6 +32,13 @@ import java.util.List;
 public class Family {
 
     /**
+     * Default constructor.
+     */
+    public Family() {
+        // Default constructor
+    }
+
+    /**
      * List of all family members included in this family structure.
      * Each FamilyMember contains health information, demographics, and relationship data.
      */

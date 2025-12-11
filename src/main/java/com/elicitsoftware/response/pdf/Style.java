@@ -30,6 +30,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public class Style {
 
     /**
+     * Default constructor.
+     */
+    public Style() {
+        // Default constructor
+    }
+
+    /**
      * Text alignment for the styled element.
      * Common values include "left", "center", "right", and "justify".
      */

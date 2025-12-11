@@ -43,6 +43,13 @@ import java.util.List;
 public class FactFHHSView extends PanacheEntityBase {
 
     /**
+     * Default constructor for JPA.
+     */
+    public FactFHHSView() {
+        // Default constructor required by JPA
+    }
+
+    /**
      * Constant representing boolean true in survey responses.
      */
     @Transient
@@ -416,9 +423,19 @@ public class FactFHHSView extends PanacheEntityBase {
      */
     public String vital_status;
 
+    /**
+     * Cached title value combining step and step instance.
+     * Transient field not persisted to the database.
+     */
     @Transient
     private String title;
 
+    /**
+     * Gets the title for this fact record.
+     * Title combines the step name with the step instance number if greater than 0.
+     *
+     * @return the formatted title string
+     */
     public String getTitle() {
         if (title == null) {
             title = this.step;
@@ -429,6 +446,14 @@ public class FactFHHSView extends PanacheEntityBase {
         }
         return title;
     }
+
+    /**
+     * Gets the list of cancer diagnosis rows for this family member.
+     * Creates a row for each cancer type that has been diagnosed, including
+     * the cancer type name and age at diagnosis.
+     *
+     * @return list of Row objects representing cancer diagnoses
+     */
     public List<Row> getRows() {
         List<Row> rows = new ArrayList<>();
         title = getTitle();
@@ -593,6 +618,13 @@ public class FactFHHSView extends PanacheEntityBase {
 
         return rows;
     }
+
+    /**
+     * Gets the list of rows for the proband (main respondent) including Ashkenazi ancestry.
+     * This method includes all cancer rows plus the Ashkenazi ancestry indicator.
+     *
+     * @return list of Row objects for the proband
+     */
     public List<Row> getProbandRows() {
         List<Row> rows = new ArrayList<>();
         rows.add(new Row(title, "Ashkenazi", ashkenazi));

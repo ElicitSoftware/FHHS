@@ -31,6 +31,13 @@ package com.elicitsoftware.model;
 public class Person {
 
     /**
+     * Default constructor.
+     */
+    public Person() {
+        // Default constructor
+    }
+
+    /**
      * The relationship of this person to the proband/main respondent.
      */
     private String Relationship;
@@ -270,6 +277,12 @@ public class Person {
         return Gender;
     }
 
+    /**
+     * Sets the gender of the person.
+     * Updates both the Person gender and the familyMember Sex field.
+     *
+     * @param gender the gender to set (male, female, or other)
+     */
     public void setGender(String gender) {
         if(gender != null && !gender.isEmpty()) {
             Gender = gender.toLowerCase();
@@ -287,6 +300,12 @@ public class Person {
         }
     }
 
+    /**
+     * Sets the vital status of the person.
+     * Updates both the Person vital status and the familyMember Status field.
+     *
+     * @param vital_Status the vital status to set (alive or deceased)
+     */
     public void setVital_Status(String vital_Status) {
         if(vital_Status != null && !vital_Status.isEmpty()) {
             Vital_Status = vital_Status.toLowerCase();
@@ -301,6 +320,11 @@ public class Person {
         }
     }
 
+    /**
+     * Gets the associated FamilyMember object.
+     *
+     * @return the FamilyMember associated with this Person
+     */
     public FamilyMember getFamilyMember() {
         return this.familyMember;
     }
@@ -469,36 +493,71 @@ public class Person {
         this.familyMember.Other_Cancer_Type = type;
     }
 
+    /**
+     * Sets the ovarian cancer diagnosis information.
+     *
+     * @param ovarian_Cancer the ovarian cancer diagnosis value
+     */
     public void setOvarian_Cancer(String ovarian_Cancer) {
         Ovarian_Cancer = ovarian_Cancer;
         this.familyMember.Ovarian_Cancer = ovarian_Cancer;
     }
 
+    /**
+     * Sets the pancreatic cancer diagnosis information.
+     *
+     * @param pancreatic_Cancer the pancreatic cancer diagnosis value
+     */
     public void setPancreatic_Cancer(String pancreatic_Cancer) {
         Pancreatic_Cancer = pancreatic_Cancer;
         this.familyMember.Pancreatic_Cancer = pancreatic_Cancer;
     }
 
+    /**
+     * Sets the prostate cancer diagnosis information.
+     *
+     * @param prostate_Cancer the prostate cancer diagnosis value
+     */
     public void setProstate_Cancer(String prostate_Cancer) {
         Prostate_Cancer = prostate_Cancer;
         this.familyMember.Prostate_Cancer = prostate_Cancer;
     }
 
+    /**
+     * Sets the stomach cancer diagnosis information.
+     *
+     * @param stomach_Cancer the stomach cancer diagnosis value
+     */
     public void setStomach_Cancer(String stomach_Cancer) {
         Stomach_Cancer = stomach_Cancer;
         this.familyMember.Stomach_Cancer = stomach_Cancer;
     }
 
+    /**
+     * Sets the testicular cancer diagnosis information.
+     *
+     * @param testicular_Cancer the testicular cancer diagnosis value
+     */
     public void setTesticular_Cancer(String testicular_Cancer) {
         Testicular_Cancer = testicular_Cancer;
         this.familyMember.Testicular_Cancer = testicular_Cancer;
     }
 
+    /**
+     * Sets the thyroid cancer diagnosis information.
+     *
+     * @param thyroid_Cancer the thyroid cancer diagnosis value
+     */
     public void setThyroid_Cancer(String thyroid_Cancer) {
         Thyroid_Cancer = thyroid_Cancer;
         this.familyMember.Thyroid_Cancer = thyroid_Cancer;
     }
 
+    /**
+     * Sets the unknown cancer type diagnosis information.
+     *
+     * @param unknown_Cancer the unknown cancer diagnosis value
+     */
     public void setUnknown_Cancer(String unknown_Cancer) {
         Unknown_Cancer = unknown_Cancer;
         this.familyMember.Unknown_Cancer = unknown_Cancer;

@@ -25,6 +25,13 @@ package com.elicitsoftware.request;
 public class ReportRequest {
 
     /**
+     * Default constructor.
+     */
+    public ReportRequest() {
+        // Default constructor
+    }
+
+    /**
      * The unique identifier of the respondent/participant for whom the report is requested.
      * This ID is used to query the database for relevant family history health survey data.
      */

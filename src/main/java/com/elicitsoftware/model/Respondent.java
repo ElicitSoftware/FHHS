@@ -53,35 +53,80 @@ import java.util.concurrent.TimeUnit;
 })
 public class Respondent extends PanacheEntityBase {
 
+    /**
+     * Default constructor for JPA.
+     */
+    public Respondent() {
+        // Default constructor required by JPA
+    }
+
+    /**
+     * Unique identifier for the respondent.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "RESPONDENT_ID_GENERATOR")
     @SequenceGenerator(name = "RESPONDENT_ID_GENERATOR", schema = "survey", sequenceName = "respondents_seq", allocationSize = 1)
     @Column(name = "id", unique = true, nullable = false, precision = 20)
     public Integer id;
 
+    /**
+     * Timestamp when the respondent record was created.
+     */
     @Column(name = "created_dt")
     @CreationTimestamp
     public OffsetDateTime createdDt;
 
+    /**
+     * Timestamp of the first time the respondent accessed the survey.
+     */
     @Column(name = "first_access_dt")
     public OffsetDateTime firstAccessDt;
 
+    /**
+     * Timestamp when the respondent finalized the survey.
+     */
     @Column(name = "finalized_dt")
     public OffsetDateTime finalizedDt;
+
+    /**
+     * Indicates whether this respondent record is active.
+     */
     public boolean active;
+
+    /**
+     * Number of times the respondent has logged in.
+     */
     public int logins;
 
-    // uni-directional many-to-one association to ActionType
+    /**
+     * The survey associated with this respondent.
+     */
     @ManyToOne
     @JoinColumn(name = "survey_id", nullable = false)
     public Survey survey;
+
+    /**
+     * Unique token for accessing the survey.
+     */
     public String token;
 
+    /**
+     * Finds a respondent by survey ID and token.
+     *
+     * @param survey_id the survey ID
+     * @param token the respondent token
+     * @return the matching Respondent or null if not found
+     */
     @Transient
     public static Respondent findBySurveyAndToken(Integer survey_id, String token) {
         return Respondent.find("survey.id = :survey_id and token = :token", Parameters.with("survey_id", survey_id).and("token", token)).firstResult();
     }
 
+    /**
+     * Calculates the elapsed time between first access and finalization.
+     *
+     * @return formatted time string (HH:mm:ss) or null if times not available
+     */
     @Transient
     public String getElapsedTime() {
         if (firstAccessDt != null && finalizedDt != null) {

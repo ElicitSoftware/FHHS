@@ -35,26 +35,51 @@ import jakarta.persistence.*;
 @Table(name = "post_survey_actions", schema = "survey")
 public class PostSurveyAction extends PanacheEntityBase {
 
+    /**
+     * Default constructor for JPA.
+     */
+    public PostSurveyAction() {
+        // Default constructor required by JPA
+    }
+
+    /**
+     * Unique identifier for the post survey action.
+     */
     @Id
     @SequenceGenerator(name = "ACTION_ID_GENERATOR", schema = "survey", sequenceName = "post_survey_actions_seq", allocationSize = 1)
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ACTION_ID_GENERATOR")
     @Column(name = "id", unique = true, nullable = false)
     public Integer id;
 
+    /**
+     * The survey associated with this action.
+     */
     @JsonbTransient
     @ManyToOne()
     @JoinColumn(name = "survey_id", nullable = false)
     public Survey survey;
 
+    /**
+     * Name of the action.
+     */
     @Column(name = "name")
     public String name;
 
+    /**
+     * Description of what the action does.
+     */
     @Column(name = "description")
     public String description;
 
+    /**
+     * URL endpoint for executing the action.
+     */
     @Column(name = "url")
     public String url;
 
+    /**
+     * Order in which this action should be executed.
+     */
     @Column(name = "execution_order")
     public Integer executionOrder;
 

@@ -34,6 +34,13 @@ import org.flywaydb.core.Flyway;
 public class MigrationService {
 
     /**
+     * Default constructor.
+     */
+    public MigrationService() {
+        // Default constructor for CDI
+    }
+
+    /**
      * Flyway instance configured for the "owner" datasource.
      * Injected using Quarkus CDI with the FlywayDataSource qualifier.
      */

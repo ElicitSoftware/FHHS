@@ -98,6 +98,11 @@ public class FamilyHistoryReportService {
     @ConfigProperty(name = "family.history.async.threads", defaultValue = "2")
     int asyncThreads;
 
+    /**
+     * Post survey action ID for tracking upload status.
+     * Configured via the {@code family.history.upload.psa.id} property.
+     * Defaults to 1 if not specified.
+     */
     @ConfigProperty(name = "family.history.upload.psa.id", defaultValue = "1")
     int psaId;
 
@@ -231,6 +236,11 @@ public class FamilyHistoryReportService {
         return future;
     }
 
+    /**
+     * Scheduled task that processes failed uploads and retries them.
+     * Runs every 15 minutes to check for RespondentPSA records with FAILED status
+     * that haven't been uploaded yet and haven't exceeded retry limits.
+     */
     @Scheduled(every = "15m")
     @Transactional
     void processUnsentUploads(){
