@@ -49,31 +49,62 @@ import java.util.concurrent.TimeUnit;
 @Table(name = "respondent_psa", schema = "survey")
 public class RespondentPSA extends PanacheEntityBase {
 
+    /**
+     * Default constructor for JPA.
+     */
+    public RespondentPSA() {
+        // Default constructor required by JPA
+    }
+
+    /**
+     * Unique identifier for the respondent PSA record.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "RESPONDENT_PSA_ID_GENERATOR")
     @SequenceGenerator(name = "RESPONDENT_PSA_ID_GENERATOR", schema = "survey", sequenceName = "post_survey_actions_seq", allocationSize = 1)
     @Column(name = "id", unique = true, nullable = false, precision = 20)
     public Integer id;
 
+    /**
+     * ID of the respondent associated with this action.
+     */
     @Column(name = "respondent_id")
     public long respondentId;
 
+    /**
+     * Post survey action ID.
+     */
     @Column(name = "post_survey_action_id")
     public long psaId;
 
+    /**
+     * Number of upload attempts.
+     */
     @Column(name = "tries")
     public long tries;
 
+    /**
+     * Current status of the action (e.g., SUCCESS, FAILED).
+     */
     @Column(name = "status")
     public String status;
 
+    /**
+     * Error message if the action failed.
+     */
     @Column(name = "error_msg")
     public String error;
 
+    /**
+     * Timestamp when the record was created.
+     */
     @Column(name = "created_dt")
     @CreationTimestamp
     public OffsetDateTime createdDt;
 
+    /**
+     * Timestamp when the file was successfully uploaded.
+     */
     @Column(name = "uploaded_dt")
     public OffsetDateTime uploadedDt;
 

@@ -359,6 +359,13 @@ public class FamilyMember {
         return sb.toString();
     }
 
+    /**
+     * Generates a unique identifier string for this family member.
+     * The ID includes name, age, and cancer diagnoses with ages.
+     * Multiple cancers are marked with an asterisk.
+     *
+     * @return unique ID string for this family member
+     */
     private String getID() {
         StringBuilder sb = new StringBuilder(this.name);
 
@@ -544,6 +551,12 @@ public class FamilyMember {
 
     }
 
+    /**
+     * Checks if this family member has multiple instances of any cancer type.
+     * Used for special formatting and risk assessment in reports.
+     *
+     * @return true if any cancer type has multiple occurrences, false otherwise
+     */
     public boolean hasMultipleCancers() {
         if (Multiple_Bladder_Cancer != null && Multiple_Bladder_Cancer.equalsIgnoreCase("true")) {
             return true;

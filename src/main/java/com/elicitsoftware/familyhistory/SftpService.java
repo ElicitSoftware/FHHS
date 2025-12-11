@@ -51,26 +51,57 @@ import java.util.Optional;
 @ApplicationScoped
 public class SftpService {
 
+    /**
+     * Default constructor.
+     */
+    public SftpService() {
+        // Default constructor for CDI
+    }
+
+    /**
+     * Logger instance for this class.
+     */
     private static final Logger LOG = LoggerFactory.getLogger(SftpService.class);
     
+    /**
+     * SFTP server hostname.
+     */
     @ConfigProperty(name = "family.history.sftp.host")
     String sftpHost;
     
+    /**
+     * SFTP username for authentication.
+     */
     @ConfigProperty(name = "family.history.sftp.username")
     String sftpUsername;
     
+    /**
+     * Optional password for SFTP authentication.
+     */
     @ConfigProperty(name = "family.history.sftp.password")
     Optional<String> sftpPassword;
     
+    /**
+     * Optional private key for SFTP authentication.
+     */
     @ConfigProperty(name = "family.history.sftp.privateKey")
     Optional<String> sftpPrivateKey;
     
+    /**
+     * Remote path on SFTP server where files are uploaded.
+     */
     @ConfigProperty(name = "family.history.sftp.path")
     String sftpPath;
     
+    /**
+     * SFTP server port (default 22).
+     */
     @ConfigProperty(name = "family.history.sftp.port", defaultValue = "22")
     int sftpPort;
     
+    /**
+     * Connection timeout in milliseconds (default 30000).
+     */
     @ConfigProperty(name = "family.history.sftp.timeout", defaultValue = "30000")
     int sftpTimeout;
     

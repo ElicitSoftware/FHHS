@@ -32,6 +32,13 @@ import java.util.Map;
 public class PDFDocument {
 
     /**
+     * Default constructor.
+     */
+    public PDFDocument() {
+        // Default constructor
+    }
+
+    /**
      * Array of content elements that make up the PDF document.
      * Each Content object represents a distinct element like text, tables, or images.
      */

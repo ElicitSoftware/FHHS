@@ -39,26 +39,51 @@ import jakarta.persistence.*;
 @Table(name = "reports", schema = "survey")
 public class ReportDefinition extends PanacheEntityBase {
 
+    /**
+     * Default constructor for JPA.
+     */
+    public ReportDefinition() {
+        // Default constructor required by JPA
+    }
+
+    /**
+     * Unique identifier for the report definition.
+     */
     @Id
     @SequenceGenerator(name = "REPORT_ID_GENERATOR", schema = "survey", sequenceName = "reports_seq", allocationSize = 1)
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "REPORT_ID_GENERATOR")
     @Column(name = "id", unique = true, nullable = false)
     public Integer id;
 
+    /**
+     * The survey associated with this report.
+     */
     @JsonbTransient
     @ManyToOne()
     @JoinColumn(name = "survey_id", nullable = false)
     public Survey survey;
 
+    /**
+     * Name of the report.
+     */
     @Column(name = "name")
     public String name;
 
+    /**
+     * Description of the report content.
+     */
     @Column(name = "description")
     public String description;
 
+    /**
+     * URL endpoint for generating the report.
+     */
     @Column(name = "url")
     public String url;
 
+    /**
+     * Display order for this report in lists.
+     */
     @Column(name = "display_order")
     public Integer displayOrder;
 

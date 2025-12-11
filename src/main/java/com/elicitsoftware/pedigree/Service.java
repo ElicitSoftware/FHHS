@@ -48,6 +48,13 @@ import java.util.Map;
 public class Service {
 
     /**
+     * Default constructor.
+     */
+    public Service() {
+        // Default constructor for CDI
+    }
+
+    /**
      * Injected FamilyManager for accessing family data and relationships.
      */
     @Inject

@@ -43,6 +43,13 @@ import java.util.Objects;
 public class FamilyManager {
 
     /**
+     * Default constructor.
+     */
+    public FamilyManager() {
+        // Default constructor for CDI
+    }
+
+    /**
      * Default value used when age is unknown.
      */
     private static final String UKN_AGE = "unk. age";
@@ -286,6 +293,14 @@ public class FamilyManager {
         }
     }
 
+    /**
+     * Gets or creates a Person object based on the relationship type in the fact record.
+     * Uses lazy initialization to create Person objects only when needed.
+     *
+     * @param fact the FactFHHSView containing relationship information
+     * @return the Person object corresponding to the relationship
+     * @throws RelationException if the relationship type is not recognized
+     */
     private Person getPerson(FactFHHSView fact) throws RelationException {
         String key = fact.step + Objects.requireNonNullElse(fact.step_instance, "");
         switch (fact.step) {
@@ -350,6 +365,11 @@ public class FamilyManager {
 
     }
 
+    /**
+     * Assigns unique IDs to all family members following pedigree conventions.
+     * Sets parent relationship IDs (Dadid, Momid) to establish family structure.
+     * IDs follow a specific numbering scheme for pedigree generation tools.
+     */
     private void setIDs() {
         // Person ID F M
 
@@ -468,6 +488,11 @@ public class FamilyManager {
         }
     }
 
+    /**
+     * Adjusts proband gender if marked as 'Other' and has children.
+     * Kinship2 pedigree tools cannot model an 'Other' parent, so the proband
+     * is modeled as female with an unknown partner for visualization purposes.
+     */
     private void setProbandSexIfOtherAndParent() {
         //Kindship2 can not model an other parent.
         // if the proband is other and parent
@@ -477,7 +502,11 @@ public class FamilyManager {
         }
     }
 
-
+    /**
+     * Adds missing parent entries to complete the family structure.
+     * Ensures each person has both mother and father entries, adding unknown
+     * parent placeholders where necessary for pedigree completeness.
+     */
     private void addMissingParents() {
         //If we have one of the parents add the other as unknown.
         if (this.Father == null && this.Mother != null) {
@@ -537,6 +566,12 @@ public class FamilyManager {
 
     }
 
+    /**
+     * Compiles the complete list of all family members in the structure.
+     * Includes all known and unknown family members with appropriate names assigned.
+     *
+     * @return list of all FamilyMember objects in the family
+     */
     private List<FamilyMember> getFamilyMembers() {
         List<FamilyMember> members = new ArrayList<FamilyMember>();
 
@@ -639,6 +674,13 @@ public class FamilyManager {
         return members;
     }
 
+    /**
+     * Gets an unknown person placeholder with the specified sex.
+     * Used to create placeholder family members when information is incomplete.
+     *
+     * @param sex the gender of the unknown person
+     * @return a Person object configured as unknown
+     */
     private Person getUnknownPerson(String sex) {
         Person p = new Person();
         p.setGender(sex);
@@ -646,6 +688,10 @@ public class FamilyManager {
         return p;
     }
 
+    /**
+     * Adds an unknown father entry to the family structure.
+     * Creates a placeholder male parent when father information is not available.
+     */
     private void addUnknownFather() {
         if (this.UnknownFather == null) {
             this.UnknownFather = getUnknownPerson(MALE);
@@ -653,6 +699,10 @@ public class FamilyManager {
         }
     }
 
+    /**
+     * Adds an unknown mother entry to the family structure.
+     * Creates a placeholder female parent when mother information is not available.
+     */
     private void addUnknownMother() {
         if (this.UnknownMother == null) {
             this.UnknownMother = getUnknownPerson(FEMALE);
@@ -660,6 +710,10 @@ public class FamilyManager {
         }
     }
 
+    /**
+     * Adds an unknown husband entry to the family structure.
+     * Creates a placeholder male spouse when husband information is not available.
+     */
     private void addUnknownHusband() {
         if (this.UnknownHusband == null) {
             this.UnknownHusband = getUnknownPerson(MALE);
@@ -667,6 +721,10 @@ public class FamilyManager {
         }
     }
 
+    /**
+     * Adds an unknown wife entry to the family structure.
+     * Creates a placeholder female spouse when wife information is not available.
+     */
     private void addUnknownWife() {
         if (this.UnknownWife == null) {
             this.UnknownWife = getUnknownPerson(FEMALE);

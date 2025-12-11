@@ -164,12 +164,25 @@ public class Service {
         return new ReportResponse("Cancer Summary", innerHTML.toString(), pdf);
     }
 
+    /**
+     * Sets a row in the PDF table with cancer data.
+     *
+     * @param row the row data to add
+     * @param table the table to add the row to
+     * @param index the row index
+     */
     private void setPDFTableRow(Row row, Table table, int index) {
         table.body[index][0] = row.getTitle();
         table.body[index][1] = row.getLabel().replace("Age", "");
         table.body[index][2] = row.getValue();
     }
 
+    /**
+     * Gets the text value for display, handling null and blank values.
+     *
+     * @param value the value to process
+     * @return formatted text value
+     */
     private String getTextValue(String value) {
         if (value == null || value.isBlank() || value.equalsIgnoreCase("true")) {
             return UKN_AGE;

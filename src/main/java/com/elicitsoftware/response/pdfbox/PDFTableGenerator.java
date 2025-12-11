@@ -20,15 +20,46 @@ import org.apache.pdfbox.util.Matrix;
 import java.io.IOException;
 import java.util.Arrays;
 
+/**
+ * Generates PDF tables using Apache PDFBox.
+ * <p>
+ * This class provides functionality to render tabular data in PDF format,
+ * handling pagination, grid drawing, and content positioning.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 @RequestScoped
 public class PDFTableGenerator {
 
-    // Generates document from Table object
+    /**
+     * Default constructor.
+     */
+    public PDFTableGenerator() {
+        // Default constructor for CDI
+    }
+
+    /**
+     * Generates a PDF document from a Table object.
+     *
+     * @param document the PDF document to add the table to
+     * @param table the table to render
+     * @throws IOException if an error occurs during generation
+     */
     public void generatePDF(PDDocument document, Table table) throws IOException {
         drawTable(document, table);
     }
 
-    // Configures basic setup for the table and draws it page by page
+    /**
+     * Draws the table across multiple pages as needed.
+     * Calculates pagination and renders each page.
+     *
+     * @param document the PDF document
+     * @param table the table to draw
+     * @throws IOException if an error occurs during drawing
+     */
     public void drawTable(PDDocument document, Table table) throws IOException {
         // Calculate pagination
         Integer rowsPerPage = (int) Math.floor(table.getHeight() / table.getRowHeight()) - 1; // subtract
@@ -44,7 +75,15 @@ public class PDFTableGenerator {
         }
     }
 
-    // Draws current page table grid and borderlines and content
+    /**
+     * Draws the current page of table content.
+     *
+     * @param document the PDF document
+     * @param table the table being drawn
+     * @param currentPageContent content for the current page
+     * @param contentStream the content stream to draw to
+     * @throws IOException if an error occurs during drawing
+     */
     private void drawCurrentPage(PDDocument document, Table table, String[][] currentPageContent, PDPageContentStream contentStream)
             throws IOException {
         PDPage page = document.getPage(document.getNumberOfPages() - 1);
@@ -81,7 +120,16 @@ public class PDFTableGenerator {
 //        page.cursorY = nextTextY;
     }
 
-    // Writes the content for one line
+    /**
+     * Writes a single line of table content.
+     *
+     * @param lineContent the content for this line
+     * @param contentStream the content stream to write to
+     * @param nextTextX starting X coordinate
+     * @param nextTextY starting Y coordinate
+     * @param table the table being drawn
+     * @throws IOException if an error occurs during writing
+     */
     private void writeContentLine(String[] lineContent, PDPageContentStream contentStream, float nextTextX, float nextTextY,
                                   Table table) throws IOException {
         for (int i = 0; i < table.getNumberOfColumns(); i++) {
@@ -94,6 +142,15 @@ public class PDFTableGenerator {
         }
     }
 
+    /**
+     * Draws the table grid lines for rows and columns.
+     *
+     * @param table the table being drawn
+     * @param currentPageContent content for the current page
+     * @param contentStream the content stream to draw to
+     * @param tableTopY the Y coordinate of the table top
+     * @throws IOException if an error occurs during drawing
+     */
     private void drawTableGrid(Table table, String[][] currentPageContent, PDPageContentStream contentStream, float tableTopY)
             throws IOException {
         // Draw row lines
@@ -121,6 +178,14 @@ public class PDFTableGenerator {
 
     }
 
+    /**
+     * Extracts content for the current page from the full table.
+     *
+     * @param table the table being paginated
+     * @param rowsPerPage number of rows per page
+     * @param pageCount current page number
+     * @return content array for the current page
+     */
     private String[][] getContentForCurrentPage(Table table, Integer rowsPerPage, int pageCount) {
         int startRange = pageCount * rowsPerPage;
         int endRange = (pageCount * rowsPerPage) + rowsPerPage;
@@ -139,6 +204,15 @@ public class PDFTableGenerator {
 //        return page;
 //    }
 
+    /**
+     * Generates a content stream for drawing.
+     * Applies transformations for landscape orientation if needed.
+     *
+     * @param document the PDF document
+     * @param table the table being drawn
+     * @return configured content stream
+     * @throws IOException if an error occurs creating the stream
+     */
     private PDPageContentStream generateContentStream(PDDocument document, Table table) throws IOException {
 
         PDPageContentStream contentStream = new PDPageContentStream(document, document.getPage(document.getNumberOfPages() - 1), PDPageContentStream.AppendMode.OVERWRITE, false);

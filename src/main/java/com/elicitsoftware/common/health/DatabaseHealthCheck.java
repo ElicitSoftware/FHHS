@@ -20,12 +20,36 @@ import jakarta.inject.Inject;
 import javax.sql.DataSource;
 import java.sql.Connection;
 
+/**
+ * Health check implementation for database connectivity.
+ * <p>
+ * This health check verifies that the application can connect to the database
+ * and execute queries. It is marked as a readiness check, meaning the application
+ * will not receive traffic until this check passes.
+ * </p>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 2025
+ */
 @Readiness
 @ApplicationScoped
 public class DatabaseHealthCheck implements HealthCheck {
 
+    /**
+     * The data source used to obtain database connections.
+     * Injected by the CDI container.
+     */
     @Inject
     DataSource dataSource;
+
+    /**
+     * Default constructor.
+     * CDI container will instantiate this class and inject dependencies.
+     */
+    public DatabaseHealthCheck() {
+        // Default constructor for CDI
+    }
 
     @Override
     public HealthCheckResponse call() {

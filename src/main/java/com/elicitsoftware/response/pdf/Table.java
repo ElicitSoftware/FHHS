@@ -26,6 +26,13 @@ package com.elicitsoftware.response.pdf;
 public class Table {
 
     /**
+     * Default constructor.
+     */
+    public Table() {
+        // Default constructor
+    }
+
+    /**
      * Array of header labels for the table columns.
      */
     public String[] headers;

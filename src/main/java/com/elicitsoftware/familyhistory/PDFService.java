@@ -73,29 +73,100 @@ import java.util.List;
 @RequestScoped
 public class PDFService {
 
+    /**
+     * Default constructor.
+     */
+    public PDFService() {
+        // Default constructor for CDI
+    }
+
+    /**
+     * Standard page size for all generated PDFs.
+     */
     private static final PDRectangle PAGE_SIZE = PDRectangle.LETTER;
+
+    /**
+     * Top margin for page headers.
+     */
     static final float HEADER_MARGIN = 20f;
+
+    /**
+     * Margin for main text content.
+     */
     static final float TEXT_MARGIN = 40f;
+
+    /**
+     * Padding around content elements.
+     */
     static final float PADDING = 40f;
-    // Font configuration
+
+    /**
+     * Font used for text content in the PDF.
+     */
     static final PDFont TEXT_FONT = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+
+    /**
+     * Base font size for PDF text.
+     */
     static final float FONT_SIZE = 10f;
+
+    /**
+     * Line spacing (leading) for text.
+     */
     static final float LEADING = FONT_SIZE;
 
-    // Table configuration
+    /**
+     * Height of table rows.
+     */
     private static final float ROW_HEIGHT = 15;
+
+    /**
+     * Margin within table cells.
+     */
     private static final float CELL_MARGIN = 2;
 
+    /**
+     * The PDF document being constructed.
+     */
     PDDocument document;
+
+    /**
+     * Current page being written to.
+     */
     PDPage page;
+
+    /**
+     * Content stream for drawing on the current page.
+     */
     PDPageContentStream contentStream;
+
+    /**
+     * Current vertical position on the page.
+     */
     float yPosition;
+
+    /**
+     * Height of the current page.
+     */
     float pageHeight;
+
+    /**
+     * Width of the current page.
+     */
     float pageWidth;
 
+    /**
+     * Base URL for the application, used in generated content.
+     */
     @ConfigProperty(name = "app.base.url")
     String baseUrl;
 
+    /**
+     * Generates a PDF report for a specific respondent.
+     *
+     * @param respondentId the ID of the respondent
+     * @return byte array containing the generated PDF
+     */
     public byte[] generatePDF(long respondentId) {
         try {
             //Get the respondent
@@ -174,6 +245,13 @@ public class PDFService {
         }
     }
 
+    /**
+     * Adds a title block to the current PDF page.
+     * Handles page breaks if the title doesn't fit on the current page.
+     *
+     * @param title the title text to add
+     * @throws IOException if an error occurs while writing to the PDF
+     */
     public void addTitleBlock(String title) throws IOException {
         if (title != null && !title.isEmpty()) {
             //Add some space between the last item and the new title.
@@ -234,6 +312,13 @@ public class PDFService {
         yPosition -= LEADING;
     }
 
+    /**
+     * Adds an SVG graphic to the PDF in landscape orientation.
+     * Scales and centers the SVG to fit within the page margins.
+     *
+     * @param content the content containing the SVG data
+     * @throws IOException if an error occurs while processing the SVG
+     */
     void addSVG(Content content) throws IOException {
         PDRectangle landscape = new PDRectangle(PDRectangle.LETTER.getHeight(), PDRectangle.LETTER.getWidth());
 
@@ -307,6 +392,13 @@ public class PDFService {
         }
     }
 
+    /**
+     * Creates a Table object from Content data.
+     * Calculates column widths and configures table properties.
+     *
+     * @param content the content containing table data
+     * @return configured Table object ready for rendering
+     */
     private static Table createContent(Content content) {
 
         // Total size of columns must not be greater than table width.
@@ -364,6 +456,10 @@ public class PDFService {
         return table;
     }
 
+    /**
+     * Adds headers and footers to all pages in the document.
+     * Includes page numbers, date, and base URL.
+     */
     void addHeadersAndFooters() {
         // Step 2: Add header and footer to each page
         int totalPages = document.getNumberOfPages();
@@ -433,7 +529,13 @@ public class PDFService {
         }
     }
 
-    // Configures basic setup for the table and draws it page by page
+    /**
+     * Draws a table across multiple pages if necessary.
+     * Handles pagination and page breaks automatically.
+     *
+     * @param table the table to draw
+     * @throws IOException if an error occurs while drawing
+     */
     public void drawTable(Table table) throws IOException {
         // Calculate pagination
         Integer rowsPerPage = (int) Math.floor(table.getHeight() / table.getRowHeight()) - 1;
@@ -454,6 +556,14 @@ public class PDFService {
         }
     }
 
+    /**
+     * Generates a content stream for drawing table content.
+     * Applies transformation matrix for landscape orientation if needed.
+     *
+     * @param table the table being drawn
+     * @return configured PDPageContentStream
+     * @throws IOException if an error occurs creating the stream
+     */
     private PDPageContentStream generateContentStream(Table table) throws IOException {
 
         PDPageContentStream contentStream = new PDPageContentStream(document, document.getPage(document.getNumberOfPages() - 1), PDPageContentStream.AppendMode.APPEND, false);
@@ -466,6 +576,14 @@ public class PDFService {
         return contentStream;
     }
 
+    /**
+     * Extracts the content rows for the current page.
+     *
+     * @param table the table being paginated
+     * @param rowsPerPage number of rows per page
+     * @param pageCount current page number
+     * @return array of rows for the current page
+     */
     private String[][] getContentForCurrentPage(Table table, Integer rowsPerPage, int pageCount) {
         int startRange = pageCount * rowsPerPage;
         int endRange = (pageCount * rowsPerPage) + rowsPerPage;
@@ -475,7 +593,13 @@ public class PDFService {
         return Arrays.copyOfRange(table.getContent(), startRange, endRange);
     }
 
-    // Draws current page table grid and borderlines and content
+    /**
+     * Draws the current page of table content including grid and data.
+     *
+     * @param table the table being drawn
+     * @param currentPageContent the content rows for this page
+     * @throws IOException if an error occurs while drawing
+     */
     private void drawCurrentPage(Table table, String[][] currentPageContent)
             throws IOException {
         PDPage page = document.getPage(document.getNumberOfPages() - 1);
@@ -510,7 +634,15 @@ public class PDFService {
         yPosition = nextTextY;
     }
 
-    // Writes the content for one line
+    /**
+     * Writes a single line of table content.
+     *
+     * @param lineContent array of cell values for the line
+     * @param nextTextX starting X coordinate
+     * @param nextTextY starting Y coordinate
+     * @param table the table being drawn
+     * @throws IOException if an error occurs while writing
+     */
     private void writeContentLine(String[] lineContent, float nextTextX, float nextTextY,
                                   Table table) throws IOException {
         for (int i = 0; i < table.getNumberOfColumns(); i++) {
@@ -523,6 +655,14 @@ public class PDFService {
         }
     }
 
+    /**
+     * Draws the table grid lines.
+     *
+     * @param table the table being drawn
+     * @param currentPageContent the content for this page
+     * @param tableTopY the Y coordinate of the table top
+     * @throws IOException if an error occurs while drawing
+     */
     private void drawTableGrid(Table table, String[][] currentPageContent, float tableTopY)
             throws IOException {
         // Draw row lines
@@ -550,6 +690,17 @@ public class PDFService {
 
     }
 
+    /**
+     * Wraps text to fit within a specified width.
+     * Breaks text at word boundaries to ensure proper formatting.
+     *
+     * @param text the text to wrap
+     * @param font the font being used
+     * @param fontSize the font size
+     * @param maxWidth maximum width in points
+     * @return list of wrapped text lines
+     * @throws IOException if font width calculation fails
+     */
     public static List<String> wrapText(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
         List<String> lines = new ArrayList<>();
         String[] words = new String[0];
@@ -576,6 +727,13 @@ public class PDFService {
         return lines;
     }
 
+    /**
+     * Calls a report service endpoint to generate report content.
+     *
+     * @param rpt the report definition containing the service URL
+     * @param respondentId the respondent ID for the report
+     * @return the report response containing generated content
+     */
     private ReportResponse callReport(ReportDefinition rpt, long respondentId) {
         try {
             ReportRequest request = new ReportRequest();
