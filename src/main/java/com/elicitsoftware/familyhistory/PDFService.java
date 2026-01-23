@@ -192,6 +192,31 @@ public class PDFService {
             }
 
             for (ReportResponse response : reportResponses) {
+                if (response == null) {
+                    System.out.println("FHHS PDFService.generatePDF - Skipping null response");
+                    continue;
+                }
+
+                System.out.println("FHHS PDFService.generatePDF - Processing response: " + response.title);
+                System.out.println("  response.pdf is null: " + (response.pdf == null));
+                if (response.pdf != null) {
+                    System.out.println("  response.pdf.title: " + response.pdf.title);
+                    System.out.println("  response.pdf.content length: " + (response.pdf.content != null ? response.pdf.content.length : "null"));
+                }
+
+                // If the PDF payload is missing, render a safe error block instead of crashing
+                if (response.pdf == null) {
+                    System.out.println("FHHS PDFService.generatePDF - PDF is null, rendering error block");
+                    String title = (response.title != null && !response.title.isEmpty()) ? response.title : "Report Generation Error";
+                    addTitleBlock(title);
+                    String errorText = (response.innerHTML != null && !response.innerHTML.isEmpty())
+                            ? response.innerHTML.replaceAll("[\\r\\n\\t]", " ").replaceAll("<[^>]+>", " ").replaceAll("&nbsp;", " ").trim()
+                            : "Failed to generate report content.";
+                    addTextBlock(errorText);
+                    // Move to next response
+                    continue;
+                }
+
                 // Close the current content stream if a new page is needed
                 if (response.pdf.pageBreak) {
                     contentStream.close();
@@ -743,9 +768,65 @@ public class PDFService {
                     .build(ReportService.class);
             ReportResponse reportResponse = reportService.callReport(request);
             return reportResponse;
-        } catch (Exception e) {
+        } catch (jakarta.ws.rs.WebApplicationException e) {
+            // Extract detailed service error message
+            String errorMessage = "Service error: " + e.getMessage();
+            if (e.getResponse() != null) {
+                int status = e.getResponse().getStatus();
+                if (e.getResponse().hasEntity()) {
+                    try {
+                        String responseBody = e.getResponse().readEntity(String.class);
+                        if (responseBody != null && !responseBody.trim().isEmpty()) {
+                            errorMessage = responseBody;
+                        } else {
+                            errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
+                        }
+                    } catch (Exception readException) {
+                        errorMessage = (status == 403)
+                                ? "Access forbidden - License validation may have failed. Please check your license configuration."
+                                : "Service error (HTTP " + status + "): " + e.getMessage();
+                    }
+                } else {
+                    errorMessage = (status == 403)
+                            ? "Access forbidden - License validation may have failed. Please check your license configuration."
+                            : "Service error (HTTP " + status + "): " + e.getMessage();
+                }
+            }
+
             ReportResponse reportResponse = new ReportResponse();
+            reportResponse.title = "Error: " + rpt.name;
+            reportResponse.innerHTML = errorMessage;
+
+            // Initialize PDF document with detailed error message
+            com.elicitsoftware.response.pdf.PDFDocument pdfDoc = new com.elicitsoftware.response.pdf.PDFDocument();
+            pdfDoc.title = "Error: " + rpt.name;
+            pdfDoc.pageBreak = false;
+            Content errorContent = new Content();
+            String cleanErrorMessage = ("Error generating " + rpt.name + " report: " + errorMessage).replaceAll("[\\r\\n\\t]", " ").trim();
+            errorContent.text = cleanErrorMessage;
+            pdfDoc.content = new Content[]{errorContent};
+            reportResponse.pdf = pdfDoc;
+            
+            System.out.println("FHHS PDFService.callReport - Error for " + rpt.name);
+            System.out.println("  Error message: " + cleanErrorMessage);
+            System.out.println("  PDF title: " + pdfDoc.title);
+            System.out.println("  PDF content length: " + (pdfDoc.content != null ? pdfDoc.content.length : "null"));
+            System.out.println("  PDF content[0].text: " + (pdfDoc.content != null && pdfDoc.content.length > 0 ? pdfDoc.content[0].text : "null"));
+            
+            return reportResponse;
+        } catch (Exception e) {
+            // Generic error path
+            ReportResponse reportResponse = new ReportResponse();
+            reportResponse.title = "Error: " + rpt.name;
             reportResponse.innerHTML = e.getMessage();
+
+            com.elicitsoftware.response.pdf.PDFDocument pdfDoc = new com.elicitsoftware.response.pdf.PDFDocument();
+            pdfDoc.title = "Error: " + rpt.name;
+            pdfDoc.pageBreak = false;
+            Content errorContent = new Content();
+            errorContent.text = ("Error generating " + rpt.name + " report: " + (e.getMessage() != null ? e.getMessage() : "Unknown error")).replaceAll("[\\r\\n\\t]", " ").trim();
+            pdfDoc.content = new Content[]{errorContent};
+            reportResponse.pdf = pdfDoc;
             return reportResponse;
         }
     }
