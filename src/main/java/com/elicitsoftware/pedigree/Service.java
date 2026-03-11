@@ -23,12 +23,23 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * REST service for generating family pedigree reports and visualizations.
@@ -47,6 +58,11 @@ import java.util.Map;
 @RequestScoped
 public class Service {
 
+    private static final HttpClient PEDIGREE_HTTP_CLIENT = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(2))
+            .build();
+
     /**
      * Default constructor.
      */
@@ -59,6 +75,9 @@ public class Service {
      */
     @Inject
     FamilyManager familyManager;
+
+    @Inject
+    Tracer tracer;
 
     /**
      * URL for the external pedigree generation service.
@@ -143,18 +162,87 @@ public class Service {
      * @return the SVG content of the generated pedigree chart
      */
     private String callPedigree(String family) {
+        URI endpoint = URI.create(pedigreeURL);
+        int endpointPort = resolvePort(endpoint);
 
-        MultipartUtility multipart;
-        List<String> response;
-        try {
-            multipart = new MultipartUtility(this.pedigreeURL, "UTF-8");
-            multipart.addFilePart("ped", family);
-            response = multipart.finish();
-            return String.join("",response);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            return e.getMessage();
+        Span span = tracer.spanBuilder("pedigree.call")
+                .setSpanKind(SpanKind.CLIENT)
+                .startSpan();
+        span.setAttribute("server.address", endpoint.getHost() == null ? pedigreeURL : endpoint.getHost());
+        if (endpointPort > 0) {
+            span.setAttribute("server.port", endpointPort);
         }
+        span.setAttribute("url.full", pedigreeURL);
+        span.setAttribute("http.request.method", "POST");
+        span.setAttribute("rpc.system", "http");
+        span.setAttribute("pedigree.payload.length", family.length());
+
+        try (Scope ignored = span.makeCurrent()) {
+            String boundary = "----ElicitBoundary" + UUID.randomUUID();
+            byte[] requestBody = buildMultipartBody(boundary, "ped", family);
+
+            HttpRequest request = HttpRequest.newBuilder(endpoint)
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(requestBody))
+                    .build();
+
+            HttpResponse<String> response = PEDIGREE_HTTP_CLIENT.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+
+            int statusCode = response.statusCode();
+            span.setAttribute("http.response.status_code", statusCode);
+            if (statusCode == 200 || statusCode == 201) {
+                span.setStatus(StatusCode.OK);
+                return response.body();
+            }
+
+            String error = "Server returned non-OK status: " + statusCode;
+            span.setStatus(StatusCode.ERROR, error);
+            return error;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            span.recordException(e);
+            span.setStatus(StatusCode.ERROR, "Interrupted while calling pedigree service");
+            return "Interrupted while calling pedigree service";
+        } catch (IOException e) {
+            span.recordException(e);
+            span.setStatus(StatusCode.ERROR, e.getMessage());
+            return e.getMessage();
+        } finally {
+            span.end();
+        }
+    }
+
+    private byte[] buildMultipartBody(String boundary, String fieldName, String value) {
+        StringBuilder body = new StringBuilder();
+        body.append("--").append(boundary).append("\r\n");
+        body.append("Content-Disposition: form-data; name=\"")
+                .append(fieldName)
+                .append("\"; filename=\"")
+                .append(fieldName)
+                .append("\"\r\n");
+        body.append("Content-Type: text/plain\r\n");
+        body.append("Content-Transfer-Encoding: binary\r\n\r\n");
+        body.append(value).append("\r\n");
+        body.append("--").append(boundary).append("--\r\n");
+        return body.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private int resolvePort(URI endpoint) {
+        if (endpoint.getPort() > 0) {
+            return endpoint.getPort();
+        }
+        String scheme = endpoint.getScheme();
+        if ("https".equalsIgnoreCase(scheme)) {
+            return 443;
+        }
+        if ("http".equalsIgnoreCase(scheme)) {
+            return 80;
+        }
+        return -1;
     }
 
     /**

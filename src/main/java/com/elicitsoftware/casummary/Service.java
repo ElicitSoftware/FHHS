@@ -13,19 +13,24 @@ package com.elicitsoftware.casummary;
  */
 
 import com.elicitsoftware.model.Card;
-import com.elicitsoftware.model.FactFHHSView;
+import com.elicitsoftware.model.CancerHistoryRepository;
+import com.elicitsoftware.model.FamilyHistoryRecord;
 import com.elicitsoftware.model.Row;
+import com.elicitsoftware.model.RowConverter;
 import com.elicitsoftware.request.ReportRequest;
 import com.elicitsoftware.response.ReportResponse;
 import com.elicitsoftware.response.pdf.Content;
 import com.elicitsoftware.response.pdf.PDFDocument;
 import com.elicitsoftware.response.pdf.Style;
 import com.elicitsoftware.response.pdf.Table;
-import io.quarkus.panache.common.Sort;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -48,11 +53,6 @@ import java.util.Map.Entry;
 public class Service {
 
     /**
-     * Default value used when age information is unknown.
-     */
-    private static final String UKN_AGE = "Unknown";
-
-    /**
      * String buffer for building PDF table content.
      */
     private StringBuffer pdfTableSB = null;
@@ -61,6 +61,12 @@ public class Service {
      * Default title for cancer summary reports.
      */
     private static String TITLE = "Cancer Summary";
+
+    /**
+     * Repository for optimized family history queries.
+     */
+    @Inject
+    CancerHistoryRepository cancerHistoryRepository;
 
     /**
      * Default constructor.
@@ -111,17 +117,19 @@ public class Service {
         String property = "";
 
         StringBuffer innerHTML = new StringBuffer();
-        List<FactFHHSView> facts = FactFHHSView.find("respondent_id =?1 and step != 'Proband' ", Sort.by("relationship").and("step"), req.id).list();
+        List<FamilyHistoryRecord> facts = cancerHistoryRepository.findFamilyHistoryByRespondentId(req.id);
+        // Filter out proband records (we only want relatives)
+        facts.removeIf(f -> f.step != null && f.step.equals("Proband"));
 
         PDFDocument pdf = new PDFDocument();
         pdf.title = TITLE;
         pdf.styles = getPDFStyles();
         if (facts.size() > 0) {
             int i = 0;
-            for (FactFHHSView f : facts) {
-                List<Row> rows = f.getRows();
+            for (FamilyHistoryRecord f : facts) {
+                List<Row> rows = RowConverter.toRows(f);
                 if (rows.size() > 0) {
-                    property = f.getTitle();
+                    property = f.step;
                     Card card = cards.get(property);
                     if (card == null) {
                         card = new Card(property);
@@ -175,19 +183,6 @@ public class Service {
         table.body[index][0] = row.getTitle();
         table.body[index][1] = row.getLabel().replace("Age", "");
         table.body[index][2] = row.getValue();
-    }
-
-    /**
-     * Gets the text value for display, handling null and blank values.
-     *
-     * @param value the value to process
-     * @return formatted text value
-     */
-    private String getTextValue(String value) {
-        if (value == null || value.isBlank() || value.equalsIgnoreCase("true")) {
-            return UKN_AGE;
-        }
-        return value;
     }
 
     /**
