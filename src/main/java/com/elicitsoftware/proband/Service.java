@@ -12,8 +12,10 @@ package com.elicitsoftware.proband;
  */
 
 import com.elicitsoftware.model.Card;
-import com.elicitsoftware.model.FactFHHSView;
+import com.elicitsoftware.model.CancerHistoryRepository;
+import com.elicitsoftware.model.FamilyHistoryRecord;
 import com.elicitsoftware.model.Row;
+import com.elicitsoftware.model.RowConverter;
 import com.elicitsoftware.request.ReportRequest;
 import com.elicitsoftware.response.ReportResponse;
 import com.elicitsoftware.response.pdf.Content;
@@ -22,13 +24,13 @@ import com.elicitsoftware.response.pdf.Style;
 import com.elicitsoftware.response.pdf.Table;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,14 +52,15 @@ import java.util.Map;
 public class Service {
 
     /**
-     * String buffer for building PDF table content.
-     */
-    private StringBuffer pdfTableSB = null;
-
-    /**
      * The default title for respondent summary reports.
      */
     private static String TITLE = "Respondent Summary";
+
+    /**
+     * Repository for optimized family history queries.
+     */
+    @Inject
+    CancerHistoryRepository cancerHistoryRepository;
 
     /**
      * Default constructor.
@@ -85,7 +88,6 @@ public class Service {
     @Produces("application/json")
     @Transactional
     public ReportResponse report(ReportRequest req) {
-
         Table table = new Table();
         table.headers = new String[2];
         table.headers[0] = "Property";
@@ -95,19 +97,21 @@ public class Service {
         table.widths[0] = 300;
         table.widths[1] = 200f;
 
-        List<Row> pdfRows = new ArrayList<Row>();
+        StringBuilder innerHTML = new StringBuilder();
 
-        pdfTableSB = new StringBuffer();
-        String title = "";
-
-        StringBuffer innerHTML = new StringBuffer();
-
-        FactFHHSView fact = FactFHHSView.find("respondent_id =?1 and step = 'Proband'", req.id).firstResult();
+        FamilyHistoryRecord fact = null;
+        List<FamilyHistoryRecord> allRecords = cancerHistoryRepository.findFamilyHistoryByRespondentId(req.id);
+        for (FamilyHistoryRecord record : allRecords) {
+            if ("Proband".equals(record.step)) {
+                fact = record;
+                break;
+            }
+        }
 
         if (fact != null) {
-            List<Row> rows = fact.getProbandRows();
+            List<Row> rows = RowConverter.toRows(fact);
             table.body = new String[rows.size()][2];
-            Card card = new Card(title);
+            Card card = new Card("");
             card.addRows(rows);
             int i = 0;
 
@@ -120,7 +124,6 @@ public class Service {
 
         } else {
             innerHTML.append("No Significant Data.");
-            pdfTableSB.append("[{ text: 'No significant data to report.', bold: true }, '', '']");
         }
 
         PDFDocument pdf = new PDFDocument();

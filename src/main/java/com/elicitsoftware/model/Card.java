@@ -80,7 +80,7 @@ public class Card {
      * @return a String containing the complete HTML representation of the card
      */
     public String getHTML() {
-        StringBuffer html = new StringBuffer();
+        StringBuilder html = new StringBuilder();
         html.append("<div class=\"card\">");
         html.append("<div class=\"card--header\"><p>" + this.title + "</p></div><div class=\"card--content\">");
 
