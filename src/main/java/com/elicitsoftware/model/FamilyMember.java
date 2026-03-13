@@ -317,7 +317,7 @@ public class FamilyMember {
         sb.append(this.Dadid).append("	");
         sb.append(this.Momid).append("	");
         sb.append(this.Status).append("	");
-        sb.append(getID());
+        sb.append(getID()).append("	");
         if (this.ID > 0 && !this.unknown) {
             // Upper Left Quadrent
             if (this.Bladder_Cancer != null || this.Breast_Cancer != null || this.Kidney_Renal_Cell_Cancer != null || this.Melanoma_Cancer

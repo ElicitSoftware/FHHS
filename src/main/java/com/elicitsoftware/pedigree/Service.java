@@ -246,6 +246,24 @@ public class Service {
     }
 
     /**
+     * Checks if the provided content is valid SVG.
+     * <p>
+     * Valid SVG content should start with an XML declaration or an SVG tag.
+     * This method is used to validate responses from the pedigree service
+     * before attempting to parse them as SVG.
+     *
+     * @param content the content to check
+     * @return true if the content appears to be valid SVG, false otherwise
+     */
+    private boolean isValidSvg(String content) {
+        if (content == null || content.isEmpty()) {
+            return false;
+        }
+        String trimmed = content.trim();
+        return trimmed.startsWith("<?xml") || trimmed.startsWith("<svg") || trimmed.startsWith("<SVG");
+    }
+
+    /**
      * Creates the content array for the PDF document including SVG and legend elements.
      * <p>
      * This method assembles the various content elements for the PDF:
@@ -255,6 +273,9 @@ public class Service {
      *   <li>Color legend for cancer indicators</li>
      *   <li>Multiple diagnosis disclaimer (if applicable)</li>
      * </ul>
+     * <p>
+     * If the SVG content is invalid (e.g., an error message from the pedigree service),
+     * the method will display an error message in the PDF instead of failing.
      *
      * @param svg the SVG content representing the family pedigree
      * @param multipleCancers indicates whether any family members have multiple cancer diagnoses
@@ -273,7 +294,13 @@ public class Service {
         }
 
         Content svgContent = new Content();
-        svgContent.svg = svg;
+        // Validate SVG content before setting it - if invalid, show error text instead
+        if (isValidSvg(svg)) {
+            svgContent.svg = svg;
+        } else {
+            // The pedigree service returned an error or invalid response
+            svgContent.text = "Pedigree diagram unavailable: " + (svg != null ? svg : "No response from pedigree service");
+        }
         content[0] = svgContent;
 
         Content green = new Content();
