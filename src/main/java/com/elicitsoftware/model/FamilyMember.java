@@ -151,7 +151,11 @@ public class FamilyMember {
 
     private String buildDisplayId() {
         StringBuilder sb = new StringBuilder();
-        sb.append(this.name == null || this.name.isBlank() ? "Unknown" : this.name);
+        if (this.ID == PROBAND_ID) {
+            sb.append("Respondent (Proband)");
+        } else {
+            sb.append(this.name == null || this.name.isBlank() ? "Unknown" : this.name);
+        }
         if (this.Age != null && !this.Age.isEmpty()) {
             sb.append(" (Age ").append(this.Age).append(")");
         }
