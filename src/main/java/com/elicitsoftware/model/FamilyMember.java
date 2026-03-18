@@ -31,6 +31,8 @@ package com.elicitsoftware.model;
  */
 public class FamilyMember {
 
+    private static final int PROBAND_ID = 7;
+
     /**
      * Unique identifier for this family member within the family structure.
      */
@@ -43,33 +45,30 @@ public class FamilyMember {
     public int Sex = 3;
 
     /**
-     * Age of the family member as a string.
+     * Age of the family member, when known.
      */
-    public String Age = "";
+    public String Age;
 
     /**
-     * ID reference to this member's father.
-     * 0 indicates no father information available.
+     * Identifier of the father in the serialized pedigree.
      */
-    public int Dadid = 0;
+    public int Dadid;
 
     /**
-     * ID reference to this member's mother.
-     * 0 indicates no mother information available.
+     * Identifier of the mother in the serialized pedigree.
      */
-    public int Momid = 0;
+    public int Momid;
 
     /**
-     * Shared parent indicator for tracking sibling relationships.
+     * Indicates shared-parent relationships in survey input.
      */
-    public int SharedParent;
+    public String SharedParent;
 
     /**
-     * Vital status indicator (alive, deceased, unknown).
+     * Vital status indicator. A value of 1 means deceased.
      */
     public int Status;
 
-    // Cancer occurrence fields
     /**
      * Bladder cancer occurrence and age information.
      */
@@ -115,6 +114,96 @@ public class FamilyMember {
      */
     public String Melanoma_Cancer;
 
+
+    private String formatParentId(int parentId) {
+        return parentId == 0 ? "NA" : Integer.toString(parentId);
+    }
+
+    private String sanitizeField(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ').trim();
+    }
+
+    private boolean hasCancer() {
+        return this.Bladder_Cancer != null
+                || this.Breast_Cancer != null
+                || this.Colon_Rectal_Cancer != null
+                || this.Endometrial_Uterine_Cancer != null
+                || this.Kidney_Renal_Cell_Cancer != null
+                || this.Leukemia_Cancer != null
+                || this.Lung_Cancer != null
+                || this.Lymphoma != null
+                || this.Melanoma_Cancer != null
+                || this.Non_Melanoma_Cancer != null
+                || this.Oral_Throat_Cancer != null
+                || this.Other_Cancer != null
+                || !this.Other_Cancer_Type.isEmpty()
+                || this.Ovarian_Cancer != null
+                || this.Pancreatic_Cancer != null
+                || this.Prostate_Cancer != null
+                || this.Stomach_Cancer != null
+                || this.Testicular_Cancer != null
+                || this.Thyroid_Cancer != null
+                || this.Unknown_Cancer != null;
+    }
+
+    private String buildDisplayId() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.name == null || this.name.isBlank() ? "Unknown" : this.name);
+        if (this.Age != null && !this.Age.isEmpty()) {
+            sb.append(" (Age ").append(this.Age).append(")");
+        }
+        return sb.toString();
+    }
+
+    private void appendCancerLabel(StringBuilder sb, String cancerName, String cancerAge, String multipleCancerFlag) {
+        if (cancerAge == null) {
+            return;
+        }
+        if (!sb.isEmpty()) {
+            sb.append("; ");
+        }
+        sb.append(cancerName);
+        if (multipleCancerFlag != null && multipleCancerFlag.equalsIgnoreCase("true")) {
+            sb.append("*");
+        }
+        sb.append(" ").append(cancerAge);
+    }
+
+    private String buildCancerLabel() {
+        if (this.unknown || !hasCancer()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        appendCancerLabel(sb, "Bladder", this.Bladder_Cancer, this.Multiple_Bladder_Cancer);
+        appendCancerLabel(sb, "Breast", this.Breast_Cancer, this.Multiple_Breast_Cancer);
+        appendCancerLabel(sb, "Colon", this.Colon_Rectal_Cancer, this.Multiple_Colon_Rectal_Cancer);
+        appendCancerLabel(sb, "Uterine", this.Endometrial_Uterine_Cancer, this.Multiple_Endometrial_Uterine_Cancer);
+        appendCancerLabel(sb, "Kidney", this.Kidney_Renal_Cell_Cancer, this.Multiple_Kidney_Renal_Cell_Cancer);
+        appendCancerLabel(sb, "Leukemia", this.Leukemia_Cancer, this.Multiple_Leukemia_Cancer);
+        appendCancerLabel(sb, "Lung", this.Lung_Cancer, this.Multiple_Lung_Cancer);
+        appendCancerLabel(sb, "Lymphoma", this.Lymphoma, this.Multiple_Lymphoma);
+        appendCancerLabel(sb, "Melanoma", this.Melanoma_Cancer, this.Multiple_Melanoma_Cancer);
+        appendCancerLabel(sb, "Non-Melanoma", this.Non_Melanoma_Cancer, this.Multiple_Non_Melanoma_Cancer);
+        appendCancerLabel(sb, "Oral", this.Oral_Throat_Cancer, this.Multiple_Oral_Throat_Cancer);
+        appendCancerLabel(sb, "Ovarian", this.Ovarian_Cancer, this.Multiple_Ovarian_Cancer);
+        appendCancerLabel(sb, "Pancreatic", this.Pancreatic_Cancer, this.Multiple_Pancreatic_Cancer);
+        appendCancerLabel(sb, "Prostate", this.Prostate_Cancer, this.Multiple_Prostate_Cancer);
+        appendCancerLabel(sb, "Stomach", this.Stomach_Cancer, this.Multiple_Stomach_Cancer);
+        appendCancerLabel(sb, "Testicular", this.Testicular_Cancer, this.Multiple_Testicular_Cancer);
+        appendCancerLabel(sb, "Thyroid", this.Thyroid_Cancer, this.Multiple_Thyroid_Cancer);
+        appendCancerLabel(sb, "Unknown", this.Unknown_Cancer, null);
+
+        if (this.Other_Cancer != null || !this.Other_Cancer_Type.isEmpty()) {
+            String otherName = this.Other_Cancer_Type.isEmpty() ? "Other" : "Other (" + this.Other_Cancer_Type + ")";
+            appendCancerLabel(sb, otherName, this.Other_Cancer, this.Multiple_Other_Cancer);
+        }
+
+        return sb.toString();
+    }
     /**
      * Non-melanoma cancer occurrence and age information.
      */
@@ -311,50 +400,17 @@ public class FamilyMember {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(1 + "	");
+        sb.append(1).append("	");
         sb.append(this.ID).append("	");
         sb.append(this.Sex).append("	");
-        sb.append(this.Dadid).append("	");
-        sb.append(this.Momid).append("	");
-        sb.append(this.Status).append("	");
-        sb.append(getID()).append("	");
-        if (this.ID > 0 && !this.unknown) {
-            // Upper Left Quadrent
-            if (this.Bladder_Cancer != null || this.Breast_Cancer != null || this.Kidney_Renal_Cell_Cancer != null || this.Melanoma_Cancer
-                    != null || this.Non_Melanoma_Cancer != null) {
-                sb.append("1	");
-            } else {
-                sb.append("0	");
-            }
-
-            // Upper Right Quadrent
-            if (this.Colon_Rectal_Cancer != null || this.Oral_Throat_Cancer != null || this.Pancreatic_Cancer != null
-                    || this.Leukemia_Cancer != null) {
-                sb.append("1	");
-            } else {
-                sb.append("0	");
-            }
-
-            // Lower Left Quadrent
-            if (this.Endometrial_Uterine_Cancer != null || this.Prostate_Cancer != null || this.Thyroid_Cancer != null
-                    || this.Lung_Cancer != null || this.Lymphoma != null) {
-                sb.append("1	");
-            } else {
-                sb.append("0	");
-            }
-
-            // Lower Right Quadrent
-            if (this.Ovarian_Cancer != null || this.Stomach_Cancer != null || this.Testicular_Cancer != null || this.Other_Cancer
-                    != null || this.Unknown_Cancer != null) {
-                sb.append("1");
-            } else {
-                sb.append("0");
-            }
-        } else {
-            // Unknown person and disease
-            sb.append("NA	NA	NA	NA");
-        }
-
+        sb.append(formatParentId(this.Dadid)).append("	");
+        sb.append(formatParentId(this.Momid)).append("	");
+        sb.append(this.Status == 1).append("	");
+        sb.append(this.ID == PROBAND_ID).append("	");
+        sb.append(hasCancer()).append("	");
+        sb.append("FALSE	");
+        sb.append(sanitizeField(buildDisplayId())).append("	");
+        sb.append(sanitizeField(buildCancerLabel()));
         sb.append(System.lineSeparator());
         return sb.toString();
     }

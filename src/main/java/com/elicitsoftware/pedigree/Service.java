@@ -29,6 +29,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -57,6 +58,8 @@ import java.util.UUID;
 @Path("pedigree")
 @RequestScoped
 public class Service {
+
+    private static final Logger LOG = Logger.getLogger(Service.class);
 
     private static final HttpClient PEDIGREE_HTTP_CLIENT = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
@@ -178,6 +181,8 @@ public class Service {
         span.setAttribute("pedigree.payload.length", family.length());
 
         try (Scope ignored = span.makeCurrent()) {
+            LOG.infof("Sending pedigree payload to %s:%n%s", pedigreeURL, family);
+
             String boundary = "----ElicitBoundary" + UUID.randomUUID();
             byte[] requestBody = buildMultipartBody(boundary, "ped", family);
 
@@ -193,6 +198,7 @@ public class Service {
             );
 
             int statusCode = response.statusCode();
+            LOG.infof("Pedigree service returned status %d", statusCode);
             span.setAttribute("http.response.status_code", statusCode);
             if (statusCode == 200 || statusCode == 201) {
                 span.setStatus(StatusCode.OK);
@@ -303,13 +309,12 @@ public class Service {
         }
         content[0] = svgContent;
 
-        Content green = new Content();
-        green.text = "green = respondent";
-        green.style = "ped_green";
-        content[1] = green;
+        Content proband = new Content();
+        proband.text = "P with arrow = respondent";
+        content[1] = proband;
 
         Content red = new Content();
-        red.text = "red = family member with cancer";
+        red.text = "red fill = family member with cancer";
         red.style = "ped_red";
         content[2] = red;
 

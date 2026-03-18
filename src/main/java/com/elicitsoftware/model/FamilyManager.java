@@ -13,6 +13,7 @@ package com.elicitsoftware.model;
 
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
 
 import javax.management.relation.RelationException;
 import java.util.ArrayList;
@@ -42,6 +43,8 @@ import java.util.Objects;
 @RequestScoped
 public class FamilyManager {
 
+    private static final Logger LOG = Logger.getLogger(FamilyManager.class);
+
     /**
      * Repository for optimized family history queries.
      */
@@ -64,6 +67,24 @@ public class FamilyManager {
      * String constant representing boolean true in survey data.
      */
     private static final String STRING_TRUE = "true";
+    private static final String STRING_UNKNOWN = "unknown";
+
+    private static boolean hasCancerHistory(String response) {
+        if (response == null) {
+            return false;
+        }
+
+        String normalized = response.trim().toLowerCase();
+        if (normalized.isEmpty()) {
+            return false;
+        }
+
+        return STRING_TRUE.equals(normalized)
+                || STRING_UNKNOWN.equals(normalized)
+                || "yes".equals(normalized)
+                || "y".equals(normalized)
+                || "1".equals(normalized);
+    }
 
     /**
      * Gender constant for male family members.
@@ -216,81 +237,93 @@ public class FamilyManager {
                 p.setSharedParent(fact.sharedParent);
                 p.setVital_Status(fact.vitalStatus);
 
-                if (STRING_TRUE.equalsIgnoreCase(fact.bladderCancer)) {
+                if (hasCancerHistory(fact.bladderCancer)) {
                     p.setBladder_Cancer(Objects.requireNonNullElse(fact.bladderCancerAge, UKN_AGE).toString());
                     p.setMultiple_Bladder_Cancer(fact.multipleBladdercancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.breastCancer)) {
+                if (hasCancerHistory(fact.breastCancer)) {
                     p.setBreast_Cancer(Objects.requireNonNullElse(fact.breastCancerAge, UKN_AGE).toString());
                     p.setMultiple_Breast_Cancer(fact.multipleBreastcancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.colonOrRectalCancer)) {
+                if (hasCancerHistory(fact.colonOrRectalCancer)) {
                     p.setColon_Rectal_Cancer(Objects.requireNonNullElse(fact.colonOrRectalCancerAge, UKN_AGE).toString());
                     p.setMultiple_Colon_Rectal_Cancer(fact.multipleColonOrRectalCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.endometrialOrUterineCancer)) {
+                if (hasCancerHistory(fact.endometrialOrUterineCancer)) {
                     p.setEndometrial_Uterine_Cancer(Objects.requireNonNullElse(fact.endometrialOrUterineCancerAge, UKN_AGE).toString());
                     p.setMultiple_Endometrial_Uterine_Cancer(fact.multipleEndometrialOrUterineCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.kidneyRenalCellCancer)) {
+                if (hasCancerHistory(fact.kidneyRenalCellCancer)) {
                     p.setKidney_Renal_Cell_Cancer(Objects.requireNonNullElse(fact.kidneyRenalCellCancerAge, UKN_AGE).toString());
                     p.setMultiple_Kidney_Renal_Cell_Cancer(fact.multipleKidneyRenalCellCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.leukemia)) {
+                if (hasCancerHistory(fact.leukemia)) {
                     p.setLeukemia_Cancer(Objects.requireNonNullElse(fact.leukemiaAge, UKN_AGE).toString());
                     p.setMultiple_Leukemia_Cancer(fact.multipleLeukemias);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.lungCancer)) {
+                if (hasCancerHistory(fact.lungCancer)) {
                     p.setLung_Cancer(Objects.requireNonNullElse(fact.lungCancerAge, UKN_AGE).toString());
                     p.setMultiple_Lung_Cancer(fact.multipleLungCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.lymphoma)) {
+                if (hasCancerHistory(fact.lymphoma)) {
                     p.setLymphoma(Objects.requireNonNullElse(fact.lymphomaAge, UKN_AGE).toString());
                     p.setMultiple_Lymphoma(fact.multipleLymphomas);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.melanomaSkinCancer)) {
+                if (hasCancerHistory(fact.melanomaSkinCancer)) {
                     p.setMelanoma_Cancer(Objects.requireNonNullElse(fact.melanomaSkinCancerAge, UKN_AGE).toString());
                     p.setMultiple_Melanoma_Cancer(fact.multipleMelanomaSkinCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.nonmelanomaSkinCancer)) {
+                if (hasCancerHistory(fact.nonmelanomaSkinCancer)) {
                     p.setNon_Melanoma_Cancer(Objects.requireNonNullElse(fact.nonmelanomaSkinCancerAge, UKN_AGE).toString());
                     p.setMultiple_Non_Melanoma_Cancer(fact.multipleNonmelanomaSkinCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.oralCavityOrThroatCancer)) {
+                if (hasCancerHistory(fact.oralCavityOrThroatCancer)) {
                     p.setOral_Throat_Cancer(Objects.requireNonNullElse(fact.oralCavityOrThroatCancerAge, UKN_AGE).toString());
                     p.setMultiple_Oral_Throat_Cancer(fact.multipleOralCavityOrThroatCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.otherCancer)) {
+                if (hasCancerHistory(fact.otherCancer)) {
                     p.setOther_Cancer(Objects.requireNonNullElse(fact.otherAge, UKN_AGE).toString());
                     p.setOther_Cancer_Type(fact.otherCancerName);
                     p.setMultiple_Other_Cancer(fact.multipleOtherCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.ovarianCancer)) {
+                if (hasCancerHistory(fact.ovarianCancer)) {
                     p.setOvarian_Cancer(Objects.requireNonNullElse(fact.ovarianCancerAge, UKN_AGE).toString());
                     p.setMultiple_Ovarian_Cancer(fact.multipleOvarianCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.pancreaticCancer)) {
+                if (hasCancerHistory(fact.pancreaticCancer)) {
                     p.setPancreatic_Cancer(Objects.requireNonNullElse(fact.pancreaticCancerAge, UKN_AGE).toString());
                     p.setMultiple_Pancreatic_Cancer(fact.multiplePancreaticCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.prostateCancer)) {
+                if (hasCancerHistory(fact.prostateCancer)) {
                     p.setProstate_Cancer(Objects.requireNonNullElse(fact.prostateCancerAge, UKN_AGE).toString());
                     p.setMultiple_Prostate_Cancer(fact.multipleProstateCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.stomachCancer)) {
+                if (hasCancerHistory(fact.stomachCancer)) {
                     p.setStomach_Cancer(Objects.requireNonNullElse(fact.stomachCancerAge, UKN_AGE).toString());
                     p.setMultiple_Stomach_Cancer(fact.multipleStomachCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.testicularCancer)) {
+                if (hasCancerHistory(fact.testicularCancer)) {
                     p.setTesticular_Cancer(Objects.requireNonNullElse(fact.testicularCancerAge, UKN_AGE).toString());
                     p.setMultiple_Testicular_Cancer(fact.multipleTesticularCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.thyroidCancer)) {
+                if (hasCancerHistory(fact.thyroidCancer)) {
                     p.setThyroid_Cancer(Objects.requireNonNullElse(fact.thyroidCancerAge, UKN_AGE).toString());
                     p.setMultiple_Thyroid_Cancer(fact.multipleThyroidCancers);
                 }
-                if (STRING_TRUE.equalsIgnoreCase(fact.unknownCancer)) {
+                if (hasCancerHistory(fact.unknownCancer)) {
                     p.setUnknown_Cancer(Objects.requireNonNullElse(fact.unknownCancerAge, UKN_AGE).toString());
+                }
+
+                if ("Proband".equals(fact.step) || "Proband Cancer".equals(fact.step)) {
+                    LOG.infof(
+                            "Proband cancer mapping: step=%s breast=%s age=%s uterine=%s age=%s familyMember=%s",
+                            fact.step,
+                            fact.breastCancer,
+                            fact.breastCancerAge,
+                            fact.endometrialOrUterineCancer,
+                            fact.endometrialOrUterineCancerAge,
+                            p.getFamilyMember()
+                    );
                 }
             } catch (RelationException e) {
                 // There are some steps that are not relationships. i.e. Demographics
@@ -310,6 +343,8 @@ public class FamilyManager {
         String key = fact.step + Objects.requireNonNullElse(fact.stepInstance, "");
         switch (fact.step) {
             case "Proband":
+            case "Proband Cancer":
+            case "Demographics":
                 if (this.Proband == null) {
                     this.Proband = new Person();
                 }
