@@ -77,8 +77,9 @@ public class Family {
      */
     @Override
     public String toString() {
-        // Add the headers
-        StringBuilder sb = new StringBuilder("Ped	ID	Sex	Dadid	Momid	Status	Label	ul	ur	ll	lr");
+        StringBuilder sb = new StringBuilder(
+                "famid\tid\tsex\tdadid\tmomid\tdeceased\tproband\taffection\tavail\tdisplay_id\tcancer_label"
+        );
         sb.append(System.lineSeparator());
         for (FamilyMember p : family) {
             sb.append(p.toString());

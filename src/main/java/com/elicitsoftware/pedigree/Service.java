@@ -29,6 +29,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -57,6 +58,8 @@ import java.util.UUID;
 @Path("pedigree")
 @RequestScoped
 public class Service {
+
+    private static final Logger LOG = Logger.getLogger(Service.class);
 
     private static final HttpClient PEDIGREE_HTTP_CLIENT = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
@@ -178,6 +181,8 @@ public class Service {
         span.setAttribute("pedigree.payload.length", family.length());
 
         try (Scope ignored = span.makeCurrent()) {
+            LOG.infof("Sending pedigree payload to %s:%n%s", pedigreeURL, family);
+
             String boundary = "----ElicitBoundary" + UUID.randomUUID();
             byte[] requestBody = buildMultipartBody(boundary, "ped", family);
 
@@ -193,6 +198,7 @@ public class Service {
             );
 
             int statusCode = response.statusCode();
+            LOG.infof("Pedigree service returned status %d", statusCode);
             span.setAttribute("http.response.status_code", statusCode);
             if (statusCode == 200 || statusCode == 201) {
                 span.setStatus(StatusCode.OK);
@@ -246,6 +252,24 @@ public class Service {
     }
 
     /**
+     * Checks if the provided content is valid SVG.
+     * <p>
+     * Valid SVG content should start with an XML declaration or an SVG tag.
+     * This method is used to validate responses from the pedigree service
+     * before attempting to parse them as SVG.
+     *
+     * @param content the content to check
+     * @return true if the content appears to be valid SVG, false otherwise
+     */
+    private boolean isValidSvg(String content) {
+        if (content == null || content.isEmpty()) {
+            return false;
+        }
+        String trimmed = content.trim();
+        return trimmed.startsWith("<?xml") || trimmed.startsWith("<svg") || trimmed.startsWith("<SVG");
+    }
+
+    /**
      * Creates the content array for the PDF document including SVG and legend elements.
      * <p>
      * This method assembles the various content elements for the PDF:
@@ -255,6 +279,9 @@ public class Service {
      *   <li>Color legend for cancer indicators</li>
      *   <li>Multiple diagnosis disclaimer (if applicable)</li>
      * </ul>
+     * <p>
+     * If the SVG content is invalid (e.g., an error message from the pedigree service),
+     * the method will display an error message in the PDF instead of failing.
      *
      * @param svg the SVG content representing the family pedigree
      * @param multipleCancers indicates whether any family members have multiple cancer diagnoses
@@ -273,18 +300,19 @@ public class Service {
         }
 
         Content svgContent = new Content();
-        svgContent.svg = svg;
+        // Validate SVG content before setting it - if invalid, show error text instead
+        if (isValidSvg(svg)) {
+            svgContent.svg = svg;
+        } else {
+            // The pedigree service returned an error or invalid response
+            svgContent.text = "Pedigree diagram unavailable: " + (svg != null ? svg : "No response from pedigree service");
+        }
         content[0] = svgContent;
 
-        Content green = new Content();
-        green.text = "green = respondent";
-        green.style = "ped_green";
-        content[1] = green;
-
         Content red = new Content();
-        red.text = "red = family member with cancer";
+        red.text = "red fill = family member with cancer";
         red.style = "ped_red";
-        content[2] = red;
+        content[1] = red;
 
         return content;
 
