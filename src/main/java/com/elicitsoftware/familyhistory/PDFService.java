@@ -376,7 +376,7 @@ public class PDFService {
             Rectangle actualBounds = bounds.union(primitiveBounds);
 
             // Add explicit padding to ensure content that extends beyond computed bounds is captured
-            int padding = 30; // Add 30 pixels padding on all sides
+            int padding = 5; // Add 5 pixels padding on all sides
             Rectangle expandedBounds = new Rectangle(
                     actualBounds.x - padding,
                     actualBounds.y - padding,

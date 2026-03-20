@@ -309,14 +309,10 @@ public class Service {
         }
         content[0] = svgContent;
 
-        Content proband = new Content();
-        proband.text = "P with arrow = respondent";
-        content[1] = proband;
-
         Content red = new Content();
         red.text = "red fill = family member with cancer";
         red.style = "ped_red";
-        content[2] = red;
+        content[1] = red;
 
         return content;
 
