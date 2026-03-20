@@ -40,24 +40,29 @@ public class PDFDocument {
 
     /**
      * Array of content elements that make up the PDF document.
+     * <p>
      * Each Content object represents a distinct element like text, tables, or images.
+     * The array is used for sequential rendering in the final PDF output.
      */
     public Content[] content;
 
     /**
      * Indicates whether a page break should be applied.
-     * Default is false.
+     * <p>
+     * Default is false. Used to control pagination in multi-section reports.
      */
     public boolean pageBreak = false;
 
     /**
      * Indicates whether the document should be in landscape orientation.
-     * Default is false (portrait orientation).
+     * <p>
+     * Default is false (portrait orientation). Set true for wide tables or diagrams.
      */
     public boolean landscape = false;
 
     /**
      * The title of the PDF document.
+     * <p>
      * This may be used for document metadata and headers.
      */
     public String title;

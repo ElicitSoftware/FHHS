@@ -32,73 +32,271 @@ package com.elicitsoftware.model;
  */
 public class FamilyHistoryRecord {
     // Demographic and relationship fields
+    /**
+     * Survey step identifier for this record.
+     */
     public final String step;
+    /**
+     * Step instance identifier for tracking survey progression.
+     */
     public final String stepInstance;
+    /**
+     * Relationship of the family member to the proband/main respondent.
+     */
     public final String relationship;
+    /**
+     * Age of the family member.
+     */
     public final Integer age;
+    /**
+     * Gender of the family member.
+     */
     public final String gender;
+    /**
+     * Vital status (e.g., alive, deceased).
+     */
     public final String vitalStatus;
+    /**
+     * Shared parent indicator for complex family relationships.
+     */
     public final String sharedParent;
+    /**
+     * Ashkenazi Jewish ancestry indicator.
+     */
     public final String ashkenazi;
 
     // Cancer history fields (56 total cancer-related columns)
+    /**
+     * Bladder cancer diagnosis indicator.
+     */
     public final String bladderCancer;
+    /**
+     * Age at bladder cancer diagnosis.
+     */
     public final Integer bladderCancerAge;
+    /**
+     * Breast cancer diagnosis indicator.
+     */
     public final String breastCancer;
+    /**
+     * Age at breast cancer diagnosis.
+     */
     public final Integer breastCancerAge;
+    /**
+     * Triple negative breast cancer indicator.
+     */
     public final String tripleNegativeBreastCancer;
+    /**
+     * Colon or rectal cancer diagnosis indicator.
+     */
     public final String colonOrRectalCancer;
+    /**
+     * Age at colon or rectal cancer diagnosis.
+     */
     public final Integer colonOrRectalCancerAge;
+    /**
+     * Endometrial or uterine cancer diagnosis indicator.
+     */
     public final String endometrialOrUterineCancer;
+    /**
+     * Age at endometrial or uterine cancer diagnosis.
+     */
     public final Integer endometrialOrUterineCancerAge;
+    /**
+     * Kidney/renal cell cancer diagnosis indicator.
+     */
     public final String kidneyRenalCellCancer;
+    /**
+     * Age at kidney/renal cell cancer diagnosis.
+     */
     public final Integer kidneyRenalCellCancerAge;
+    /**
+     * Leukemia diagnosis indicator.
+     */
     public final String leukemia;
+    /**
+     * Age at leukemia diagnosis.
+     */
     public final Integer leukemiaAge;
+    /**
+     * Lung cancer diagnosis indicator.
+     */
     public final String lungCancer;
+    /**
+     * Age at lung cancer diagnosis.
+     */
     public final Integer lungCancerAge;
+    /**
+     * Lymphoma diagnosis indicator.
+     */
     public final String lymphoma;
+    /**
+     * Age at lymphoma diagnosis.
+     */
     public final Integer lymphomaAge;
+    /**
+     * Melanoma skin cancer diagnosis indicator.
+     */
     public final String melanomaSkinCancer;
+    /**
+     * Age at melanoma skin cancer diagnosis.
+     */
     public final Integer melanomaSkinCancerAge;
+    /**
+     * Nonmelanoma skin cancer diagnosis indicator.
+     */
     public final String nonmelanomaSkinCancer;
+    /**
+     * Age at nonmelanoma skin cancer diagnosis.
+     */
     public final Integer nonmelanomaSkinCancerAge;
+    /**
+     * Oral cavity or throat cancer diagnosis indicator.
+     */
     public final String oralCavityOrThroatCancer;
+    /**
+     * Age at oral cavity or throat cancer diagnosis.
+     */
     public final Integer oralCavityOrThroatCancerAge;
+    /**
+     * Other cancer diagnosis indicator.
+     */
     public final String otherCancer;
+    /**
+     * Age at other cancer diagnosis.
+     */
     public final Integer otherAge;
+    /**
+     * Name of other cancer diagnosed.
+     */
     public final String otherCancerName;
+    /**
+     * Ovarian cancer diagnosis indicator.
+     */
     public final String ovarianCancer;
+    /**
+     * Age at ovarian cancer diagnosis.
+     */
     public final Integer ovarianCancerAge;
+    /**
+     * Pancreatic cancer diagnosis indicator.
+     */
     public final String pancreaticCancer;
+    /**
+     * Age at pancreatic cancer diagnosis.
+     */
     public final Integer pancreaticCancerAge;
+    /**
+     * Prostate cancer diagnosis indicator.
+     */
     public final String prostateCancer;
+    /**
+     * Age at prostate cancer diagnosis.
+     */
     public final Integer prostateCancerAge;
+    /**
+     * Stomach cancer diagnosis indicator.
+     */
     public final String stomachCancer;
+    /**
+     * Age at stomach cancer diagnosis.
+     */
     public final Integer stomachCancerAge;
+    /**
+     * Testicular cancer diagnosis indicator.
+     */
     public final String testicularCancer;
+    /**
+     * Age at testicular cancer diagnosis.
+     */
     public final Integer testicularCancerAge;
+    /**
+     * Thyroid cancer diagnosis indicator.
+     */
     public final String thyroidCancer;
+    /**
+     * Age at thyroid cancer diagnosis.
+     */
     public final Integer thyroidCancerAge;
+    /**
+     * Unknown cancer diagnosis indicator.
+     */
     public final String unknownCancer;
+    /**
+     * Age at unknown cancer diagnosis.
+     */
     public final Integer unknownCancerAge;
+    /**
+     * Multiple bladder cancers indicator.
+     */
     public final String multipleBladdercancers;
+    /**
+     * Multiple breast cancers indicator.
+     */
     public final String multipleBreastcancers;
+    /**
+     * Multiple colon or rectal cancers indicator.
+     */
     public final String multipleColonOrRectalCancers;
+    /**
+     * Multiple endometrial or uterine cancers indicator.
+     */
     public final String multipleEndometrialOrUterineCancers;
+    /**
+     * Multiple kidney renal cell cancers indicator.
+     */
     public final String multipleKidneyRenalCellCancers;
+    /**
+     * Multiple leukemias indicator.
+     */
     public final String multipleLeukemias;
+    /**
+     * Multiple lung cancers indicator.
+     */
     public final String multipleLungCancers;
+    /**
+     * Multiple lymphomas indicator.
+     */
     public final String multipleLymphomas;
+    /**
+     * Multiple melanoma skin cancers indicator.
+     */
     public final String multipleMelanomaSkinCancers;
+    /**
+     * Multiple nonmelanoma skin cancers indicator.
+     */
     public final String multipleNonmelanomaSkinCancers;
+    /**
+     * Multiple oral cavity or throat cancers indicator.
+     */
     public final String multipleOralCavityOrThroatCancers;
+    /**
+     * Multiple other cancers indicator.
+     */
     public final String multipleOtherCancers;
+    /**
+     * Multiple ovarian cancers indicator.
+     */
     public final String multipleOvarianCancers;
+    /**
+     * Multiple pancreatic cancers indicator.
+     */
     public final String multiplePancreaticCancers;
+    /**
+     * Multiple prostate cancers indicator.
+     */
     public final String multipleProstateCancers;
+    /**
+     * Multiple stomach cancers indicator.
+     */
     public final String multipleStomachCancers;
+    /**
+     * Multiple testicular cancers indicator.
+     */
     public final String multipleTesticularCancers;
+    /**
+     * Multiple thyroid cancers indicator.
+     */
     public final String multipleThyroidCancers;
 
     /**

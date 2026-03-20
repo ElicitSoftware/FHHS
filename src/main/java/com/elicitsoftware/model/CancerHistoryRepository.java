@@ -33,8 +33,22 @@ import jakarta.persistence.EntityManager;
 @ApplicationScoped
 public class CancerHistoryRepository {
 
+    /**
+     * Injected JPA EntityManager for database access.
+     * <p>
+     * Used for executing native SQL queries and managing persistence context.
+     */
     @Inject
     EntityManager entityManager;
+
+    /**
+     * Default constructor for CancerHistoryRepository.
+     * <p>
+     * Required for CDI and Javadoc compliance.
+     */
+    public CancerHistoryRepository() {
+        // Default constructor
+    }
 
     /**
      * Safely converts a database value to Integer.

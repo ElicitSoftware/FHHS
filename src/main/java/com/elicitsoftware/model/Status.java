@@ -70,7 +70,11 @@ import java.util.Date;
 @Table(name = "status", schema = "survey")
 public class Status extends PanacheEntityBase {
 
-    /** Date formatter for displaying creation dates in MM/dd/yyyy format. */
+    /**
+     * Date formatter for displaying creation dates in MM/dd/yyyy format.
+     * <p>
+     * Used for formatting audit and display fields; not persisted in database.
+     */
     @Transient
     private final static SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
 

@@ -55,6 +55,8 @@ public class Respondent extends PanacheEntityBase {
 
     /**
      * Default constructor for JPA.
+     * <p>
+     * Required for entity instantiation and persistence operations.
      */
     public Respondent() {
         // Default constructor required by JPA

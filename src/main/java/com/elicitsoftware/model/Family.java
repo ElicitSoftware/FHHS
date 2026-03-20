@@ -40,7 +40,9 @@ public class Family {
 
     /**
      * List of all family members included in this family structure.
+     * <p>
      * Each FamilyMember contains health information, demographics, and relationship data.
+     * This list is used for pedigree generation, risk assessment, and report formatting.
      */
     public List<FamilyMember> family = new ArrayList<>();
 

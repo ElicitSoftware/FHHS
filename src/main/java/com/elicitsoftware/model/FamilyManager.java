@@ -43,16 +43,23 @@ import java.util.Objects;
 @RequestScoped
 public class FamilyManager {
 
+    /**
+     * Logger for family manager operations and diagnostics.
+     */
     private static final Logger LOG = Logger.getLogger(FamilyManager.class);
 
     /**
      * Repository for optimized family history queries.
+     * <p>
+     * Used to access and query cancer history data for family members.
      */
     @Inject
     CancerHistoryRepository cancerHistoryRepository;
 
     /**
      * Default constructor.
+     * <p>
+     * Required for CDI and Javadoc compliance.
      */
     public FamilyManager() {
         // Default constructor for CDI
@@ -67,8 +74,19 @@ public class FamilyManager {
      * String constant representing boolean true in survey data.
      */
     private static final String STRING_TRUE = "true";
+    /**
+     * String constant representing unknown value in survey data.
+     */
     private static final String STRING_UNKNOWN = "unknown";
 
+    /**
+     * Determines if a response indicates cancer history.
+     * <p>
+     * Returns true for values like "true", "unknown", "yes", "y", or "1".
+     * </p>
+     * @param response the survey response string
+     * @return true if cancer history is indicated, false otherwise
+     */
     private static boolean hasCancerHistory(String response) {
         if (response == null) {
             return false;

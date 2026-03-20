@@ -29,7 +29,21 @@ import java.util.Objects;
  */
 public class RowConverter {
 
+    /**
+     * String constant for boolean true comparison.
+     * <p>
+     * Used for matching cancer diagnosis fields in FamilyHistoryRecord.
+     */
     private static final String STRING_TRUE = "true";
+
+    /**
+     * Default constructor for RowConverter.
+     * <p>
+     * Required for Javadoc compliance.
+     */
+    public RowConverter() {
+        // Default constructor
+    }
 
     /**
      * Converts a FamilyHistoryRecord to a list of Row objects representing cancer diagnoses.
@@ -112,6 +126,11 @@ public class RowConverter {
             rows.add(new Row(title, "Multiple " + cancerName + "s", record.multipleOtherCancers));
         }
 
+        /**
+         * Adds ovarian cancer rows if diagnosis is true.
+         * <p>
+         * Includes age at diagnosis and multiple occurrence indicator.
+         */
         if (STRING_TRUE.equalsIgnoreCase(record.ovarianCancer)) {
             rows.add(new Row(title, "Ovarian Cancer", record.ovarianCancerAge));
             rows.add(new Row(title, "Multiple Ovarian Cancers", record.multipleOvarianCancers));
