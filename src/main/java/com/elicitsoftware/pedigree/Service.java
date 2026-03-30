@@ -59,15 +59,23 @@ import java.util.UUID;
 @RequestScoped
 public class Service {
 
+    /**
+     * Logger for pedigree service operations and diagnostics.
+     */
     private static final Logger LOG = Logger.getLogger(Service.class);
 
-    private static final HttpClient PEDIGREE_HTTP_CLIENT = HttpClient.newBuilder()
+        /**
+         * HTTP client for external pedigree service communication.
+         */
+        private static final HttpClient PEDIGREE_HTTP_CLIENT = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(2))
             .build();
 
     /**
-     * Default constructor.
+     * Default constructor for CDI instantiation.
+     * <p>
+     * No initialization logic; dependencies are injected by the container.
      */
     public Service() {
         // Default constructor for CDI
@@ -75,22 +83,33 @@ public class Service {
 
     /**
      * Injected FamilyManager for accessing family data and relationships.
+     * <p>
+     * Used to retrieve family structure and member information for pedigree generation.
      */
     @Inject
     FamilyManager familyManager;
 
+    /**
+     * Injected OpenTelemetry tracer for distributed tracing.
+     * <p>
+     * Used to trace pedigree report generation and service calls.
+     */
     @Inject
     Tracer tracer;
 
     /**
      * URL for the external pedigree generation service.
+     * <p>
      * Configured via the "pedigree.url" application property.
+     * Used for remote SVG pedigree diagram generation.
      */
     @ConfigProperty(name = "pedigree.url")
     private String pedigreeURL;
 
     /**
      * Default title for pedigree reports.
+     * <p>
+     * Used as the report heading and PDF title.
      */
     private static String TITLE = "Pedigree";
 
@@ -222,6 +241,16 @@ public class Service {
         }
     }
 
+    /**
+     * Builds a multipart/form-data request body for HTTP POST.
+     * <p>
+     * Used to send family data to the external pedigree service.
+     * </p>
+     * @param boundary the multipart boundary string
+     * @param fieldName the form field name
+     * @param value the field value (family data)
+     * @return byte array representing the multipart body
+     */
     private byte[] buildMultipartBody(String boundary, String fieldName, String value) {
         StringBuilder body = new StringBuilder();
         body.append("--").append(boundary).append("\r\n");
@@ -237,6 +266,15 @@ public class Service {
         return body.toString().getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * Resolves the port number from a URI endpoint.
+     * <p>
+     * Returns the port if specified, otherwise returns the default port for the scheme (443 for HTTPS, 80 for HTTP).
+     * Returns -1 if the scheme is unknown or no port is specified.
+     *
+     * @param endpoint the URI endpoint to resolve
+     * @return the port number, or -1 if not found
+     */
     private int resolvePort(URI endpoint) {
         if (endpoint.getPort() > 0) {
             return endpoint.getPort();

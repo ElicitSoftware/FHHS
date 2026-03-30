@@ -44,35 +44,47 @@ import java.util.List;
  */
 public class MultipartUtility {
 
-    /**
-     * Unique boundary string used to separate multipart sections.
-     */
-    private final String boundary;
+        /**
+         * Unique boundary string used to separate multipart sections in the HTTP request.
+         * <p>
+         * Generated per request to ensure multipart integrity and avoid collisions.
+         */
+        private final String boundary;
 
-    /**
-     * Line feed constant for proper multipart formatting.
-     */
-    private static final String LINE_FEED = "\r\n";
+        /**
+         * Line feed constant for proper multipart formatting.
+         * <p>
+         * Used to separate lines in multipart content according to RFC 2046.
+         */
+        private static final String LINE_FEED = "\r\n";
 
-    /**
-     * HTTP connection for the multipart request.
-     */
-    private HttpURLConnection httpConn;
+        /**
+         * HTTP connection for the multipart request.
+         * <p>
+         * Managed internally for sending data and receiving responses.
+         */
+        private HttpURLConnection httpConn;
 
-    /**
-     * Character encoding used for the request.
-     */
-    private String charset;
+        /**
+         * Character encoding used for the request.
+         * <p>
+         * Typically UTF-8, but configurable per request.
+         */
+        private String charset;
 
-    /**
-     * Output stream for writing request data.
-     */
-    private OutputStream outputStream;
+        /**
+         * Output stream for writing request data.
+         * <p>
+         * Used for binary and text content transmission.
+         */
+        private OutputStream outputStream;
 
-    /**
-     * Print writer for writing text content to the request.
-     */
-    private PrintWriter writer;
+        /**
+         * Print writer for writing text content to the request.
+         * <p>
+         * Used for form fields and headers.
+         */
+        private PrintWriter writer;
 
     /**
      * Constructs a new MultipartUtility for the specified URL and charset.

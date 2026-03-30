@@ -33,21 +33,29 @@ public class Row {
 
     /**
      * Default value used when age or other data is unknown.
+     * <p>
+     * Used to substitute missing values for consistent report formatting.
      */
     private static final String UKN_AGE = "Unknown";
 
     /**
      * The title associated with this row.
+     * <p>
+     * Used for display and report section labeling.
      */
     private final String title;
 
     /**
      * The label or field name for this row.
+     * <p>
+     * Used for internal mapping and data serialization.
      */
     private final String label;
 
     /**
      * The value or data content for this row.
+     * <p>
+     * May be null or "Unknown" if not provided.
      */
     private final String value;
 

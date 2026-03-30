@@ -39,21 +39,29 @@ public class Person {
 
     /**
      * The relationship of this person to the proband/main respondent.
+     * <p>
+     * Used for survey logic and pedigree mapping.
      */
     private String Relationship;
 
     /**
      * Associated family member object for maintaining family-level data consistency.
+     * <p>
+     * Links person-level and family-level health and demographic data.
      */
     private final FamilyMember familyMember = new FamilyMember();
 
     /**
      * Step instance identifier for tracking survey progression.
+     * <p>
+     * Used for workflow and state management in survey navigation.
      */
     private long StepInstance;
 
     /**
      * Age of the person.
+     * <p>
+     * May be null or empty if not provided by the respondent.
      */
     private String Age;
 

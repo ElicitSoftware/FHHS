@@ -31,12 +31,15 @@ public class Card {
 
     /**
      * The title displayed in the card header.
+     * <p>
+     * Used for section labeling in reports and UI components.
      */
     private final String title;
 
     /**
      * A linked hash map of rows organized by label for ordered display.
-     * Uses LinkedHashMap to maintain insertion order of the rows.
+     * <p>
+     * Uses LinkedHashMap to maintain insertion order of the rows for consistent display.
      */
     private final LinkedHashMap<String, Row> rows = new LinkedHashMap<String, Row>();
 

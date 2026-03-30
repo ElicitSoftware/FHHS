@@ -31,76 +31,110 @@ package com.elicitsoftware.model;
  */
 public class FamilyMember {
 
+    /**
+     * Constant for the proband (primary study participant) ID.
+     */
     private static final int PROBAND_ID = 7;
 
     /**
      * Unique identifier for this family member within the family structure.
+     * <p>
+     * Used to reference this individual in pedigree serialization and relationship mapping.
      */
     public int ID;
 
     /**
      * Gender/sex indicator using numeric codes.
+     * <ul>
+     *   <li>1 = Male</li>
+     *   <li>2 = Female</li>
+     *   <li>3 = Other/Unknown</li>
+     * </ul>
      * Default value is 3 (other/unknown).
      */
     public int Sex = 3;
 
     /**
      * Age of the family member, when known.
+     * <p>
+     * May be null or empty if not provided by the respondent.
      */
     public String Age;
 
     /**
      * Identifier of the father in the serialized pedigree.
+     * <p>
+     * Used for parent-child relationship mapping in pedigree diagrams.
      */
     public int Dadid;
 
     /**
      * Identifier of the mother in the serialized pedigree.
+     * <p>
+     * Used for parent-child relationship mapping in pedigree diagrams.
      */
     public int Momid;
 
     /**
      * Indicates shared-parent relationships in survey input.
+     * <p>
+     * Used for complex family structures (step-siblings, half-siblings).
      */
     public String SharedParent;
 
     /**
      * Vital status indicator. A value of 1 means deceased.
+     * <p>
+     * Used for risk assessment and pedigree visualization.
      */
     public int Status;
 
     /**
      * Bladder cancer occurrence and age information.
+     * <p>
+     * Contains diagnosis indicator and age at diagnosis.
      */
     public String Bladder_Cancer;
 
     /**
      * Breast cancer occurrence and age information.
+     * <p>
+     * Contains diagnosis indicator and age at diagnosis.
      */
     public String Breast_Cancer;
 
     /**
      * Colorectal cancer occurrence and age information.
+     * <p>
+     * Contains diagnosis indicator and age at diagnosis.
      */
     public String Colon_Rectal_Cancer;
 
     /**
      * Endometrial/uterine cancer occurrence and age information.
+     * <p>
+     * Contains diagnosis indicator and age at diagnosis.
      */
     public String Endometrial_Uterine_Cancer;
 
     /**
      * Kidney/renal cell cancer occurrence and age information.
+     * <p>
+     * Contains diagnosis indicator and age at diagnosis.
      */
     public String Kidney_Renal_Cell_Cancer;
 
     /**
      * Leukemia occurrence and age information.
+     * <p>
+     * Contains diagnosis indicator and age at diagnosis.
      */
     public String Leukemia_Cancer;
 
     /**
      * Lung cancer occurrence and age information.
+     * <p>
+     * Contains diagnosis indicator and age at diagnosis.
      */
     public String Lung_Cancer;
 
@@ -115,10 +149,26 @@ public class FamilyMember {
     public String Melanoma_Cancer;
 
 
+    /**
+     * Formats the parent ID for pedigree serialization.
+     * <p>
+     * Returns "NA" if parentId is 0, otherwise returns the integer as a string.
+     * </p>
+     * @param parentId the parent identifier
+     * @return formatted parent ID string
+     */
     private String formatParentId(int parentId) {
         return parentId == 0 ? "NA" : Integer.toString(parentId);
     }
 
+    /**
+     * Sanitizes a string field for pedigree output.
+     * <p>
+     * Removes tabs, carriage returns, newlines, and trims whitespace.
+     * </p>
+     * @param value the input string
+     * @return sanitized string
+     */
     private String sanitizeField(String value) {
         if (value == null || value.isBlank()) {
             return "";
@@ -126,6 +176,13 @@ public class FamilyMember {
         return value.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ').trim();
     }
 
+    /**
+     * Checks if the family member has any cancer diagnosis.
+     * <p>
+     * Returns true if any cancer-related field is non-null or non-empty.
+     * </p>
+     * @return true if cancer is present, false otherwise
+     */
     private boolean hasCancer() {
         return this.Bladder_Cancer != null
                 || this.Breast_Cancer != null
@@ -149,6 +206,13 @@ public class FamilyMember {
                 || this.Unknown_Cancer != null;
     }
 
+    /**
+     * Builds a display identifier for the family member.
+     * <p>
+     * Returns "Respondent (Proband)" for the proband, otherwise uses the member's name and age.
+     * </p>
+     * @return display identifier string
+     */
     private String buildDisplayId() {
         StringBuilder sb = new StringBuilder();
         if (this.ID == PROBAND_ID) {
@@ -162,6 +226,16 @@ public class FamilyMember {
         return sb.toString();
     }
 
+    /**
+     * Appends a cancer label to the StringBuilder for pedigree output.
+     * <p>
+     * Adds cancer name and age, and handles multiple cancer flags.
+     * </p>
+     * @param sb the StringBuilder to append to
+     * @param cancerName the name of the cancer
+     * @param cancerAge the age at diagnosis
+     * @param multipleCancerFlag indicator for multiple occurrences
+     */
     private void appendCancerLabel(StringBuilder sb, String cancerName, String cancerAge, String multipleCancerFlag) {
         if (cancerAge == null) {
             return;
@@ -176,6 +250,13 @@ public class FamilyMember {
         sb.append(" ").append(cancerAge);
     }
 
+    /**
+     * Builds a formatted cancer label for pedigree output.
+     * <p>
+     * Combines cancer name, age, and multiple cancer flags for display.
+     * </p>
+     * @return formatted cancer label string
+     */
     private String buildCancerLabel() {
         if (this.unknown || !hasCancer()) {
             return "";

@@ -34,25 +34,29 @@ public class Content {
 
     /**
      * Text content to be rendered in the PDF.
-     * Used for simple text elements, titles, paragraphs, etc.
+     * <p>
+     * Used for simple text elements, titles, paragraphs, and error messages.
      */
     public String text;
 
     /**
      * SVG content for vector graphics.
-     * Used for charts, diagrams, or other scalable graphics.
+     * <p>
+     * Used for charts, diagrams, pedigree trees, or other scalable graphics.
      */
     public String svg;
 
     /**
      * Table content for structured data presentation.
-     * Used for displaying tabular data with headers and rows.
+     * <p>
+     * Used for displaying tabular data with headers and rows, such as survey results.
      */
     public Table table;
 
     /**
      * Style reference for applying formatting.
-     * References a named style from the PDFDocument's styles map.
+     * <p>
+     * References a named style from the PDFDocument's styles map for custom formatting.
      */
     public String style;
 
