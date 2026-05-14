@@ -16,6 +16,7 @@ import com.elicitsoftware.response.ReportResponse;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
@@ -36,12 +37,13 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 public interface ReportService {
     /**
      * Calls the external report service to generate a report based on the provided request.
-     * 
+     *
      * @param request The report request containing parameters for report generation
      * @return ReportResponse containing the generated report data
      * @throws jakarta.ws.rs.WebApplicationException if validation fails, service errors occur, or communication fails
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     ReportResponse callReport(ReportRequest request);
 }
