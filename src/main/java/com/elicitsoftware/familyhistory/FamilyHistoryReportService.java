@@ -91,6 +91,15 @@ public class FamilyHistoryReportService {
     String sftpHost;
 
     /**
+     * Whether the SFTP upload feature is enabled.
+     * Configured via the {@code family.history.sftp.enabled} property.
+     * Defaults to {@code true}. When {@code false}, no connection test,
+     * report generation/upload, or retry processing is performed.
+     */
+    @ConfigProperty(name = "family.history.sftp.enabled", defaultValue = "true")
+    boolean sftpEnabled;
+
+    /**
      * Number of threads for the async executor pool.
      * Configured via the {@code family.history.async.threads} property.
      * Defaults to 2 threads if not specified.
@@ -162,9 +171,14 @@ public class FamilyHistoryReportService {
             return t;
         });
         
-        LOG.info("Family History Report Service initialized with SFTP host: {} and {} async threads", 
-                sftpHost, asyncThreads);
-        
+        LOG.info("Family History Report Service initialized with SFTP host: {} and {} async threads (SFTP enabled: {})",
+                sftpHost, asyncThreads, sftpEnabled);
+
+        if (!sftpEnabled) {
+            LOG.info("SFTP upload is disabled via family.history.sftp.enabled=false - skipping connection test");
+            return;
+        }
+
         // Test SFTP connection during initialization to identify configuration issues early
         try {
             boolean connectionTest = sftpService.testConnection();
@@ -215,6 +229,12 @@ public class FamilyHistoryReportService {
      * @see SftpService#uploadFile(String, byte[])
      */
     public CompletableFuture<Void> generateAndUploadFamilyHistoryReport(Status status) {
+        if (!sftpEnabled) {
+            LOG.info("SFTP upload is disabled via family.history.sftp.enabled=false - skipping report generation for respondent {}",
+                    status.getRespondentId());
+            return CompletableFuture.completedFuture(null);
+        }
+
         CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
             // Call the transactional method to do the actual work
             try {
@@ -244,6 +264,11 @@ public class FamilyHistoryReportService {
     @Scheduled(every = "15m")
     @Transactional
     void processUnsentUploads(){
+
+        if (!sftpEnabled) {
+            LOG.debug("SFTP upload is disabled via family.history.sftp.enabled=false - skipping retry processing");
+            return;
+        }
 
         if (psaId != 0) {
             // Get RespondentPSA records that have failed (status = FAILED and uploadedDt is null)

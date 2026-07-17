@@ -34,6 +34,9 @@ Add the following properties to your `application.properties`:
 
 ```properties
 # Family History SFTP Configuration
+# Set to false to disable the SFTP upload feature entirely (skips the startup
+# connection test, report generation/upload, and the retry job).
+family.history.sftp.enabled=true
 family.history.sftp.host=your-sftp-host.com
 family.history.sftp.username=your_username
 family.history.sftp.password=your_password
