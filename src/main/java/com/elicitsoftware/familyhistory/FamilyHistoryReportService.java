@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,7 +89,7 @@ public class FamilyHistoryReportService {
      * Configured via the {@code family.history.sftp.host} property.
      */
     @ConfigProperty(name = "family.history.sftp.host")
-    String sftpHost;
+    Optional<String> sftpHost;
 
     /**
      * Whether the SFTP upload feature is enabled.
@@ -172,7 +173,7 @@ public class FamilyHistoryReportService {
         });
         
         LOG.info("Family History Report Service initialized with SFTP host: {} and {} async threads (SFTP enabled: {})",
-                sftpHost, asyncThreads, sftpEnabled);
+                sftpHost.orElse("<not configured>"), asyncThreads, sftpEnabled);
 
         if (!sftpEnabled) {
             LOG.info("SFTP upload is disabled via family.history.sftp.enabled=false - skipping connection test");
