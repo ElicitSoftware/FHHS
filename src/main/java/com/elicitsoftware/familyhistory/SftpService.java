@@ -12,6 +12,7 @@ package com.elicitsoftware.familyhistory;
  */
 
 import com.jcraft.jsch.*;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -64,16 +65,16 @@ public class SftpService {
     private static final Logger LOG = LoggerFactory.getLogger(SftpService.class);
     
     /**
-     * SFTP server hostname.
+     * SFTP server hostname. Only required when family.history.sftp.enabled=true.
      */
     @ConfigProperty(name = "family.history.sftp.host")
-    String sftpHost;
-    
+    Optional<String> sftpHostConfig;
+
     /**
-     * SFTP username for authentication.
+     * SFTP username for authentication. Only required when family.history.sftp.enabled=true.
      */
     @ConfigProperty(name = "family.history.sftp.username")
-    String sftpUsername;
+    Optional<String> sftpUsernameConfig;
     
     /**
      * Optional password for SFTP authentication.
@@ -88,10 +89,10 @@ public class SftpService {
     Optional<String> sftpPrivateKey;
     
     /**
-     * Remote path on SFTP server where files are uploaded.
+     * Remote path on SFTP server where files are uploaded. Only required when family.history.sftp.enabled=true.
      */
     @ConfigProperty(name = "family.history.sftp.path")
-    String sftpPath;
+    Optional<String> sftpPathConfig;
     
     /**
      * SFTP server port (default 22).
@@ -104,7 +105,32 @@ public class SftpService {
      */
     @ConfigProperty(name = "family.history.sftp.timeout", defaultValue = "30000")
     int sftpTimeout;
-    
+
+    /**
+     * SFTP server hostname, resolved from {@link #sftpHostConfig}.
+     * Only populated (and only needed) when family.history.sftp.enabled=true.
+     */
+    String sftpHost;
+
+    /**
+     * SFTP username, resolved from {@link #sftpUsernameConfig}.
+     * Only populated (and only needed) when family.history.sftp.enabled=true.
+     */
+    String sftpUsername;
+
+    /**
+     * Remote upload path, resolved from {@link #sftpPathConfig}.
+     * Only populated (and only needed) when family.history.sftp.enabled=true.
+     */
+    String sftpPath;
+
+    @PostConstruct
+    void init() {
+        sftpHost = sftpHostConfig.orElse(null);
+        sftpUsername = sftpUsernameConfig.orElse(null);
+        sftpPath = sftpPathConfig.orElse(null);
+    }
+
     /**
      * Uploads a file to the configured SFTP server using JSch library.
      * 
