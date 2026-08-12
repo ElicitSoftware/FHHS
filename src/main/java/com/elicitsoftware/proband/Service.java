@@ -32,6 +32,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import org.jboss.logging.Logger;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,24 +107,24 @@ public class Service {
 
         StringBuilder innerHTML = new StringBuilder();
 
-        FamilyHistoryRecord fact = null;
         List<FamilyHistoryRecord> allRecords = cancerHistoryRepository.findFamilyHistoryByRespondentId(req.id);
         LOG.debugf("Retrieved %d family history record(s) for respondent id=%d", allRecords.size(), req.id);
+
+        List<Row> allRows = new ArrayList<>();
+        Card card = new Card("");
         for (FamilyHistoryRecord record : allRecords) {
-            if ("Proband".equals(record.step)) {
-                fact = record;
-                break;
+            if ("Proband".equals(record.step) || "Proband Cancer".equals(record.step)) {
+                List<Row> rows = RowConverter.toRows(record);
+                allRows.addAll(rows);
+                card.addRows(rows);
             }
         }
 
-        if (fact != null) {
-            List<Row> rows = RowConverter.toRows(fact);
-            table.body = new String[rows.size()][2];
-            Card card = new Card("");
-            card.addRows(rows);
+        if (!allRows.isEmpty()) {
+            table.body = new String[allRows.size()][2];
             int i = 0;
 
-            for (Row row : rows) {
+            for (Row row : allRows) {
                 setPDFTableRow(row, table, i);
                 i++;
             }
