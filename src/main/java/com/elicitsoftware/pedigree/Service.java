@@ -134,8 +134,10 @@ public class Service {
     @Produces("application/json")
     @Transactional()
     public ReportResponse report(ReportRequest req) {
+        LOG.debugf("Generating pedigree report for respondent id=%d", req.id);
 
         Family family = familyManager.getFamily(req.id);
+        LOG.debugf("Loaded family data for respondent id=%d", req.id);
 
         String response = callPedigree(family.toString());
 
@@ -148,6 +150,7 @@ public class Service {
         pdf.styles = getPDFStyles();
         pdf.content = getPDFContent(innerHTML, family.hasMultipleCancers());
 
+        LOG.debugf("Completed pedigree report generation for respondent id=%d", req.id);
         return new ReportResponse("Patient Pedigree", innerHTML, pdf);
 
     }
