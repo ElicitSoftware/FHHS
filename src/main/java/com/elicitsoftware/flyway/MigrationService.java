@@ -12,6 +12,7 @@ package com.elicitsoftware.flyway;
  */
 
 import io.quarkus.flyway.FlywayDataSource;
+import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
@@ -83,6 +84,6 @@ public class MigrationService {
         // Use the flyway instance manually
         flywayForOwner.repair();
         flywayForOwner.migrate();
-        System.out.println(flywayForOwner.info().current().getVersion().toString());
+        Log.infov("Database migrated to version: {}", flywayForOwner.info().current().getVersion().toString());
     }
 }

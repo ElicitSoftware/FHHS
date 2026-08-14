@@ -11,33 +11,30 @@ package com.elicitsoftware.familyhistory;
  * ***LICENSE_END***
  */
 
+import io.quarkus.logging.Log;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @QuarkusTest
 public class SftpServiceAuthenticationTest {
-
-    private static final Logger LOG = LoggerFactory.getLogger(SftpServiceAuthenticationTest.class);
 
     @Inject
     SftpService sftpService;
 
     @Test
     public void testSftpConnection() {
-        LOG.info("Testing SFTP connection with SSH key authentication...");
-        
+        Log.info("Testing SFTP connection with SSH key authentication...");
+
         try {
             boolean connectionSuccess = sftpService.testConnection();
             if (connectionSuccess) {
-                LOG.info("✅ SFTP connection test PASSED - SSH key authentication is working!");
+                Log.info("✅ SFTP connection test PASSED - SSH key authentication is working!");
             } else {
-                LOG.error("❌ SFTP connection test FAILED - Check configuration and logs");
+                Log.error("❌ SFTP connection test FAILED - Check configuration and logs");
             }
         } catch (Exception e) {
-            LOG.error("❌ SFTP connection test FAILED with exception: {}", e.getMessage(), e);
+            Log.errorv(e, "❌ SFTP connection test FAILED with exception: {}", e.getMessage());
         }
     }
 }

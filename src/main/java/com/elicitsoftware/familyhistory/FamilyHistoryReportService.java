@@ -23,8 +23,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.quarkus.logging.Log;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -71,11 +70,6 @@ public class FamilyHistoryReportService {
     public FamilyHistoryReportService() {
         // Default constructor for CDI
     }
-
-    /**
-     * Logger instance for this service.
-     */
-    private static final Logger LOG = LoggerFactory.getLogger(FamilyHistoryReportService.class);
 
     /**
      * Dedicated executor service for async report generation tasks.
@@ -172,11 +166,11 @@ public class FamilyHistoryReportService {
             return t;
         });
         
-        LOG.info("Family History Report Service initialized with SFTP host: {} and {} async threads (SFTP enabled: {})",
+        Log.infov("Family History Report Service initialized with SFTP host: {} and {} async threads (SFTP enabled: {})",
                 sftpHost.orElse("<not configured>"), asyncThreads, sftpEnabled);
 
         if (!sftpEnabled) {
-            LOG.info("SFTP upload is disabled via family.history.sftp.enabled=false - skipping connection test");
+            Log.info("SFTP upload is disabled via family.history.sftp.enabled=false - skipping connection test");
             return;
         }
 
@@ -184,12 +178,12 @@ public class FamilyHistoryReportService {
         try {
             boolean connectionTest = sftpService.testConnection();
             if (connectionTest) {
-                LOG.info("SFTP connection test successful during service initialization");
+                Log.info("SFTP connection test successful during service initialization");
             } else {
-                LOG.warn("SFTP connection test failed during service initialization - file uploads may fail");
+                Log.warn("SFTP connection test failed during service initialization - file uploads may fail");
             }
         } catch (Exception e) {
-            LOG.error("SFTP connection test threw exception during service initialization: {}", e.getMessage(), e);
+            Log.errorv(e, "SFTP connection test threw exception during service initialization: {}", e.getMessage());
         }
     }
 
@@ -201,7 +195,7 @@ public class FamilyHistoryReportService {
     void destroy() {
         if (asyncExecutor != null && !asyncExecutor.isShutdown()) {
             asyncExecutor.shutdown();
-            LOG.info("Family History Report Service async executor shutdown completed");
+            Log.info("Family History Report Service async executor shutdown completed");
         }
     }
 
@@ -231,7 +225,7 @@ public class FamilyHistoryReportService {
      */
     public CompletableFuture<Void> generateAndUploadFamilyHistoryReport(Status status) {
         if (!sftpEnabled) {
-            LOG.info("SFTP upload is disabled via family.history.sftp.enabled=false - skipping report generation for respondent {}",
+            Log.infov("SFTP upload is disabled via family.history.sftp.enabled=false - skipping report generation for respondent {}",
                     status.getRespondentId());
             return CompletableFuture.completedFuture(null);
         }
@@ -241,8 +235,8 @@ public class FamilyHistoryReportService {
             try {
                 doGenerateAndUploadFamilyHistoryReport(status);
             } catch (Exception e) {
-                LOG.error("Failed to generate and upload family history report for respondent {}: {}",
-                        status.getRespondentId(), e.getMessage(), e);
+                Log.errorv(e, "Failed to generate and upload family history report for respondent {}: {}",
+                        status.getRespondentId(), e.getMessage());
                 throw new RuntimeException("Failed to process family history report", e);
             }
         }, asyncExecutor); // Use dedicated executor instead of default ForkJoinPool
@@ -267,7 +261,7 @@ public class FamilyHistoryReportService {
     void processUnsentUploads(){
 
         if (!sftpEnabled) {
-            LOG.debug("SFTP upload is disabled via family.history.sftp.enabled=false - skipping retry processing");
+            Log.debug("SFTP upload is disabled via family.history.sftp.enabled=false - skipping retry processing");
             return;
         }
 
@@ -277,11 +271,11 @@ public class FamilyHistoryReportService {
             List<RespondentPSA> unsentPSAs = RespondentPSA.find("psaId = ?1 AND status = ?2 AND uploadedDt IS NULL AND tries < ?3",
                     psaId, "FAILED", 50).list();
             
-            LOG.info("Found {} unsent uploads to retry", unsentPSAs.size());
-            
+            Log.infov("Found {} unsent uploads to retry", unsentPSAs.size());
+
             for (RespondentPSA respondentPSA : unsentPSAs) {
                 try {
-                    LOG.info("Retrying upload for respondent {} (attempt {})", 
+                    Log.infov("Retrying upload for respondent {} (attempt {})",
                             respondentPSA.respondentId, respondentPSA.tries + 1);
                     
                     // Get the status for this respondent
@@ -292,15 +286,15 @@ public class FamilyHistoryReportService {
                         // Update the RespondentPSA with no error
                         updateRespondentPSAStatus(respondentPSA.respondentId, null);
                     } else {
-                        LOG.warn("No status record found for respondent {}, skipping retry", respondentPSA.respondentId);
+                        Log.warnv("No status record found for respondent {}, skipping retry", respondentPSA.respondentId);
                     }
-                } catch (Exception e) {                    
+                } catch (Exception e) {
                     // Update the RespondentPSA with the new failure
                     updateRespondentPSAStatus(respondentPSA.respondentId, e);
                 }
             }
         } else {
-            LOG.warn("No Post Survey Action found with name 'Generate Family History Report'");
+            Log.warn("No Post Survey Action found with name 'Generate Family History Report'");
         }
     }
 
@@ -313,42 +307,42 @@ public class FamilyHistoryReportService {
      */
     @Transactional
     public void doGenerateAndUploadFamilyHistoryReport(Status status) throws Exception {
-        LOG.info("Generating family history report for respondent {} with external ID {}",
+        Log.infov("Generating family history report for respondent {} with external ID {}",
                 status.getRespondentId(), status.getXid());
 
         // Generate PDF report
-        LOG.info("Starting PDF generation for respondent: {}", status.getRespondentId());
+        Log.infov("Starting PDF generation for respondent: {}", status.getRespondentId());
         byte[] pdfData = generateFamilyHistoryPdf(status.getRespondentId());
         String pdfFileName = status.getXid() + ".pdf";
-        LOG.info("PDF generated successfully: {} ({} bytes)", pdfFileName, pdfData.length);
+        Log.infov("PDF generated successfully: {} ({} bytes)", pdfFileName, pdfData.length);
 
         // Generate XML metadata
-        LOG.info("Generating XML metadata for respondent: {}", status.getRespondentId());
+        Log.infov("Generating XML metadata for respondent: {}", status.getRespondentId());
         String xmlMetadata = generateXmlMetadata(status);
         String xmlFileName = status.getXid() + "-index.xml";
-        LOG.info("XML metadata generated successfully: {} ({} bytes)", xmlFileName, xmlMetadata.length());
+        Log.infov("XML metadata generated successfully: {} ({} bytes)", xmlFileName, xmlMetadata.length());
 
 
         // Upload files to SFTP server
-        LOG.info("Starting SFTP upload for files: {} and {}", pdfFileName, xmlFileName);
+        Log.infov("Starting SFTP upload for files: {} and {}", pdfFileName, xmlFileName);
         try {
-            LOG.info("Uploading PDF file: {}", pdfFileName);
+            Log.infov("Uploading PDF file: {}", pdfFileName);
             sftpService.uploadFile(pdfFileName, pdfData);
-            LOG.info("PDF file uploaded successfully: {}", pdfFileName);
+            Log.infov("PDF file uploaded successfully: {}", pdfFileName);
         } catch (Exception e) {
-            LOG.error("Failed to upload PDF file {}: {}", pdfFileName, e.getMessage(), e);
+            Log.errorv(e, "Failed to upload PDF file {}: {}", pdfFileName, e.getMessage());
             throw e;
         }
         try {
-            LOG.info("Uploading XML file: {}", xmlFileName);
+            Log.infov("Uploading XML file: {}", xmlFileName);
             sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
-            LOG.info("XML file uploaded successfully: {}", xmlFileName);
-            LOG.info("XML content: {}", xmlMetadata);
+            Log.infov("XML file uploaded successfully: {}", xmlFileName);
+            Log.infov("XML content: {}", xmlMetadata);
         } catch (Exception e) {
-            LOG.error("Failed to upload XML file {}: {}", xmlFileName, e.getMessage(), e);
+            Log.errorv(e, "Failed to upload XML file {}: {}", xmlFileName, e.getMessage());
             throw e;
         }
-        LOG.info("Successfully uploaded family history report files for external ID: {}", status.getXid());
+        Log.infov("Successfully uploaded family history report files for external ID: {}", status.getXid());
     }
 
     /**
@@ -370,43 +364,43 @@ public class FamilyHistoryReportService {
         try {
             // Skip if psaId is null or 0 to avoid foreign key constraint violations
             if (this.psaId == 0) {
-                LOG.warn("Skipping RespondentPSA status update for respondent {} - invalid psaId: {}", 
+                Log.warnv("Skipping RespondentPSA status update for respondent {} - invalid psaId: {}",
                         respondentId, psaId);
                 return;
             }
-            
+
             // Verify the post-survey action exists before creating RespondentPSA record
             Long psaCount = PostSurveyAction.count("id = ?1", psaId);
             if (psaCount == 0) {
-                LOG.warn("Skipping RespondentPSA status update for respondent {} - " +
+                Log.warnv("Skipping RespondentPSA status update for respondent {} - " +
                         "post-survey action {} does not exist", respondentId, psaId);
                 return;
             }
-            
+
             // Find or create RespondentPSA record to track execution status
-            RespondentPSA respondentPSA = RespondentPSA.find("respondentId = ?1 and psaId = ?2", 
+            RespondentPSA respondentPSA = RespondentPSA.find("respondentId = ?1 and psaId = ?2",
                     respondentId, psaId).firstResult();
-            
+
             if (respondentPSA == null) {
                 respondentPSA = new RespondentPSA();
                 respondentPSA.respondentId = respondentId;
                 respondentPSA.psaId = psaId;
                 respondentPSA.status = "STARTED";
-                LOG.debug("Created new RespondentPSA record for respondent {} and PSA {}", 
+                Log.debugv("Created new RespondentPSA record for respondent {} and PSA {}",
                         respondentId, psaId);
             }
-            
+
             if (throwable != null) {
-                LOG.error("CompletableFuture completed exceptionally for respondent {}: {}", 
-                        respondentId, throwable.getMessage(), throwable);
-                        
+                Log.errorv(throwable, "CompletableFuture completed exceptionally for respondent {}: {}",
+                        respondentId, throwable.getMessage());
+
                 // Update RespondentPSA with error status
                 respondentPSA.status = "FAILED";
                 respondentPSA.error = throwable.getMessage();
 
             } else {
-                LOG.info("CompletableFuture completed successfully for respondent {}", respondentId);
-                
+                Log.infov("CompletableFuture completed successfully for respondent {}", respondentId);
+
                 // Update RespondentPSA with success status
                 respondentPSA.status = "COMPLETED";
                 respondentPSA.error = null;
@@ -415,12 +409,12 @@ public class FamilyHistoryReportService {
             // Increment the tries value
             respondentPSA.tries = respondentPSA.tries + 1;
             respondentPSA.persist();
-            LOG.debug("Updated RespondentPSA status to {} for respondent {} and PSA {}", 
+            Log.debugv("Updated RespondentPSA status to {} for respondent {} and PSA {}",
                     respondentPSA.status, respondentId, psaId);
-            
+
         } catch (Exception e) {
-            LOG.error("Failed to update RespondentPSA status for respondent {} and PSA {}: {}", 
-                    respondentId, psaId, e.getMessage(), e);
+            Log.errorv(e, "Failed to update RespondentPSA status for respondent {} and PSA {}: {}",
+                    respondentId, psaId, e.getMessage());
             // Don't rethrow - this is a status tracking operation that shouldn't fail the main process
         }
     }
@@ -446,7 +440,7 @@ public class FamilyHistoryReportService {
      */
     @Transactional
     public byte[] generateFamilyHistoryPdf(Long respondentId) {
-        LOG.debug("Generating PDF for respondent: {}", respondentId);
+        Log.debugv("Generating PDF for respondent: {}", respondentId);
 
         // Activate request context for calling request-scoped beans
         ManagedContext requestContext = Arc.container().requestContext();
@@ -484,7 +478,7 @@ public class FamilyHistoryReportService {
      * @see #xmlTemplate
      */
     private String generateXmlMetadata(Status status) {
-        LOG.debug("Generating XML metadata for respondent: {} with external ID: {}", status);
+        Log.debugv("Generating XML metadata for respondent: {} with external ID: {}", status);
 
         String xmlDoc = xmlTemplate;
         // Any value in the status document can be included in the xml.

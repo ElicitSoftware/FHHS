@@ -15,8 +15,7 @@ import com.jcraft.jsch.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.quarkus.logging.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -59,11 +58,6 @@ public class SftpService {
         // Default constructor for CDI
     }
 
-    /**
-     * Logger instance for this class.
-     */
-    private static final Logger LOG = LoggerFactory.getLogger(SftpService.class);
-    
     /**
      * SFTP server hostname. Only required when family.history.sftp.enabled=true.
      */
@@ -147,19 +141,19 @@ public class SftpService {
         ChannelSftp sftpChannel = null;
         
         try {
-            LOG.debug("Connecting to SFTP server {}:{} for file upload: {}", sftpHost, sftpPort, fileName);
+            Log.debugv("Connecting to SFTP server {}:{} for file upload: {}", sftpHost, sftpPort, fileName);
             
             // Create JSch session with authentication
             session = createAuthenticatedSession();
             
             // Connect to the session
             session.connect();
-            LOG.debug("SSH session connected to {}:{}", sftpHost, sftpPort);
+            Log.debugv("SSH session connected to {}:{}", sftpHost, sftpPort);
             
             // Open SFTP channel
             sftpChannel = (ChannelSftp) session.openChannel("sftp");
             sftpChannel.connect();
-            LOG.debug("SFTP channel opened successfully");
+            Log.debug("SFTP channel opened successfully");
             
             // Ensure the remote directory exists
             ensureRemoteDirectoryExists(sftpChannel, sftpPath);
@@ -172,27 +166,27 @@ public class SftpService {
                 sftpChannel.put(inputStream, fileName, ChannelSftp.OVERWRITE);
             }
             
-            LOG.info("Successfully uploaded file: {} ({} bytes) to SFTP server {}:{}{}", 
+            Log.infov("Successfully uploaded file: {} ({} bytes) to SFTP server {}:{}{}",
                      fileName, fileData.length, sftpHost, sftpPort, sftpPath);
             
         } catch (JSchException e) {
-            LOG.error("SFTP connection failed for file {}: {}", fileName, e.getMessage(), e);
+            Log.errorv(e, "SFTP connection failed for file {}: {}", fileName, e.getMessage());
             throw new RuntimeException("Failed to connect to SFTP server", e);
         } catch (SftpException e) {
-            LOG.error("SFTP operation failed for file {}: {}", fileName, e.getMessage(), e);
+            Log.errorv(e, "SFTP operation failed for file {}: {}", fileName, e.getMessage());
             throw new RuntimeException("Failed to upload file to SFTP server", e);
         } catch (IOException e) {
-            LOG.error("I/O error during file upload {}: {}", fileName, e.getMessage(), e);
+            Log.errorv(e, "I/O error during file upload {}: {}", fileName, e.getMessage());
             throw new RuntimeException("I/O error during file upload", e);
         } finally {
             // Clean up resources
             if (sftpChannel != null && sftpChannel.isConnected()) {
                 sftpChannel.disconnect();
-                LOG.debug("SFTP channel disconnected");
+                Log.debug("SFTP channel disconnected");
             }
             if (session != null && session.isConnected()) {
                 session.disconnect();
-                LOG.debug("SSH session disconnected");
+                Log.debug("SSH session disconnected");
             }
         }
     }
@@ -209,10 +203,10 @@ public class SftpService {
         try {
             // Try to change to the directory - if it exists, this will succeed
             sftpChannel.cd(remotePath);
-            LOG.debug("Remote directory exists: {}", remotePath);
+            Log.debugv("Remote directory exists: {}", remotePath);
         } catch (SftpException e) {
             // Directory doesn't exist, create it
-            LOG.debug("Creating remote directory: {}", remotePath);
+            Log.debugv("Creating remote directory: {}", remotePath);
             
             // Split the path and create directories recursively
             String[] pathParts = remotePath.split("/");
@@ -229,7 +223,7 @@ public class SftpService {
                 } catch (SftpException ex) {
                     // Directory doesn't exist, create it
                     sftpChannel.mkdir(dirToCreate);
-                    LOG.debug("Created remote directory: {}", dirToCreate);
+                    Log.debugv("Created remote directory: {}", dirToCreate);
                     sftpChannel.cd(dirToCreate);
                 }
             }
@@ -249,19 +243,19 @@ public class SftpService {
         ChannelSftp sftpChannel = null;
         
         try {
-            LOG.debug("Testing SFTP connection to {}:{}", sftpHost, sftpPort);
+            Log.debugv("Testing SFTP connection to {}:{}", sftpHost, sftpPort);
             
             // Create JSch session with authentication
             session = createAuthenticatedSession();
             
             // Connect to the session
             session.connect();
-            LOG.debug("SSH session connected for connection test");
+            Log.debug("SSH session connected for connection test");
             
             // Open SFTP channel
             sftpChannel = (ChannelSftp) session.openChannel("sftp");
             sftpChannel.connect();
-            LOG.debug("SFTP channel opened for connection test");
+            Log.debug("SFTP channel opened for connection test");
             
             // Ensure the remote directory exists
             ensureRemoteDirectoryExists(sftpChannel, sftpPath);
@@ -275,29 +269,29 @@ public class SftpService {
             boolean writable = (permissions & 0200) != 0; // Check owner write permission
             
             if (!writable) {
-                LOG.warn("SFTP directory {} is not writable (permissions: {})", sftpPath, 
+                Log.warnv("SFTP directory {} is not writable (permissions: {})", sftpPath,
                         Integer.toOctalString(permissions));
                 return false;
             }
-            
-            LOG.info("SFTP connection test successful to {}:{}{} (writable)", sftpHost, sftpPort, sftpPath);
+
+            Log.infov("SFTP connection test successful to {}:{}{} (writable)", sftpHost, sftpPort, sftpPath);
             return true;
-            
+
         } catch (JSchException e) {
-            LOG.error("SFTP connection test failed - connection error: {}", e.getMessage(), e);
+            Log.errorv(e, "SFTP connection test failed - connection error: {}", e.getMessage());
             return false;
         } catch (SftpException e) {
-            LOG.error("SFTP connection test failed - SFTP operation error: {}", e.getMessage(), e);
+            Log.errorv(e, "SFTP connection test failed - SFTP operation error: {}", e.getMessage());
             return false;
         } finally {
             // Clean up resources
             if (sftpChannel != null && sftpChannel.isConnected()) {
                 sftpChannel.disconnect();
-                LOG.debug("SFTP channel disconnected after connection test");
+                Log.debug("SFTP channel disconnected after connection test");
             }
             if (session != null && session.isConnected()) {
                 session.disconnect();
-                LOG.debug("SSH session disconnected after connection test");
+                Log.debug("SSH session disconnected after connection test");
             }
         }
     }
@@ -317,7 +311,7 @@ public class SftpService {
         if (sftpPrivateKey.isPresent() && !sftpPrivateKey.get().trim().isEmpty()) {
             // Use SSH key authentication
             String privateKeyValue = sftpPrivateKey.get().trim();
-            LOG.debug("Using SSH key authentication with key: {}", 
+            Log.debugv("Using SSH key authentication with key: {}",
                      privateKeyValue.startsWith("-----BEGIN") ? "private key content" : privateKeyValue);
             
             try {
@@ -326,7 +320,7 @@ public class SftpService {
                     // Direct private key content - add it directly to JSch
                     byte[] privateKeyBytes = privateKeyValue.getBytes();
                     jsch.addIdentity("private-key", privateKeyBytes, null, null);
-                    LOG.debug("Successfully loaded SSH private key from direct content");
+                    Log.debug("Successfully loaded SSH private key from direct content");
                 } else {
                     // File path - load from file
                     File keyFile = new File(privateKeyValue);
@@ -340,17 +334,17 @@ public class SftpService {
                     }
                     
                     jsch.addIdentity(keyFile.getAbsolutePath());
-                    LOG.debug("Successfully loaded SSH private key from: {}", keyFile.getAbsolutePath());
+                    Log.debugv("Successfully loaded SSH private key from: {}", keyFile.getAbsolutePath());
                 }
-                
+
             } catch (JSchException e) {
-                LOG.error("Failed to load SSH private key: {}", e.getMessage());
+                Log.errorv("Failed to load SSH private key: {}", e.getMessage());
                 throw e;
             }
-            
+
         } else if (sftpPassword.isPresent() && !sftpPassword.get().trim().isEmpty()) {
             // Use password authentication
-            LOG.debug("Using password authentication");
+            Log.debug("Using password authentication");
             session.setPassword(sftpPassword.get());
             
         } else {

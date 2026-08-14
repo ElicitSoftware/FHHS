@@ -31,7 +31,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
-import org.jboss.logging.Logger;
+import io.quarkus.logging.Log;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -52,11 +52,6 @@ import java.util.Map.Entry;
 @Path("casummary")
 @RequestScoped
 public class Service {
-
-    /**
-     * Logger for cancer summary service operations and diagnostics.
-     */
-    private static final Logger LOG = Logger.getLogger(Service.class);
 
     /**
      * String buffer for building PDF table content.
@@ -104,7 +99,7 @@ public class Service {
     @Produces("application/json")
     @Transactional
     public ReportResponse report(ReportRequest req) {
-        LOG.debugf("Generating cancer summary report for respondent id=%d", req.id);
+        Log.debugf("Generating cancer summary report for respondent id=%d", req.id);
 
         Table table = new Table();
         table.headers = new String[3];
@@ -127,7 +122,7 @@ public class Service {
         List<FamilyHistoryRecord> facts = cancerHistoryRepository.findFamilyHistoryByRespondentId(req.id);
         // Filter out proband records (we only want relatives)
         facts.removeIf(f -> f.step != null && f.step.equals("Proband"));
-        LOG.debugf("Retrieved %d relative record(s) for respondent id=%d", facts.size(), req.id);
+        Log.debugf("Retrieved %d relative record(s) for respondent id=%d", facts.size(), req.id);
 
         PDFDocument pdf = new PDFDocument();
         pdf.title = TITLE;
@@ -164,7 +159,7 @@ public class Service {
             pdf.content = getPDFContent(table);
         }
         if (cards.size() < 1) {
-            LOG.debugf("No relatives reported cancer for respondent id=%d", req.id);
+            Log.debugf("No relatives reported cancer for respondent id=%d", req.id);
             innerHTML.append("No relatives reported cancer.");
 
             Content[] content = new Content[2];
@@ -178,7 +173,7 @@ public class Service {
             pdf.content = content;
         }
 
-        LOG.debugf("Completed cancer summary report generation for respondent id=%d", req.id);
+        Log.debugf("Completed cancer summary report generation for respondent id=%d", req.id);
         return new ReportResponse("Cancer Summary", innerHTML.toString(), pdf);
     }
 
