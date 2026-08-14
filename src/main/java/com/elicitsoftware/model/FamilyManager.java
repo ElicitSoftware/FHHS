@@ -13,7 +13,7 @@ package com.elicitsoftware.model;
 
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
-import org.jboss.logging.Logger;
+import io.quarkus.logging.Log;
 
 import javax.management.relation.RelationException;
 import java.util.ArrayList;
@@ -42,11 +42,6 @@ import java.util.Objects;
  */
 @RequestScoped
 public class FamilyManager {
-
-    /**
-     * Logger for family manager operations and diagnostics.
-     */
-    private static final Logger LOG = Logger.getLogger(FamilyManager.class);
 
     /**
      * Repository for optimized family history queries.
@@ -333,7 +328,7 @@ public class FamilyManager {
                 }
 
                 if ("Proband".equals(fact.step) || "Proband Cancer".equals(fact.step)) {
-                    LOG.infof(
+                    Log.infof(
                             "Proband cancer mapping: step=%s breast=%s age=%s uterine=%s age=%s familyMember=%s",
                             fact.step,
                             fact.breastCancer,

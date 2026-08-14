@@ -20,8 +20,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.quarkus.logging.Log;
 
 /**
  * REST service for handling family history report generation and upload requests.
@@ -52,11 +51,6 @@ public class FamilyHistoryService {
         // Default constructor for CDI
     }
 
-    /**
-     * The logger instance for this service.
-     */
-    private static final Logger LOG = LoggerFactory.getLogger(FamilyHistoryService.class);
-    
     /**
      * Injected service for handling family history report generation and upload operations.
      */
@@ -95,38 +89,38 @@ public class FamilyHistoryService {
     @Transactional
     public Response generateFamilyHistoryReport(ReportRequest request) {
         try {
-            LOG.info("Received family history report generation request for respondent: {}", request.id);
-            
+            Log.infov("Received family history report generation request for respondent: {}", request.id);
+
             // Validate request
             if (request.id == 0) {
-                LOG.warn("Missing respondent ID in request");
+                Log.warn("Missing respondent ID in request");
                 return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new FamilyHistoryReportResponse("Missing respondent ID", false))
                     .build();
             }
 
             Status status = Status.find("respondentId", request.id).firstResult();
-            
+
             // Check if status record exists
             if (status == null) {
-                LOG.warn("No status record found for respondent ID: {}", request.id);
+                Log.warnv("No status record found for respondent ID: {}", request.id);
                 return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new FamilyHistoryReportResponse("No status record found for respondent", false))
                     .build();
             }
-            
-            LOG.info("Found status record for respondent {}: external ID = {}", request.id, status.getXid());
+
+            Log.infov("Found status record for respondent {}: external ID = {}", request.id, status.getXid());
 
             // Start the asynchronous report generation and upload
             reportService.generateAndUploadFamilyHistoryReport(status);
-            
-            LOG.info("Family history report generation initiated for respondent: {}", request.id);
-            
+
+            Log.infov("Family history report generation initiated for respondent: {}", request.id);
+
             return Response.ok(new FamilyHistoryReportResponse("Family history report generation initiated", true))
                     .build();
-                    
+
         } catch (Exception e) {
-            LOG.error("Failed to initiate family history report generation: {}", e.getMessage(), e);
+            Log.errorv(e, "Failed to initiate family history report generation: {}", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new FamilyHistoryReportResponse("Failed to generate report: " + e.getMessage(), false))
                     .build();
@@ -159,24 +153,24 @@ public class FamilyHistoryService {
     @PermitAll
     public Response debugStatus(@PathParam("respondentId") long respondentId) {
         try {
-            LOG.info("Checking status records for respondent: {}", respondentId);
-            
+            Log.infov("Checking status records for respondent: {}", respondentId);
+
             Status status = Status.find("respondentId", respondentId).firstResult();
-            
+
             if (status == null) {
-                LOG.warn("No status record found for respondent: {}", respondentId);
+                Log.warnv("No status record found for respondent: {}", respondentId);
                 return Response.ok(new FamilyHistoryReportResponse("No status record found for respondent " + respondentId, false))
                         .build();
             }
-            
-            LOG.info("Found status record for respondent {}: XID = {}", respondentId, status.getXid());
+
+            Log.infov("Found status record for respondent {}: XID = {}", respondentId, status.getXid());
             return Response.ok(new FamilyHistoryReportResponse(
-                    String.format("Status found - ID: %d, XID: %s, RespondentId: %d", 
+                    String.format("Status found - ID: %d, XID: %s, RespondentId: %d",
                             status.getId(), status.getXid(), status.getRespondentId()), true))
                     .build();
-                    
+
         } catch (Exception e) {
-            LOG.error("Failed to check status for respondent {}: {}", respondentId, e.getMessage(), e);
+            Log.errorv(e, "Failed to check status for respondent {}: {}", respondentId, e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new FamilyHistoryReportResponse("Error checking status: " + e.getMessage(), false))
                     .build();

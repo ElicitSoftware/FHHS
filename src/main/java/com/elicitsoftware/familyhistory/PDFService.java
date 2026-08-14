@@ -20,6 +20,7 @@ import com.elicitsoftware.response.pdfbox.Table;
 import com.elicitsoftware.response.pdfbox.TableBuilder;
 
 import com.elicitsoftware.response.ReportResponse;
+import io.quarkus.logging.Log;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer;
 import jakarta.enterprise.context.RequestScoped;
@@ -193,20 +194,20 @@ public class PDFService {
 
             for (ReportResponse response : reportResponses) {
                 if (response == null) {
-                    System.out.println("FHHS PDFService.generatePDF - Skipping null response");
+                    Log.warn("FHHS PDFService.generatePDF - Skipping null response");
                     continue;
                 }
 
-                System.out.println("FHHS PDFService.generatePDF - Processing response: " + response.title);
-                System.out.println("  response.pdf is null: " + (response.pdf == null));
+                Log.debugv("FHHS PDFService.generatePDF - Processing response: {}", response.title);
+                Log.debugv("  response.pdf is null: {}", (response.pdf == null));
                 if (response.pdf != null) {
-                    System.out.println("  response.pdf.title: " + response.pdf.title);
-                    System.out.println("  response.pdf.content length: " + (response.pdf.content != null ? response.pdf.content.length : "null"));
+                    Log.debugv("  response.pdf.title: {}", response.pdf.title);
+                    Log.debugv("  response.pdf.content length: {}", (response.pdf.content != null ? response.pdf.content.length : "null"));
                 }
 
                 // If the PDF payload is missing, render a safe error block instead of crashing
                 if (response.pdf == null) {
-                    System.out.println("FHHS PDFService.generatePDF - PDF is null, rendering error block");
+                    Log.warn("FHHS PDFService.generatePDF - PDF is null, rendering error block");
                     String title = (response.title != null && !response.title.isEmpty()) ? response.title : "Report Generation Error";
                     addTitleBlock(title);
                     String errorText = (response.innerHTML != null && !response.innerHTML.isEmpty())
@@ -231,7 +232,7 @@ public class PDFService {
 
                 for (Content content : response.pdf.content) {
                     if (content == null) {
-                        System.out.println("Content is null");
+                        Log.warn("Content is null");
                         continue;
                     }
                     // Close the current content stream if a new page is needed
@@ -807,11 +808,11 @@ public class PDFService {
             pdfDoc.content = new Content[]{errorContent};
             reportResponse.pdf = pdfDoc;
             
-            System.out.println("FHHS PDFService.callReport - Error for " + rpt.name);
-            System.out.println("  Error message: " + cleanErrorMessage);
-            System.out.println("  PDF title: " + pdfDoc.title);
-            System.out.println("  PDF content length: " + (pdfDoc.content != null ? pdfDoc.content.length : "null"));
-            System.out.println("  PDF content[0].text: " + (pdfDoc.content != null && pdfDoc.content.length > 0 ? pdfDoc.content[0].text : "null"));
+            Log.errorv("FHHS PDFService.callReport - Error for {}", rpt.name);
+            Log.errorv("  Error message: {}", cleanErrorMessage);
+            Log.errorv("  PDF title: {}", pdfDoc.title);
+            Log.errorv("  PDF content length: {}", (pdfDoc.content != null ? pdfDoc.content.length : "null"));
+            Log.errorv("  PDF content[0].text: {}", (pdfDoc.content != null && pdfDoc.content.length > 0 ? pdfDoc.content[0].text : "null"));
             
             return reportResponse;
         } catch (Exception e) {

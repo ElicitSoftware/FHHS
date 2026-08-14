@@ -29,7 +29,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
+import io.quarkus.logging.Log;
 
 import java.io.IOException;
 import java.net.URI;
@@ -58,11 +58,6 @@ import java.util.UUID;
 @Path("pedigree")
 @RequestScoped
 public class Service {
-
-    /**
-     * Logger for pedigree service operations and diagnostics.
-     */
-    private static final Logger LOG = Logger.getLogger(Service.class);
 
         /**
          * HTTP client for external pedigree service communication.
@@ -134,10 +129,10 @@ public class Service {
     @Produces("application/json")
     @Transactional()
     public ReportResponse report(ReportRequest req) {
-        LOG.debugf("Generating pedigree report for respondent id=%d", req.id);
+        Log.debugf("Generating pedigree report for respondent id=%d", req.id);
 
         Family family = familyManager.getFamily(req.id);
-        LOG.debugf("Loaded family data for respondent id=%d", req.id);
+        Log.debugf("Loaded family data for respondent id=%d", req.id);
 
         String response = callPedigree(family.toString());
 
@@ -150,7 +145,7 @@ public class Service {
         pdf.styles = getPDFStyles();
         pdf.content = getPDFContent(innerHTML, family.hasMultipleCancers());
 
-        LOG.debugf("Completed pedigree report generation for respondent id=%d", req.id);
+        Log.debugf("Completed pedigree report generation for respondent id=%d", req.id);
         return new ReportResponse("Patient Pedigree", innerHTML, pdf);
 
     }
@@ -203,7 +198,7 @@ public class Service {
         span.setAttribute("pedigree.payload.length", family.length());
 
         try (Scope ignored = span.makeCurrent()) {
-            LOG.infof("Sending pedigree payload to %s:%n%s", pedigreeURL, family);
+            Log.infof("Sending pedigree payload to %s:%n%s", pedigreeURL, family);
 
             String boundary = "----ElicitBoundary" + UUID.randomUUID();
             byte[] requestBody = buildMultipartBody(boundary, "ped", family);
@@ -220,7 +215,7 @@ public class Service {
             );
 
             int statusCode = response.statusCode();
-            LOG.infof("Pedigree service returned status %d", statusCode);
+            Log.infof("Pedigree service returned status %d", statusCode);
             span.setAttribute("http.response.status_code", statusCode);
             if (statusCode == 200 || statusCode == 201) {
                 span.setStatus(StatusCode.OK);

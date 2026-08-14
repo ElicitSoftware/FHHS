@@ -30,7 +30,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
-import org.jboss.logging.Logger;
+import io.quarkus.logging.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,11 +52,6 @@ import java.util.Map;
 @Path("/proband")
 @RequestScoped
 public class Service {
-
-    /**
-     * Logger for proband service operations and diagnostics.
-     */
-    private static final Logger LOG = Logger.getLogger(Service.class);
 
     /**
      * The default title for respondent summary reports.
@@ -95,7 +90,7 @@ public class Service {
     @Produces("application/json")
     @Transactional
     public ReportResponse report(ReportRequest req) {
-        LOG.debugf("Generating proband report for respondent id=%d", req.id);
+        Log.debugf("Generating proband report for respondent id=%d", req.id);
         Table table = new Table();
         table.headers = new String[2];
         table.headers[0] = "Property";
@@ -108,7 +103,7 @@ public class Service {
         StringBuilder innerHTML = new StringBuilder();
 
         List<FamilyHistoryRecord> allRecords = cancerHistoryRepository.findFamilyHistoryByRespondentId(req.id);
-        LOG.debugf("Retrieved %d family history record(s) for respondent id=%d", allRecords.size(), req.id);
+        Log.debugf("Retrieved %d family history record(s) for respondent id=%d", allRecords.size(), req.id);
 
         List<Row> allRows = new ArrayList<>();
         Card card = new Card("");
@@ -132,7 +127,7 @@ public class Service {
             innerHTML.append(card.getHTML());
 
         } else {
-            LOG.debugf("No Proband record found for respondent id=%d", req.id);
+            Log.debugf("No Proband record found for respondent id=%d", req.id);
             innerHTML.append("No Significant Data.");
         }
 
@@ -141,7 +136,7 @@ public class Service {
         pdf.content = getPDFContent(table);
         pdf.styles = getPDFStyles();
 
-        LOG.debugf("Completed proband report generation for respondent id=%d", req.id);
+        Log.debugf("Completed proband report generation for respondent id=%d", req.id);
         return new ReportResponse(TITLE, innerHTML.toString(), pdf);
     }
 
