@@ -129,6 +129,7 @@ public class Service {
         } else {
             Log.debugf("No Proband record found for respondent id=%d", req.id);
             innerHTML.append("No Significant Data.");
+            table.body = new String[0][2];
         }
 
         PDFDocument pdf = new PDFDocument();
