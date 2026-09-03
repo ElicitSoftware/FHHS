@@ -13,12 +13,12 @@
 
 - The respondent has finalized the survey (`finalizedDt` is set).
 - A `POST_SURVEY_ACTION` for family history report generation is configured on the respondent's survey.
-- SFTP delivery is enabled in configuration (BR-006); otherwise this use case does not run.
+- SFTP delivery is enabled in configuration (BR-003); otherwise this use case does not run.
 
 ## Main Success Scenario
 
 1. The Survey Platform notifies FHHS that a respondent has finalized the survey, providing the respondent ID and external (study) ID.
-2. The system immediately acknowledges the request as accepted (BR-004) and continues the remaining steps in the background.
+2. The system immediately acknowledges the request as accepted (BR-001) and continues the remaining steps in the background.
 3. The system generates a PDF report covering the family member summary, per-member detail, and cancer-history counts by type.
 4. The system generates an XML metadata file describing the respondent, external ID, generation date, and produced files.
 5. The system uploads the PDF and XML files to the configured SFTP destination.
@@ -28,25 +28,24 @@
 
 ### A1: Generation or Upload Fails
 
-**Trigger:** PDF generation or the SFTP upload throws an error.
+**Trigger:** PDF generation or the SFTP upload throws an error (step 3).
 **Flow:**
 
-1. The system records the execution as failed, including the error message and incrementing the try count.
-2. Processing returns to the Scheduler for retry (see A2).
+1. The system records the execution as failed, including the error message and incrementing the try count. Processing returns to the Scheduler for retry (see A2). Use case ends.
 
 ### A2: Scheduler Retries Pending Work
 
-**Trigger:** The Scheduler's periodic sweep runs (every 15 minutes) and finds respondent execution records that have not reached a final successful status (BR-005).
+**Trigger:** The Scheduler's periodic sweep runs (every 15 minutes) and finds respondent execution records that have not reached a final successful status (BR-002) (step 3).
 **Flow:**
 
-1. The Scheduler re-attempts PDF generation and SFTP upload for each pending record, following the main success scenario from step 3.
+1. The Scheduler re-attempts PDF generation and SFTP upload for each pending record. Use case continues at step 3.
 
 ### A3: SFTP Delivery Disabled
 
-**Trigger:** SFTP delivery is disabled in configuration (BR-006).
+**Trigger:** SFTP delivery is disabled in configuration (BR-003) (step 1).
 **Flow:**
 
-1. The system skips report generation, upload, and the scheduled retry sweep entirely for this respondent.
+1. The system skips report generation, upload, and the scheduled retry sweep entirely for this respondent. Use case ends.
 
 ## Postconditions
 
@@ -61,15 +60,15 @@
 
 ## Business Rules
 
-### BR-004: Non-Blocking Acknowledgment
+### BR-001: Non-Blocking Acknowledgment
 
 The system must acknowledge a family-history report request immediately and perform generation and delivery asynchronously, so the triggering survey-completion flow is never blocked waiting on it.
 
-### BR-005: Scheduled Retry
+### BR-002: Scheduled Retry
 
 Any family-history report execution that has not reached a final successful status is retried by the scheduled sweep, which runs every 15 minutes.
 
-### BR-006: SFTP Delivery Can Be Disabled
+### BR-003: SFTP Delivery Can Be Disabled
 
 SFTP delivery can be disabled entirely via configuration; when disabled, no connection test, generation, upload, or retry occurs for any respondent.
 

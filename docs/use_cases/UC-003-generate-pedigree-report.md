@@ -24,11 +24,10 @@
 
 ### A1: Pedigree Drawing Service Is Unavailable or Returns an Error
 
-**Trigger:** The external Pedigree Drawing Service does not respond successfully within 15 seconds, or returns content that isn't a valid diagram (BR-003).
+**Trigger:** The external Pedigree Drawing Service does not respond successfully within 15 seconds, or returns content that isn't a valid diagram (BR-001) (step 3).
 **Flow:**
 
-1. The system includes a placeholder message in the PDF explaining the diagram is unavailable, in place of the diagram.
-2. The rest of the report (legend, notes) is still generated.
+1. The system substitutes a placeholder message for the diagram. Use case continues at step 4.
 
 ## Postconditions
 
@@ -42,7 +41,7 @@
 
 ## Business Rules
 
-### BR-003: Pedigree Diagram Degrades Gracefully
+### BR-001: Pedigree Diagram Degrades Gracefully
 
 If the external Pedigree Drawing Service fails, times out, or returns invalid diagram content, the report must still be generated, showing a placeholder message instead of the diagram rather than failing the request.
 

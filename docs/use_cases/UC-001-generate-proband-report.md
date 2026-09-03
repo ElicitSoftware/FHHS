@@ -25,17 +25,17 @@
 
 ### A1: Respondent Has No Recorded Family History
 
-**Trigger:** The respondent has no family history records.
+**Trigger:** The respondent has no family history records (step 2).
 **Flow:**
 
-1. The system returns a report containing an empty summary table rather than failing the request.
+1. The system returns a report containing an empty summary table rather than failing the request. Use case ends.
 
 ### A2: Caller Lacks the Required Role
 
-**Trigger:** The caller's credential does not include the `proband-user` role (BR-001).
+**Trigger:** The caller's credential does not include the `proband-user` role (BR-001) (step 1).
 **Flow:**
 
-1. The system rejects the request as unauthorized.
+1. The system rejects the request as unauthorized. Use case ends.
 
 ## Postconditions
 

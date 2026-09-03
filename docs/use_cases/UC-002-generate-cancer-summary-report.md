@@ -11,7 +11,7 @@
 ## Preconditions
 
 - The respondent has a record in FHHS's shared database and has recorded family history answers.
-- The calling system presents a credential with the `cssummary-user` role (BR-002).
+- The calling system presents a credential with the `cssummary-user` role (BR-001).
 
 ## Main Success Scenario
 
@@ -25,10 +25,10 @@
 
 ### A1: Caller Lacks the Required Role
 
-**Trigger:** The caller's credential does not include the `cssummary-user` role (BR-002).
+**Trigger:** The caller's credential does not include the `cssummary-user` role (BR-001) (step 1).
 **Flow:**
 
-1. The system rejects the request as unauthorized.
+1. The system rejects the request as unauthorized. Use case ends.
 
 ## Postconditions
 
@@ -42,7 +42,7 @@
 
 ## Business Rules
 
-### BR-002: Cancer Summary Report Authorization
+### BR-001: Cancer Summary Report Authorization
 
 Only callers presenting a credential with the `cssummary-user` role may request a cancer summary report for a respondent.
 
