@@ -1,5 +1,6 @@
 {
   "enabledPlugins": {
-    "aiup-core@ai-unified-process-marketplace": true
+    "aiup-core@ai-unified-process-marketplace": true,
+    "quarkus-agent@quarkus-tools": true
   }
 }
