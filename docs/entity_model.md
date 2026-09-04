@@ -80,10 +80,12 @@ One attempt (or retry) at executing a `POST_SURVEY_ACTION` for a specific respon
 | respondentId          | Respondent this execution is for                | Long      | 20                | Not Null, Foreign Key (RESPONDENT.id)           |
 | psaId                 | Post-survey action being executed               | Long      | 19                | Not Null, Foreign Key (POST_SURVEY_ACTION.id)   |
 | tries                 | Number of attempts made so far                  | Long      | 20                | Not Null                                        |
-| status                | Current execution status                        | String    | 50                | Not Null, Values: PENDING, SUCCESS, FAILED      |
+| status                | Current execution status                        | String    | 50                | Not Null, Values: STARTED, FAILED, COMPLETED    |
 | error                 | Error message from the most recent failed try    | String    | 1000              | Optional                                        |
 | createdDt             | When this execution record was created           | DateTime  | -                 | Not Null                                        |
 | uploadedDt            | When the resulting file was uploaded (if any)     | DateTime  | -                 | Optional                                        |
+
+**Constraints:** The scheduled retry sweep only re-attempts rows with `status = 'FAILED'` (a `STARTED` row that never reached `FAILED` or `COMPLETED` is not retried) and stops retrying once `tries` reaches 50.
 
 ### REPORT_STATUS
 

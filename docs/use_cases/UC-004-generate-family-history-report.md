@@ -35,10 +35,10 @@
 
 ### A2: Scheduler Retries Pending Work
 
-**Trigger:** The Scheduler's periodic sweep runs (every 15 minutes) and finds respondent execution records that have not reached a final successful status (BR-002) (step 3).
+**Trigger:** The Scheduler's periodic sweep runs (every 15 minutes) and finds respondent execution records with `FAILED` status, not yet uploaded, with fewer than 50 tries so far (BR-002) (step 3).
 **Flow:**
 
-1. The Scheduler re-attempts PDF generation and SFTP upload for each pending record. Use case continues at step 3.
+1. The Scheduler re-attempts PDF generation and SFTP upload for each such record. Use case continues at step 3.
 
 ### A3: SFTP Delivery Disabled
 
@@ -66,7 +66,7 @@ The system must acknowledge a family-history report request immediately and perf
 
 ### BR-002: Scheduled Retry
 
-Any family-history report execution that has not reached a final successful status is retried by the scheduled sweep, which runs every 15 minutes.
+Any family-history report execution left in `FAILED` status (not yet uploaded, with fewer than 50 tries so far) is retried by the scheduled sweep, which runs every 15 minutes. An execution stuck in `STARTED` — for example because the process crashed mid-generation before it could be marked `FAILED` — is not retried.
 
 ### BR-003: SFTP Delivery Can Be Disabled
 
