@@ -143,6 +143,13 @@
             <artifactId>quarkus-panache-mock</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Shared PostgreSQL container for @QuarkusTest (one container, both datasources).
+             Version is managed by the Quarkus BOM (Testcontainers 2.x). -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jacoco</artifactId>

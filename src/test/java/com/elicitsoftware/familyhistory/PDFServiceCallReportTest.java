@@ -13,7 +13,9 @@ package com.elicitsoftware.familyhistory;
 
 import com.elicitsoftware.model.ReportDefinition;
 import com.elicitsoftware.response.ReportResponse;
+import com.elicitsoftware.test.PostgresTestResource;
 import com.sun.net.httpserver.HttpServer;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * block then reports as if it were a real connection failure.
  */
 @QuarkusTest
+@QuarkusTestResource(PostgresTestResource.class)
 class PDFServiceCallReportTest {
 
     private HttpServer server;
