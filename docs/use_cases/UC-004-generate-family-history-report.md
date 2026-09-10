@@ -19,7 +19,7 @@
 
 1. The Survey Platform notifies FHHS that a respondent has finalized the survey, providing the respondent ID and external (study) ID.
 2. The system immediately acknowledges the request as accepted (BR-001) and continues the remaining steps in the background.
-3. The system generates a PDF report covering the family member summary, per-member detail, and cancer-history counts by type.
+3. The system generates a combined PDF report by invoking each report configured for the respondent's survey and assembling their content into a single document (BR-004).
 4. The system generates an XML metadata file describing the respondent, external ID, generation date, and produced files.
 5. The system uploads the PDF and XML files to the configured SFTP destination.
 6. The system records the execution as successful, including the upload timestamp.
@@ -71,6 +71,10 @@ Any family-history report execution left in `FAILED` status (not yet uploaded, w
 ### BR-003: SFTP Delivery Can Be Disabled
 
 SFTP delivery can be disabled entirely via configuration; when disabled, no connection test, generation, upload, or retry occurs for any respondent.
+
+### BR-004: Report Composition Is Configuration-Driven
+
+The set of reports assembled into the combined PDF is determined by the survey's configured report list, not hardcoded in FHHS. The default configuration composes the Proband (UC-001), Cancer Summary (UC-002), and Pedigree (UC-003) reports, in that order.
 
 ---
 
