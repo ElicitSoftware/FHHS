@@ -11,6 +11,8 @@ package com.elicitsoftware.familyhistory;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.test.PostgresTestResource;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * properly in Docker containers due to ForkJoinPool.commonPool() limitations.</p>
  */
 @QuarkusTest
+@QuarkusTestResource(PostgresTestResource.class)
 public class FamilyHistoryReportServiceTest {
 
     @Inject

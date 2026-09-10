@@ -13,9 +13,11 @@ package com.elicitsoftware.familyhistory;
 
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.request.ReportRequest;
+import com.elicitsoftware.test.PostgresTestResource;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +41,7 @@ import static org.mockito.Mockito.*;
  * Postgres as {@code FamilyHistoryReportServiceTest} in this package.
  */
 @QuarkusTest
+@QuarkusTestResource(PostgresTestResource.class)
 class FamilyHistoryServiceTest {
 
     @InjectMock
