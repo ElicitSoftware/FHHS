@@ -23,7 +23,14 @@
 
 ## Alternative Flows
 
-### A1: Caller Lacks the Required Role
+### A1: No Relatives Reported Cancer History
+
+**Trigger:** Summarizing the retrieved history produces no cancer-relevant diagnosis rows for any family member (step 3).
+**Flow:**
+
+1. The system returns a report stating that no relatives reported cancer, rather than failing the request. Use case ends.
+
+### A2: Caller Lacks the Required Role
 
 **Trigger:** The caller's credential does not include the `cssummary-user` role (BR-001) (step 1).
 **Flow:**
