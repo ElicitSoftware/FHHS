@@ -464,7 +464,11 @@ public class PDFService {
 
         String[][] tableContent = content.table.body;
 
-        float tableHeight = PAGE_SIZE.getHeight() - TEXT_MARGIN;
+        // Reserve the top margin the table starts drawing from (TEXT_MARGIN) and the same
+        // bottom clearance used elsewhere in this class before footer/content overlap
+        // (FONT_SIZE + PADDING) - otherwise the last row on a page can be drawn low enough
+        // to collide with the footer addHeadersAndFooters() stamps on afterward.
+        float tableHeight = PAGE_SIZE.getHeight() - TEXT_MARGIN - (FONT_SIZE + PADDING);
 
         Table table = new TableBuilder()
                 .setCellMargin(CELL_MARGIN)
@@ -623,7 +627,15 @@ public class PDFService {
      * @return the exclusive end index of the row range that fits on one page
      */
     private int rowsForNextPage(Table table, int startRowIndex) {
-        float usableHeight = table.getHeight() - table.getRowHeight(); // reserve the header row
+        // table.getHeight() is the max budget for a page the table starts at the top of
+        // (used on every internal page after the first, since generateContentStream()
+        // resets yPosition to the top margin). But drawTable()'s first page can start
+        // wherever yPosition already is - e.g. after other content earlier on that same
+        // physical page - so cap the budget at whatever room is actually left above the
+        // same footer-clearance boundary (FONT_SIZE + PADDING), or rows overflow into the
+        // footer without ever triggering a page break.
+        float availableOnThisPage = yPosition - (FONT_SIZE + PADDING);
+        float usableHeight = Math.min(table.getHeight(), availableOnThisPage) - table.getRowHeight(); // reserve the header row
         float accumulated = 0f;
         float[] rowHeights = table.getRowHeights();
         int endRowIndex = startRowIndex;

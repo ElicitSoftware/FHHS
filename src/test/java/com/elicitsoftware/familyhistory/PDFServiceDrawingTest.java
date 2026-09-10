@@ -349,4 +349,64 @@ class PDFServiceDrawingTest {
             assertTrue(perPage.get(1).contains(word), "wrapped word '" + word + "' missing from page 2");
         }
     }
+
+    @Test
+    void drawTable_startingPartwayDownAPage_paginatesUsingRoomActuallyLeftNotTheFullPageBudget() throws IOException {
+        // Regression: a report-visible bug where a table that starts partway down a page
+        // (because other content was already drawn above it, as every table after the
+        // first in a combined report does) kept using the same per-page row budget as a
+        // table starting at the very top of a fresh page. That budget assumed the table had
+        // this page entirely to itself, so it packed rows well past the room actually left
+        // above yPosition, overflowing into where addHeadersAndFooters() draws the footer.
+        PDFService service = newPrimedService();
+        service.yPosition = 150f; // simulates other content already occupying the top of this page
+
+        String[][] body = new String[10][];
+        for (int i = 0; i < body.length; i++) {
+            body[i] = new String[]{"Relative " + i, "Condition " + i};
+        }
+        // tableHeight is sized as if this page were fully available (a fresh, empty page) -
+        // exactly what createContent() computes regardless of where the table actually starts.
+        Table table = buildPdfboxTable(new String[]{"Person", "Diagnosis"}, new float[]{100f, 100f}, body, 15f, 700f);
+
+        service.drawTable(table);
+
+        // With yPosition=150, only (150 - (FONT_SIZE+PADDING) - rowHeight) = 85 of usable
+        // body height is actually available on page 1: 5 rows (75) fit, a 6th (90) would not.
+        assertEquals(2, service.document.getNumberOfPages(),
+                "a table starting at yPosition=150 must break to a second page well before "
+                        + "using the full per-page row budget, or rows collide with the footer");
+        List<String> perPage = finishAndExtractTextPerPage(service);
+        assertTrue(perPage.get(0).contains("Relative 4"), "page 1 should contain the last row that fits: " + perPage.get(0));
+        assertFalse(perPage.get(0).contains("Relative 5"), "page 1 must not overflow past the room yPosition actually left: " + perPage.get(0));
+        assertTrue(perPage.get(1).contains("Relative 5") && perPage.get(1).contains("Relative 9"));
+    }
+
+    // ------------------------------------------------------------------
+    // createContent - regression for a table row overlapping the footer
+    // addHeadersAndFooters() stamps on afterward (report-visible bug: the last row on a
+    // page rendered on top of the date/base-URL/page-number footer text).
+    // ------------------------------------------------------------------
+
+    @Test
+    void createContent_tableHeightLeavesRoomForTheFooterBelowIt() throws Exception {
+        com.elicitsoftware.response.pdf.Table pdfTable = new com.elicitsoftware.response.pdf.Table();
+        pdfTable.headers = new String[]{"Person", "Cancer", "Age"};
+        pdfTable.widths = new float[]{0f, 250f, 60f}; // widths[0] is unused - column 0 gets auto-width
+        pdfTable.body = new String[][]{{"Child", "Breast Cancer", "1"}};
+
+        java.lang.reflect.Method method = PDFService.class.getDeclaredMethod("createContent", Content.class);
+        method.setAccessible(true);
+        Table table = (Table) method.invoke(null, new Content(pdfTable));
+
+        // Every page's table content starts drawing at (pageHeight - TEXT_MARGIN), so the
+        // lowest a row's bottom edge can ever land is (pageHeight - TEXT_MARGIN) - table.getHeight().
+        // That floor must stay at or above this class's own footer-clearance convention
+        // (FONT_SIZE + PADDING, used at the "too close to page bottom" checks in addTitleBlock/
+        // addTextBlock) - otherwise the last row on a page collides with the footer.
+        float lowestPossibleRowBottomY = (PDRectangle.LETTER.getHeight() - PDFService.TEXT_MARGIN) - table.getHeight();
+        assertTrue(lowestPossibleRowBottomY >= PDFService.FONT_SIZE + PDFService.PADDING,
+                "table content can be drawn as low as y=" + lowestPossibleRowBottomY
+                        + ", which leaves no clearance for the footer stamped by addHeadersAndFooters()");
+    }
 }
