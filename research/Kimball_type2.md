@@ -1,14 +1,15 @@
 # Kimball Type 2 Impact on FHHS
 
-> **Status (2026-09-04):** Survey's Kimball Type 2 design (`Survey/research/Kimball_type_2.md`)
-> is fully resolved but **not yet implemented** — Survey's migrations stop at `V009` and
-> Admin's stop at `V0.0.11` (export format still `V1`). Survey has only test-only scaffolding
-> (`com.elicitsoftware.scd`, all `@Disabled`, plus `V011__SCD_Spec_Fixture.sql`) staged for
-> when the real migration lands. This document was revised to drop content that referred to
-> `surveyreport.FACT_FHHS_VIEW` and `FactFHHSView.java` — both were removed from FHHS in
-> `V0.0.7__DROP_FHHS_FACT_VIEW.sql` (commit `548202c`, "Removed FHHS_FACT_VIEW and optimized
-> queries", 2026-03-11), which predates the original version of this document. The risk that
-> section was written to address no longer exists in the current codebase.
+> **Status (2026-09-12):** Survey has shipped Kimball Type 2 (`Survey`'s
+> `V010__Kimball_Type2_SCD.sql` / greenfield `V001__Create_Survey_Schema.sql`), and FHHS's
+> side of the impact described below is now **implemented**: `V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql`
+> replaces the surrogate-id UPDATE in `V0.0.5__UPDATE_CANCER_QUESTONS.sql`. See section 2 and
+> section 9 for what changed. (Earlier note, 2026-09-04: this document was revised to drop
+> content that referred to `surveyreport.FACT_FHHS_VIEW` and `FactFHHSView.java` — both were
+> removed from FHHS in `V0.0.7__DROP_FHHS_FACT_VIEW.sql` (commit `548202c`, "Removed
+> FHHS_FACT_VIEW and optimized queries", 2026-03-11), which predates the original version of
+> this document. The risk that section was written to address no longer exists in the current
+> codebase.)
 
 ## Overview
 
@@ -108,114 +109,24 @@ On a clean database:
 The result is the `display_order` UPDATE in V0.0.5 may or may not match any rows when it
 runs after the Kimball migration, depending on deployment order.
 
-### Required fix: new migration using durable keys
+### Required fix: new migration using durable keys — **implemented**
 
-Create `V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql` (the next free FHHS migration version —
-`V0.0.7` is already used by `V0.0.7__DROP_FHHS_FACT_VIEW.sql`) that performs the same
-reordering logic using durable keys and the Type 2 versioning protocol (close old row,
-insert new row). This migration must run **after** Survey's Kimball Flyway migrations:
+`V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql` performs the same reordering logic using
+durable keys and the Type 2 versioning protocol (close old row, insert new row). It
+resolves the cancer section at migration runtime via `survey.sections.dimension_name =
+'Cancers'` and the triple-negative question via `survey.questions.short_text = 'Triple
+Negative'` — both confirmed against `V0.0.1__POPULATE_FHHS_DATA.sql`'s seed data (old
+surrogate `sections.id = 14` → `dimension_name = 'Cancers'`; old surrogate
+`sections_questions.id = 125` → `question_id = 50`, `short_text = 'Triple Negative'`), so
+no durable id needs to be looked up or hardcoded ahead of time.
 
-```sql
--- V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql
--- Re-orders the triple-negative breast cancer question using Kimball Type 2
--- versioning protocol. Replaces the direct UPDATE in V0.0.5, which used surrogate ids.
--- This migration must be applied after Survey's Kimball Type 2 Flyway migrations.
-
--- Step 1: Identify the durable section_id for the cancer section
--- (confirm this value from the live DB after Kimball migration runs)
--- SELECT section_id FROM survey.sections
---  WHERE dimension_name = 'cancer'
---    AND effective_from <= NOW() AND effective_to > NOW();
-
--- Step 2: For each sections_questions row in that section where display_order > 7,
--- close the current version and insert a new version with display_order + 1.
-DO $$
-DECLARE
-    rec RECORD;
-    new_version INT;
-    cancer_section_durable_id INT;
-BEGIN
-    -- Look up durable section_id by stable dimension name
-    SELECT section_id INTO cancer_section_durable_id
-      FROM survey.sections
-     WHERE dimension_name = 'cancer'  -- replace with actual dimension_name
-       AND effective_from <= NOW() AND effective_to > NOW()
-     LIMIT 1;
-
-    FOR rec IN
-        SELECT sq.id, sq.sections_question_id, sq.question_id, sq.section_id,
-               sq.survey_id, sq.display_order, sq.version,
-               sq.question_version, sq.section_version
-          FROM survey.sections_questions sq
-         WHERE sq.section_id  = cancer_section_durable_id
-           AND sq.display_order > 7
-           AND sq.effective_from <= NOW() AND sq.effective_to > NOW()
-    LOOP
-        -- Close current version
-        UPDATE survey.sections_questions
-           SET effective_to = NOW(),
-               published_by = 'fhhs_migration_v008',
-               published_comment = 'Reorder cancer questions post-Kimball Type 2'
-         WHERE sections_question_id = rec.sections_question_id
-           AND effective_to = '9999-12-31 23:59:59+00';
-
-        -- Insert new version with incremented display_order
-        INSERT INTO survey.sections_questions
-            (sections_question_id, version, survey_id, section_id, question_id,
-             display_order, effective_from, effective_to,
-             published_by, published_comment, is_draft,
-             question_version, section_version)
-        VALUES
-            (rec.sections_question_id, rec.version + 1, rec.survey_id,
-             rec.section_id, rec.question_id,
-             rec.display_order + 1, NOW(), '9999-12-31 23:59:59+00',
-             'fhhs_migration_v008',
-             'Reorder cancer questions post-Kimball Type 2',
-             false,
-             rec.question_version, rec.section_version);
-    END LOOP;
-
-    -- Move triple-negative breast cancer question to display_order = 8
-    -- Identify it by the durable question_id (confirm from survey DB)
-    FOR rec IN
-        SELECT sq.sections_question_id, sq.question_id, sq.section_id,
-               sq.survey_id, sq.version, sq.question_version, sq.section_version
-          FROM survey.sections_questions sq
-          JOIN survey.questions q ON q.question_id = sq.question_id
-                                 AND q.effective_from <= NOW()
-                                 AND q.effective_to > NOW()
-         WHERE sq.section_id = cancer_section_durable_id
-           AND LOWER(q.text) LIKE '%triple%negative%'  -- adjust to match actual text
-           AND sq.effective_from <= NOW() AND sq.effective_to > NOW()
-    LOOP
-        UPDATE survey.sections_questions
-           SET effective_to = NOW(),
-               published_by = 'fhhs_migration_v008',
-               published_comment = 'Reorder triple-negative breast cancer question'
-         WHERE sections_question_id = rec.sections_question_id
-           AND effective_to = '9999-12-31 23:59:59+00';
-
-        INSERT INTO survey.sections_questions
-            (sections_question_id, version, survey_id, section_id, question_id,
-             display_order, effective_from, effective_to,
-             published_by, published_comment, is_draft,
-             question_version, section_version)
-        VALUES
-            (rec.sections_question_id, rec.version + 1, rec.survey_id,
-             rec.section_id, rec.question_id,
-             8, NOW(), '9999-12-31 23:59:59+00',
-             'fhhs_migration_v008',
-             'Reorder triple-negative breast cancer question',
-             false,
-             rec.question_version, rec.section_version);
-    END LOOP;
-END $$;
-```
-
-> **Important**: The `dimension_name` and question text fragment in the PL/pgSQL block
-> above are placeholders. Before writing the final migration, verify the actual
-> `dimension_name` of the cancer section and the exact question text for the
-> triple-negative question in the live database.
+It is also **idempotent**: it first checks whether the triple-negative question's current
+`display_order` is already `8`. On an existing deployment (V0.0.5 ran correctly pre-Kimball
+and the Kimball migration carried that value forward unchanged), this is already true and
+the migration is a no-op for that section. It only performs the shift when V0.0.5's effect
+never landed — i.e. exactly the fresh-install/wrong-migration-order case this migration
+exists to fix — which also makes it safe to run more than once. See the file itself for the
+full PL/pgSQL block.
 
 ---
 
@@ -287,11 +198,16 @@ in a staging environment:
 
 | Step | Action | File(s) |
 |---|---|---|
-| 1 | Confirm the durable `section_id` value for the cancer section by querying the Kimball-migrated DB | — (discovery) |
-| 2 | Write `V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql` using the confirmed durable `section_id`; validate the `dimension_name` and question text fragment against the live DB before committing | `src/main/resources/db/migration/` |
+| 1 | ~~Confirm the durable `section_id` value~~ — not needed. `V0.0.8` resolves the durable section/question ids at migration runtime via `dimension_name = 'Cancers'` / `short_text = 'Triple Negative'`, so there is nothing to look up beforehand. | — |
+| 2 | ~~Write `V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql`~~ — **done**. | `src/main/resources/db/migration/V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql` |
 | 3 | Deploy FHHS to staging; verify `CancerHistoryRepository.findFamilyHistoryByRespondentId()` returns correct rows for a known respondent | QA |
 | 4 | Verify pedigree and cancer summary reports render correctly for existing respondents | QA |
 | 5 | Notify the clinical team that step/section renames in the Author Tool will retroactively update step labels in all FHHS reports (SCD Type 1 behavior) | Documentation/communication |
+
+**Rollback strategy**: no Flyway down-migration will be authored for `V0.0.8` or any
+other Kimball-related FHHS migration. Recovery from a bad rollout is an operational
+pre-upgrade database backup/restore, consistent with the Survey and Admin Kimball Type 2
+documents.
 
 ---
 
@@ -299,7 +215,9 @@ in a staging environment:
 
 | File | Nature of change |
 |---|---|
-| `src/main/resources/db/migration/V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql` | **New file** — re-applies the triple-negative breast cancer question reordering using Kimball Type 2 versioning protocol (close + insert) |
+| `src/main/resources/db/migration/V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql` | **New file** — re-applies the triple-negative breast cancer question reordering using Kimball Type 2 versioning protocol (close + insert), idempotent against the existing-deployment case |
+| `src/test/resources/db/test/V0.0.0.1__TEST_BOOTSTRAP.sql` | **Updated** — `survey.sections`/`questions`/`sections_questions` now carry the Kimball Type 2 columns (durable id, `version`, `effective_from`/`effective_to`, `published_by`, `published_comment`, `is_draft`; `question_version`/`section_version` on `sections_questions`), plus a trigger per table that defaults the durable id to the fixture's surrogate `id` so `V0.0.1`'s unmodified INSERTs still populate a valid post-Kimball shape |
+| `src/test/java/com/elicitsoftware/flyway/CancerQuestionReorderMigrationTest.java` | **New file** — `@QuarkusTest` asserting `V0.0.8`'s end state (triple-negative question at `display_order = 8`, no duplicate "current" rows, the shifted neighbor question moved to `9`) |
 | `CancerHistoryRepository.java` | No change — already queries `fact_sections_view` directly with no hardcoded surrogate keys |
 | `Respondent.java` | No change |
 | `Survey.java` | No change |

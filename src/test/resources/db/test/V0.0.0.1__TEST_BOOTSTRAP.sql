@@ -174,48 +174,111 @@ ON CONFLICT (id) DO NOTHING;
 CREATE SEQUENCE IF NOT EXISTS survey.questions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.questions
 (
-    id              integer NOT NULL,
-    survey_id       integer NOT NULL,
-    type_id         integer NOT NULL,
-    text            character varying(8000) NOT NULL,
-    short_text      character varying(100),
-    tool_tip        character varying(255),
-    required        boolean NOT NULL DEFAULT false,
-    min_value       integer,
-    max_value       integer,
-    validation_text character varying(255),
-    select_group_id integer,
-    mask            character varying(255),
-    placeholder     character varying(255),
-    default_value   character varying(255),
-    variant         character varying(255),
+    id                integer NOT NULL,
+    survey_id         integer NOT NULL,
+    type_id           integer NOT NULL,
+    text              character varying(8000) NOT NULL,
+    short_text        character varying(100),
+    tool_tip          character varying(255),
+    required          boolean NOT NULL DEFAULT false,
+    min_value         integer,
+    max_value         integer,
+    validation_text   character varying(255),
+    select_group_id   integer,
+    mask              character varying(255),
+    placeholder       character varying(255),
+    default_value     character varying(255),
+    variant           character varying(255),
+    -- Kimball Type 2 SCD columns (Survey's V010__Kimball_Type2_SCD.sql / V001 greenfield).
+    -- question_id is the durable key that survives re-versioning; id remains the
+    -- per-version surrogate PK. See V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql.
+    question_id       integer,
+    version           integer NOT NULL DEFAULT 0,
+    effective_from    timestamptz NOT NULL DEFAULT '1970-01-01 00:00:00+00',
+    effective_to      timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
+    published_by      text,
+    published_comment text,
+    is_draft          boolean NOT NULL DEFAULT false,
     CONSTRAINT questions_pk PRIMARY KEY (id),
     CONSTRAINT select_groups_fk FOREIGN KEY (select_group_id)
         REFERENCES survey.select_groups (id),
     CONSTRAINT type_fk FOREIGN KEY (type_id)
         REFERENCES survey.question_types (id)
 );
+-- Fixture rows (inserted by V0.0.1__POPULATE_FHHS_DATA.sql) never set question_id
+-- explicitly, since that migration predates Kimball Type 2. Default it to the row's own
+-- surrogate id so fixture data looks post-Kimball (durable id == surrogate id) without
+-- having to change V0.0.1 itself. V0.0.8's own inserts always set question_id explicitly,
+-- so this trigger is a no-op for them.
+CREATE OR REPLACE FUNCTION survey.set_question_durable_id() RETURNS trigger AS $BODY$
+BEGIN
+    NEW.question_id := NEW.id;
+    RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS questions_durable_id_trg ON survey.questions;
+CREATE TRIGGER questions_durable_id_trg
+    BEFORE INSERT ON survey.questions
+    FOR EACH ROW WHEN (NEW.question_id IS NULL)
+    EXECUTE FUNCTION survey.set_question_durable_id();
+CREATE UNIQUE INDEX IF NOT EXISTS questions_id_version_un ON survey.questions (question_id, version);
+CREATE UNIQUE INDEX IF NOT EXISTS questions_one_current_un ON survey.questions (question_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
 
 CREATE SEQUENCE IF NOT EXISTS survey.sections_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.sections
 (
-    id             integer NOT NULL,
-    survey_id      integer NOT NULL,
-    display_order  integer NOT NULL,
-    name           character varying(255),
-    dimension_name character varying(50) NOT NULL,
-    description    character varying(255),
+    id                integer NOT NULL,
+    survey_id         integer NOT NULL,
+    display_order     numeric NOT NULL,
+    name              character varying(255),
+    dimension_name    character varying(50) NOT NULL,
+    description       character varying(255),
+    -- Kimball Type 2 SCD columns -- see survey.questions comment above.
+    section_id        integer,
+    version           integer NOT NULL DEFAULT 0,
+    effective_from    timestamptz NOT NULL DEFAULT '1970-01-01 00:00:00+00',
+    effective_to      timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
+    published_by      text,
+    published_comment text,
+    is_draft          boolean NOT NULL DEFAULT false,
     CONSTRAINT sections_pk PRIMARY KEY (id)
 );
+CREATE OR REPLACE FUNCTION survey.set_section_durable_id() RETURNS trigger AS $BODY$
+BEGIN
+    NEW.section_id := NEW.id;
+    RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS sections_durable_id_trg ON survey.sections;
+CREATE TRIGGER sections_durable_id_trg
+    BEFORE INSERT ON survey.sections
+    FOR EACH ROW WHEN (NEW.section_id IS NULL)
+    EXECUTE FUNCTION survey.set_section_durable_id();
+CREATE UNIQUE INDEX IF NOT EXISTS sections_id_version_un ON survey.sections (section_id, version);
+CREATE UNIQUE INDEX IF NOT EXISTS sections_one_current_un ON survey.sections (section_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
 
 CREATE SEQUENCE IF NOT EXISTS survey.sections_questions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.sections_questions
 (
-    id            integer NOT NULL,
-    survey_id     integer NOT NULL,
-    question_id   integer NOT NULL,
-    section_id    integer NOT NULL,
-    display_order integer NOT NULL,
+    id                  integer NOT NULL,
+    survey_id           integer NOT NULL,
+    question_id         integer NOT NULL,
+    section_id          integer NOT NULL,
+    display_order       numeric NOT NULL,
+    -- Kimball Type 2 SCD columns -- see survey.questions comment above. question_id and
+    -- section_id above hold the durable ids (retargeted from surrogate by the real Kimball
+    -- migration); question_version/section_version are pinned to 0 by Survey's own schema.
+    sections_question_id integer,
+    version              integer NOT NULL DEFAULT 0,
+    effective_from       timestamptz NOT NULL DEFAULT '1970-01-01 00:00:00+00',
+    effective_to         timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
+    published_by         text,
+    published_comment    text,
+    is_draft             boolean NOT NULL DEFAULT false,
+    question_version     integer NOT NULL DEFAULT 0,
+    section_version      integer NOT NULL DEFAULT 0,
     CONSTRAINT sections_questions_pk PRIMARY KEY (id),
     CONSTRAINT sections_questions_question_fk FOREIGN KEY (question_id)
         REFERENCES survey.questions (id),
@@ -224,6 +287,22 @@ CREATE TABLE IF NOT EXISTS survey.sections_questions
     CONSTRAINT sections_questions_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id)
 );
+CREATE OR REPLACE FUNCTION survey.set_sections_questions_durable_id() RETURNS trigger AS $BODY$
+BEGIN
+    NEW.sections_question_id := NEW.id;
+    RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS sections_questions_durable_id_trg ON survey.sections_questions;
+CREATE TRIGGER sections_questions_durable_id_trg
+    BEFORE INSERT ON survey.sections_questions
+    FOR EACH ROW WHEN (NEW.sections_question_id IS NULL)
+    EXECUTE FUNCTION survey.set_sections_questions_durable_id();
+CREATE UNIQUE INDEX IF NOT EXISTS sections_questions_id_version_un
+    ON survey.sections_questions (sections_question_id, version);
+CREATE UNIQUE INDEX IF NOT EXISTS sections_questions_one_current_un
+    ON survey.sections_questions (sections_question_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
 
 CREATE SEQUENCE IF NOT EXISTS survey.steps_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.steps
