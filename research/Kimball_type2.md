@@ -221,6 +221,17 @@ names, preserving checksums for every already-deployed FHHS database) based on `
 checksum routing at every boot. `MigrationService.java` and its test were deleted;
 `quarkus.flyway.owner.migrate-at-start` is now `false` unconditionally.
 
+> **This is temporary scaffolding, not permanent architecture.** `ManualSchemaMigrator.java`,
+> `db/migration-v3/`, `src/test/resources/db/test-legacy/`, and
+> `ManualSchemaMigratorUpgradeTest.java` exist solely to upgrade already-deployed pre-Kimball
+> ("V2.x") FHHS databases to V3. **Once every real FHHS deployment has upgraded** (every
+> environment's `flyway_fhhs_history` converged onto `db/migration` — logged by
+> `ManualSchemaMigrator` when it happens), all four should be deleted and
+> `quarkus.flyway.owner.migrate-at-start` reverted to plain Quarkus-managed auto-migration. See
+> the `README.md` inside `db/migration-v3/` and the repo-root `DeploymentScript.md`. **Do not
+> let this get pulled into a build forever out of inertia** — track removal as a real follow-up
+> once the V2→V3 rollout is confirmed complete.
+
 ---
 
 ## 7. Post-Survey Action URL — No Changes Required

@@ -31,6 +31,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// TEMPORARY — DO NOT CARRY THIS FORWARD INDEFINITELY.
+// This class exists solely to support upgrading existing pre-Kimball ("V2.x") FHHS
+// deployments to V3.0.0 (Kimball Type 2 SCD) via db/migration-v3. Once every real FHHS
+// deployment has been upgraded to V3 (confirmed by every environment's flyway_fhhs_history
+// having converged onto db/migration — see the repair() call below), this class,
+// db/migration-v3/, src/test/resources/db/test-legacy/, and
+// ManualSchemaMigratorUpgradeTest.java should ALL be deleted, and
+// quarkus.flyway.owner.migrate-at-start should revert to the plain Quarkus-managed
+// auto-migration this class replaced (see application.properties). Tracked in
+// FHHS/research/Kimball_type2.md section 6 and DeploymentScript.md — check those before
+// removing, and update them when this class is actually deleted.
+//
 // Runs Flyway manually against a database-detected brownfield/greenfield/converged location,
 // replacing Quarkus's migrate-at-start (deliberately disabled — see the comment on
 // quarkus.flyway.owner.migrate-at-start in application.properties for why a
