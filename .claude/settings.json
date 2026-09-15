@@ -2,5 +2,19 @@
   "enabledPlugins": {
     "aiup-core@ai-unified-process-marketplace": true,
     "quarkus-agent@quarkus-tools": true
+  },
+  "extraKnownMarketplaces": {
+    "ai-unified-process-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "AI-Unified-Process/marketplace"
+      }
+    },
+    "quarkus-tools": {
+      "source": {
+        "source": "github",
+        "repo": "quarkusio/quarkus-agent-mcp"
+      }
+    }
   }
 }
