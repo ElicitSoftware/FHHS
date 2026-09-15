@@ -150,6 +150,16 @@
             <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- quarkus-flyway pulls this in transitively for the app itself, but a
+             plain, non-Quarkus-bootstrap test driving the Flyway Java API directly (see
+             ManualSchemaMigratorUpgradeTest, which replicates ManualSchemaMigrator's own
+             direct-API usage against a throwaway container) needs the real plugin jar. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <version>12.0.0</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jacoco</artifactId>

@@ -143,27 +143,14 @@ CREATE TABLE IF NOT EXISTS survey.ontology
 CREATE SEQUENCE IF NOT EXISTS survey.select_groups_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.select_groups
 (
-    id               integer NOT NULL,
-    survey_id        integer NOT NULL,
-    name             character varying(255),
-    description      character varying(255),
-    data_type        character varying(50) NOT NULL DEFAULT 'Text',
-    -- Kimball Type 2 SCD column -- see survey.questions comment above.
-    select_group_id  integer,
+    id          integer NOT NULL,
+    survey_id   integer NOT NULL,
+    name        character varying(255),
+    description character varying(255),
+    data_type   character varying(50) NOT NULL DEFAULT 'Text',
     CONSTRAINT select_groups_pk PRIMARY KEY (id),
     CONSTRAINT select_groups_name_un UNIQUE (survey_id, name)
 );
-CREATE OR REPLACE FUNCTION survey.set_select_group_durable_id() RETURNS trigger AS $BODY$
-BEGIN
-    NEW.select_group_id := NEW.id;
-    RETURN NEW;
-END;
-$BODY$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS select_groups_durable_id_trg ON survey.select_groups;
-CREATE TRIGGER select_groups_durable_id_trg
-    BEFORE INSERT ON survey.select_groups
-    FOR EACH ROW WHEN (NEW.select_group_id IS NULL)
-    EXECUTE FUNCTION survey.set_select_group_durable_id();
 
 CREATE SEQUENCE IF NOT EXISTS survey.question_types_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.question_types
@@ -326,24 +313,8 @@ CREATE TABLE IF NOT EXISTS survey.steps
     name           character varying(255),
     dimension_name character varying(50) NOT NULL,
     description    character varying(255),
-    -- Kimball Type 2 SCD column -- see survey.questions comment above. Fixed V0.0.1 (the
-    -- greenfield track) now sets this explicitly (currval() alongside the surrogate id's
-    -- nextval()), so the trigger below is a no-op for it; kept for parity with
-    -- sections/questions and for any other fixture that inserts without setting it.
-    step_id        integer,
     CONSTRAINT steps_pk PRIMARY KEY (id)
 );
-CREATE OR REPLACE FUNCTION survey.set_step_durable_id() RETURNS trigger AS $BODY$
-BEGIN
-    NEW.step_id := NEW.id;
-    RETURN NEW;
-END;
-$BODY$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS steps_durable_id_trg ON survey.steps;
-CREATE TRIGGER steps_durable_id_trg
-    BEFORE INSERT ON survey.steps
-    FOR EACH ROW WHEN (NEW.step_id IS NULL)
-    EXECUTE FUNCTION survey.set_step_durable_id();
 
 CREATE SEQUENCE IF NOT EXISTS survey.steps_sections_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.steps_sections
@@ -367,23 +338,21 @@ CREATE TABLE IF NOT EXISTS survey.steps_sections
 CREATE SEQUENCE IF NOT EXISTS survey.metadata_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.metadata
 (
-    id                    integer NOT NULL,
-    survey_id             integer NOT NULL,
-    -- Kimball Type 2 SCD rename (Survey's V010__Kimball_Type2_SCD.sql / V001 greenfield):
-    -- step_section_id -> steps_sections_id, section_question_id -> sections_question_id.
-    steps_sections_id     integer,
-    question_id           integer,
-    sections_question_id  integer,
-    ontology_id           integer NOT NULL,
-    value                 character varying(255),
+    id                   integer NOT NULL,
+    survey_id            integer NOT NULL,
+    step_section_id      integer,
+    question_id          integer,
+    section_question_id  integer,
+    ontology_id          integer NOT NULL,
+    value                character varying(255),
     CONSTRAINT metadata_pk PRIMARY KEY (id),
     CONSTRAINT metadata_ontology_fk FOREIGN KEY (ontology_id)
         REFERENCES survey.ontology (id),
     CONSTRAINT metadata_question_fk FOREIGN KEY (question_id)
         REFERENCES survey.questions (id),
-    CONSTRAINT metadata_sect_quest_fk FOREIGN KEY (sections_question_id)
+    CONSTRAINT metadata_sect_quest_fk FOREIGN KEY (section_question_id)
         REFERENCES survey.sections_questions (id),
-    CONSTRAINT metadata_section_fk FOREIGN KEY (steps_sections_id)
+    CONSTRAINT metadata_section_fk FOREIGN KEY (step_section_id)
         REFERENCES survey.steps_sections (id),
     CONSTRAINT metadata_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id)
@@ -392,15 +361,14 @@ CREATE TABLE IF NOT EXISTS survey.metadata
 CREATE SEQUENCE IF NOT EXISTS survey.select_items_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.select_items
 (
-    id               integer NOT NULL,
-    survey_id        integer NOT NULL,
-    -- Kimball Type 2 SCD rename -- see survey.metadata comment above (group_id -> select_group_id).
-    select_group_id  integer NOT NULL,
-    display_text     character varying(255),
-    display_order    integer NOT NULL,
-    coded_value      character varying(255),
+    id            integer NOT NULL,
+    survey_id     integer NOT NULL,
+    group_id      integer NOT NULL,
+    display_text  character varying(255),
+    display_order integer NOT NULL,
+    coded_value   character varying(255),
     CONSTRAINT select_items_pk PRIMARY KEY (id),
-    CONSTRAINT select_items_group_fk FOREIGN KEY (select_group_id)
+    CONSTRAINT select_items_group_fk FOREIGN KEY (group_id)
         REFERENCES survey.select_groups (id)
 );
 
@@ -448,8 +416,7 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     upstream_step_id         integer,
     upstream_sq_id           integer NOT NULL,
     downstream_step_id       integer,
-    -- Kimball Type 2 SCD rename -- see survey.metadata comment above.
-    downstream_ss_id         integer,
+    downstream_s_id          integer,
     downstream_sq_id         integer,
     operator_id              integer NOT NULL,
     action_id                integer NOT NULL,
@@ -461,7 +428,7 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     CONSTRAINT relationships_pk PRIMARY KEY (id),
     CONSTRAINT action_fk FOREIGN KEY (action_id)
         REFERENCES survey.action_types (id),
-    CONSTRAINT downstream_s_fk FOREIGN KEY (downstream_ss_id)
+    CONSTRAINT downstream_s_fk FOREIGN KEY (downstream_s_id)
         REFERENCES survey.steps_sections (id),
     CONSTRAINT downstream_sq_fk FOREIGN KEY (downstream_sq_id)
         REFERENCES survey.sections_questions (id),

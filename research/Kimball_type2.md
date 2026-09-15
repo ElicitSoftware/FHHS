@@ -1,6 +1,6 @@
 # Kimball Type 2 Impact on FHHS
 
-> **Status (2026-09-12):** Survey has shipped Kimball Type 2 (`Survey`'s
+> **Status (2026-09-15):** Survey has shipped Kimball Type 2 (`Survey`'s
 > `V010__Kimball_Type2_SCD.sql` / greenfield `V001__Create_Survey_Schema.sql`), and FHHS's
 > side of the impact described below is now **implemented**: `V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql`
 > replaces the surrogate-id UPDATE in `V0.0.5__UPDATE_CANCER_QUESTONS.sql`. See section 2 and
@@ -10,6 +10,34 @@
 > FHHS_FACT_VIEW and optimized queries", 2026-03-11), which predates the original version of
 > this document. The risk that section was written to address no longer exists in the current
 > codebase.)
+>
+> **Update (2026-09-15):** A genuinely fresh (greenfield) install against Survey's Kimball
+> schema was tested for the first time and found `V0.0.1__POPULATE_FHHS_DATA.sql` broken —
+> its `survey.metadata`/`survey.relationships`/`survey.select_items` inserts used pre-Kimball
+> column names (`step_section_id`, `section_question_id`, `downstream_s_id`, `group_id`), which
+> don't exist on a fresh Kimball database (only the ALTER-based brownfield upgrade path keeps
+> them, renamed to `*_surrogate`). A second, subtler issue: `steps`/`sections`/`questions`/
+> `select_groups` gained new durable-key columns defaulting via `nextval()` on their own
+> sequence — every other table's hardcoded numeric FK literals in `V0.0.1` implicitly assumed
+> that durable id equals surrogate id, which only holds if nothing skips a sequence value
+> (fixed by explicitly setting the durable column via `currval()` alongside each surrogate
+> `nextval()`, and by literal `0` for the one hardcoded `sections` row). This was invisible in
+> every prior test because those tests only ever exercised the upgrade path (an existing v2.x
+> database), never a from-scratch install. Fixed by porting Survey's dual Flyway migration
+> track (`ManualSchemaMigrator`, `db/migration` vs `db/migration-v3`) to FHHS — see section 6.
+>
+> A third, unrelated bug surfaced and was fixed in the same pass: `ManualSchemaMigrator`'s
+> greenfield/brownfield routing check used a plain `Flyway.validate()` call, which treats
+> *pending* (not-yet-applied) migrations as a validation failure just like a real checksum
+> mismatch. Since `V0.0.3__CREATE_FHHS_FACT_VIEW.sql` legitimately fails on a truly fresh
+> install until Survey's reporting ETL has run at least once (a pre-existing, non-Kimball
+> characteristic — see `DeploymentScript.md`'s documented "start, restart, restart" fresh-install
+> sequence), a database that hits that failure and reboots would be misdiagnosed as an
+> unupgraded v2.x database and incorrectly routed to `db/migration-v3` (the legacy-column-name
+> track), failing for real. Fixed with `.ignoreMigrationPatterns("*:pending")` on the Flyway
+> configuration `ManualSchemaMigrator` uses for its "is this clean" probe. Confirmed end-to-end:
+> a full `docker compose up -d && restart && restart` fresh install now succeeds completely —
+> all of Survey, Admin, and FHHS report healthy with every migration applied.
 
 ## Overview
 
@@ -175,11 +203,23 @@ For FHHS's read-only use of `Survey`, no change is required.
 
 ---
 
-## 6. `MigrationService.java` — No Changes Required
+## 6. `MigrationService.java` — Superseded by `ManualSchemaMigrator` (revised 2026-09-15)
 
-`MigrationService` handles Flyway programmatic migrations for FHHS. As long as the new
-FHHS migration (`V0.0.8`) is placed in the standard Flyway migration path,
-`MigrationService` picks it up automatically.
+**Original verdict (no longer correct):** "`MigrationService` handles Flyway programmatic
+migrations for FHHS. As long as the new FHHS migration (`V0.0.8`) is placed in the standard
+Flyway migration path, `MigrationService` picks it up automatically." That assessment only ever
+considered `V0.0.8` (durable-key-safe, one track) — it never audited `V0.0.1`'s `metadata`/
+`relationships` inserts, and it didn't anticipate needing a *second*, parallel greenfield track.
+
+`MigrationService` operated on a CDI-injected `Flyway` whose `locations` Quarkus resolves at
+**build time** — it has no way to choose between two location sets at runtime. Supporting a real
+greenfield/brownfield split (the fix for the `V0.0.1` problem noted in the status banner above)
+required replacing it with `com.elicitsoftware.flyway.ManualSchemaMigrator` (ported from the
+sibling Survey app), which drives its own independent `Flyway.configure()` instance and picks
+`db/migration` (greenfield, fixed column names) vs `db/migration-v3` (frozen, pre-Kimball column
+names, preserving checksums for every already-deployed FHHS database) based on `validate()`/
+checksum routing at every boot. `MigrationService.java` and its test were deleted;
+`quarkus.flyway.owner.migrate-at-start` is now `false` unconditionally.
 
 ---
 
@@ -221,5 +261,11 @@ documents.
 | `CancerHistoryRepository.java` | No change — already queries `fact_sections_view` directly with no hardcoded surrogate keys |
 | `Respondent.java` | No change |
 | `Survey.java` | No change |
-| `MigrationService.java` | No change |
+| `MigrationService.java` | **Deleted** — superseded by `ManualSchemaMigrator.java` (see section 6) |
+| `src/main/java/com/elicitsoftware/flyway/ManualSchemaMigrator.java` | **New file** — dual greenfield/brownfield Flyway track routing, ported from Survey |
+| `src/main/resources/db/migration/V0.0.1__POPULATE_FHHS_DATA.sql` | **Fixed** — renamed `metadata`/`relationships` columns to the Kimball names, added durable-id-matches-surrogate-id assignment (`currval()`) to `steps`/`sections`/`questions` inserts |
+| `src/main/resources/db/migration-v3/*.sql` | **New directory** — frozen, byte-for-byte copy of the pre-fix `db/migration`, preserving checksums for already-deployed databases |
+| `src/test/resources/db/test/V0.0.0.1__TEST_BOOTSTRAP.sql` | **Updated again** — `metadata`/`relationships` renamed to match the fixed `V0.0.1`; `steps` gained a `step_id` durable column + default trigger |
+| `src/test/resources/db/test-legacy/V0.0.0.1__TEST_BOOTSTRAP.sql` | **New file** — frozen pre-fix copy of the bootstrap, paired with `db/migration-v3` for upgrade-path testing |
+| `src/test/java/com/elicitsoftware/flyway/ManualSchemaMigratorUpgradeTest.java` | **New file** — proves an existing, already-migrated FHHS database converges cleanly onto `db/migration` without any data rewrite |
 | All service classes (`casummary`, `proband`, `pedigree`, `familyhistory`) | No change |
