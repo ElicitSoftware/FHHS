@@ -8,7 +8,7 @@ around them.
 
 ## Stack
 
-- Java 25, Quarkus 3.37.x, Maven build
+- Java 25, Quarkus 3.39.2, Maven build
 - No UI — FHHS is a headless REST backend (unlike the companion Survey/Admin
   apps, which use Vaadin Flow)
 - Hibernate ORM with Panache (JPA) — **not jOOQ**
