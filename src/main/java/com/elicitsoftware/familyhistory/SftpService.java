@@ -141,14 +141,14 @@ public class SftpService {
         ChannelSftp sftpChannel = null;
         
         try {
-            Log.debugv("Connecting to SFTP server {}:{} for file upload: {}", sftpHost, sftpPort, fileName);
+            Log.debugv("Connecting to SFTP server {0}:{1} for file upload: {2}", sftpHost, sftpPort, fileName);
             
             // Create JSch session with authentication
             session = createAuthenticatedSession();
             
             // Connect to the session
             session.connect();
-            Log.debugv("SSH session connected to {}:{}", sftpHost, sftpPort);
+            Log.debugv("SSH session connected to {0}:{1}", sftpHost, sftpPort);
             
             // Open SFTP channel
             sftpChannel = (ChannelSftp) session.openChannel("sftp");
@@ -166,17 +166,17 @@ public class SftpService {
                 sftpChannel.put(inputStream, fileName, ChannelSftp.OVERWRITE);
             }
             
-            Log.infov("Successfully uploaded file: {} ({} bytes) to SFTP server {}:{}{}",
+            Log.infov("Successfully uploaded file: {0} ({1} bytes) to SFTP server {2}:{3}{4}",
                      fileName, fileData.length, sftpHost, sftpPort, sftpPath);
             
         } catch (JSchException e) {
-            Log.errorv(e, "SFTP connection failed for file {}: {}", fileName, e.getMessage());
+            Log.errorv(e, "SFTP connection failed for file {0}: {1}", fileName, e.getMessage());
             throw new RuntimeException("Failed to connect to SFTP server", e);
         } catch (SftpException e) {
-            Log.errorv(e, "SFTP operation failed for file {}: {}", fileName, e.getMessage());
+            Log.errorv(e, "SFTP operation failed for file {0}: {1}", fileName, e.getMessage());
             throw new RuntimeException("Failed to upload file to SFTP server", e);
         } catch (IOException e) {
-            Log.errorv(e, "I/O error during file upload {}: {}", fileName, e.getMessage());
+            Log.errorv(e, "I/O error during file upload {0}: {1}", fileName, e.getMessage());
             throw new RuntimeException("I/O error during file upload", e);
         } finally {
             // Clean up resources
@@ -203,10 +203,10 @@ public class SftpService {
         try {
             // Try to change to the directory - if it exists, this will succeed
             sftpChannel.cd(remotePath);
-            Log.debugv("Remote directory exists: {}", remotePath);
+            Log.debugv("Remote directory exists: {0}", remotePath);
         } catch (SftpException e) {
             // Directory doesn't exist, create it
-            Log.debugv("Creating remote directory: {}", remotePath);
+            Log.debugv("Creating remote directory: {0}", remotePath);
             
             // Split the path and create directories recursively
             String[] pathParts = remotePath.split("/");
@@ -223,7 +223,7 @@ public class SftpService {
                 } catch (SftpException ex) {
                     // Directory doesn't exist, create it
                     sftpChannel.mkdir(dirToCreate);
-                    Log.debugv("Created remote directory: {}", dirToCreate);
+                    Log.debugv("Created remote directory: {0}", dirToCreate);
                     sftpChannel.cd(dirToCreate);
                 }
             }
@@ -243,7 +243,7 @@ public class SftpService {
         ChannelSftp sftpChannel = null;
         
         try {
-            Log.debugv("Testing SFTP connection to {}:{}", sftpHost, sftpPort);
+            Log.debugv("Testing SFTP connection to {0}:{1}", sftpHost, sftpPort);
             
             // Create JSch session with authentication
             session = createAuthenticatedSession();
@@ -269,19 +269,19 @@ public class SftpService {
             boolean writable = (permissions & 0200) != 0; // Check owner write permission
             
             if (!writable) {
-                Log.warnv("SFTP directory {} is not writable (permissions: {})", sftpPath,
+                Log.warnv("SFTP directory {0} is not writable (permissions: {1})", sftpPath,
                         Integer.toOctalString(permissions));
                 return false;
             }
 
-            Log.infov("SFTP connection test successful to {}:{}{} (writable)", sftpHost, sftpPort, sftpPath);
+            Log.infov("SFTP connection test successful to {0}:{1}{2} (writable)", sftpHost, sftpPort, sftpPath);
             return true;
 
         } catch (JSchException e) {
-            Log.errorv(e, "SFTP connection test failed - connection error: {}", e.getMessage());
+            Log.errorv(e, "SFTP connection test failed - connection error: {0}", e.getMessage());
             return false;
         } catch (SftpException e) {
-            Log.errorv(e, "SFTP connection test failed - SFTP operation error: {}", e.getMessage());
+            Log.errorv(e, "SFTP connection test failed - SFTP operation error: {0}", e.getMessage());
             return false;
         } finally {
             // Clean up resources
@@ -311,7 +311,7 @@ public class SftpService {
         if (sftpPrivateKey.isPresent() && !sftpPrivateKey.get().trim().isEmpty()) {
             // Use SSH key authentication
             String privateKeyValue = sftpPrivateKey.get().trim();
-            Log.debugv("Using SSH key authentication with key: {}",
+            Log.debugv("Using SSH key authentication with key: {0}",
                      privateKeyValue.startsWith("-----BEGIN") ? "private key content" : privateKeyValue);
             
             try {
@@ -334,11 +334,11 @@ public class SftpService {
                     }
                     
                     jsch.addIdentity(keyFile.getAbsolutePath());
-                    Log.debugv("Successfully loaded SSH private key from: {}", keyFile.getAbsolutePath());
+                    Log.debugv("Successfully loaded SSH private key from: {0}", keyFile.getAbsolutePath());
                 }
 
             } catch (JSchException e) {
-                Log.errorv("Failed to load SSH private key: {}", e.getMessage());
+                Log.errorv("Failed to load SSH private key: {0}", e.getMessage());
                 throw e;
             }
 

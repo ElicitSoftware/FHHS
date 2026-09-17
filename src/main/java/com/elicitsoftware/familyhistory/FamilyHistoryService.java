@@ -89,7 +89,7 @@ public class FamilyHistoryService {
     @Transactional
     public Response generateFamilyHistoryReport(ReportRequest request) {
         try {
-            Log.infov("Received family history report generation request for respondent: {}", request.id);
+            Log.infov("Received family history report generation request for respondent: {0}", request.id);
 
             // Validate request
             if (request.id == 0) {
@@ -103,24 +103,24 @@ public class FamilyHistoryService {
 
             // Check if status record exists
             if (status == null) {
-                Log.warnv("No status record found for respondent ID: {}", request.id);
+                Log.warnv("No status record found for respondent ID: {0}", request.id);
                 return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new FamilyHistoryReportResponse("No status record found for respondent", false))
                     .build();
             }
 
-            Log.infov("Found status record for respondent {}: external ID = {}", request.id, status.getXid());
+            Log.infov("Found status record for respondent {0}: external ID = {1}", request.id, status.getXid());
 
             // Start the asynchronous report generation and upload
             reportService.generateAndUploadFamilyHistoryReport(status);
 
-            Log.infov("Family history report generation initiated for respondent: {}", request.id);
+            Log.infov("Family history report generation initiated for respondent: {0}", request.id);
 
             return Response.ok(new FamilyHistoryReportResponse("Family history report generation initiated", true))
                     .build();
 
         } catch (Exception e) {
-            Log.errorv(e, "Failed to initiate family history report generation: {}", e.getMessage());
+            Log.errorv(e, "Failed to initiate family history report generation: {0}", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new FamilyHistoryReportResponse("Failed to generate report: " + e.getMessage(), false))
                     .build();
@@ -153,24 +153,24 @@ public class FamilyHistoryService {
     @PermitAll
     public Response debugStatus(@PathParam("respondentId") long respondentId) {
         try {
-            Log.infov("Checking status records for respondent: {}", respondentId);
+            Log.infov("Checking status records for respondent: {0}", respondentId);
 
             Status status = Status.find("respondentId", respondentId).firstResult();
 
             if (status == null) {
-                Log.warnv("No status record found for respondent: {}", respondentId);
+                Log.warnv("No status record found for respondent: {0}", respondentId);
                 return Response.ok(new FamilyHistoryReportResponse("No status record found for respondent " + respondentId, false))
                         .build();
             }
 
-            Log.infov("Found status record for respondent {}: XID = {}", respondentId, status.getXid());
+            Log.infov("Found status record for respondent {0}: XID = {1}", respondentId, status.getXid());
             return Response.ok(new FamilyHistoryReportResponse(
                     String.format("Status found - ID: %d, XID: %s, RespondentId: %d",
                             status.getId(), status.getXid(), status.getRespondentId()), true))
                     .build();
 
         } catch (Exception e) {
-            Log.errorv(e, "Failed to check status for respondent {}: {}", respondentId, e.getMessage());
+            Log.errorv(e, "Failed to check status for respondent {0}: {1}", respondentId, e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new FamilyHistoryReportResponse("Error checking status: " + e.getMessage(), false))
                     .build();

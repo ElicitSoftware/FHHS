@@ -166,7 +166,7 @@ public class FamilyHistoryReportService {
             return t;
         });
         
-        Log.infov("Family History Report Service initialized with SFTP host: {} and {} async threads (SFTP enabled: {})",
+        Log.infov("Family History Report Service initialized with SFTP host: {0} and {1} async threads (SFTP enabled: {2})",
                 sftpHost.orElse("<not configured>"), asyncThreads, sftpEnabled);
 
         if (!sftpEnabled) {
@@ -183,7 +183,7 @@ public class FamilyHistoryReportService {
                 Log.warn("SFTP connection test failed during service initialization - file uploads may fail");
             }
         } catch (Exception e) {
-            Log.errorv(e, "SFTP connection test threw exception during service initialization: {}", e.getMessage());
+            Log.errorv(e, "SFTP connection test threw exception during service initialization: {0}", e.getMessage());
         }
     }
 
@@ -225,7 +225,7 @@ public class FamilyHistoryReportService {
      */
     public CompletableFuture<Void> generateAndUploadFamilyHistoryReport(Status status) {
         if (!sftpEnabled) {
-            Log.infov("SFTP upload is disabled via family.history.sftp.enabled=false - skipping report generation for respondent {}",
+            Log.infov("SFTP upload is disabled via family.history.sftp.enabled=false - skipping report generation for respondent {0}",
                     status.getRespondentId());
             return CompletableFuture.completedFuture(null);
         }
@@ -235,7 +235,7 @@ public class FamilyHistoryReportService {
             try {
                 doGenerateAndUploadFamilyHistoryReport(status);
             } catch (Exception e) {
-                Log.errorv(e, "Failed to generate and upload family history report for respondent {}: {}",
+                Log.errorv(e, "Failed to generate and upload family history report for respondent {0}: {1}",
                         status.getRespondentId(), e.getMessage());
                 throw new RuntimeException("Failed to process family history report", e);
             }
@@ -271,11 +271,11 @@ public class FamilyHistoryReportService {
             List<RespondentPSA> unsentPSAs = RespondentPSA.find("psaId = ?1 AND status = ?2 AND uploadedDt IS NULL AND tries < ?3",
                     psaId, "FAILED", 50).list();
             
-            Log.infov("Found {} unsent uploads to retry", unsentPSAs.size());
+            Log.infov("Found {0} unsent uploads to retry", unsentPSAs.size());
 
             for (RespondentPSA respondentPSA : unsentPSAs) {
                 try {
-                    Log.infov("Retrying upload for respondent {} (attempt {})",
+                    Log.infov("Retrying upload for respondent {0} (attempt {1})",
                             respondentPSA.respondentId, respondentPSA.tries + 1);
                     
                     // Get the status for this respondent
@@ -286,7 +286,7 @@ public class FamilyHistoryReportService {
                         // Update the RespondentPSA with no error
                         updateRespondentPSAStatus(respondentPSA.respondentId, null);
                     } else {
-                        Log.warnv("No status record found for respondent {}, skipping retry", respondentPSA.respondentId);
+                        Log.warnv("No status record found for respondent {0}, skipping retry", respondentPSA.respondentId);
                     }
                 } catch (Exception e) {
                     // Update the RespondentPSA with the new failure
@@ -307,42 +307,42 @@ public class FamilyHistoryReportService {
      */
     @Transactional
     public void doGenerateAndUploadFamilyHistoryReport(Status status) throws Exception {
-        Log.infov("Generating family history report for respondent {} with external ID {}",
+        Log.infov("Generating family history report for respondent {0} with external ID {1}",
                 status.getRespondentId(), status.getXid());
 
         // Generate PDF report
-        Log.infov("Starting PDF generation for respondent: {}", status.getRespondentId());
+        Log.infov("Starting PDF generation for respondent: {0}", status.getRespondentId());
         byte[] pdfData = generateFamilyHistoryPdf(status.getRespondentId());
         String pdfFileName = status.getXid() + ".pdf";
-        Log.infov("PDF generated successfully: {} ({} bytes)", pdfFileName, pdfData.length);
+        Log.infov("PDF generated successfully: {0} ({1} bytes)", pdfFileName, pdfData.length);
 
         // Generate XML metadata
-        Log.infov("Generating XML metadata for respondent: {}", status.getRespondentId());
+        Log.infov("Generating XML metadata for respondent: {0}", status.getRespondentId());
         String xmlMetadata = generateXmlMetadata(status);
         String xmlFileName = status.getXid() + "-index.xml";
-        Log.infov("XML metadata generated successfully: {} ({} bytes)", xmlFileName, xmlMetadata.length());
+        Log.infov("XML metadata generated successfully: {0} ({1} bytes)", xmlFileName, xmlMetadata.length());
 
 
         // Upload files to SFTP server
-        Log.infov("Starting SFTP upload for files: {} and {}", pdfFileName, xmlFileName);
+        Log.infov("Starting SFTP upload for files: {0} and {1}", pdfFileName, xmlFileName);
         try {
-            Log.infov("Uploading PDF file: {}", pdfFileName);
+            Log.infov("Uploading PDF file: {0}", pdfFileName);
             sftpService.uploadFile(pdfFileName, pdfData);
-            Log.infov("PDF file uploaded successfully: {}", pdfFileName);
+            Log.infov("PDF file uploaded successfully: {0}", pdfFileName);
         } catch (Exception e) {
-            Log.errorv(e, "Failed to upload PDF file {}: {}", pdfFileName, e.getMessage());
+            Log.errorv(e, "Failed to upload PDF file {0}: {1}", pdfFileName, e.getMessage());
             throw e;
         }
         try {
-            Log.infov("Uploading XML file: {}", xmlFileName);
+            Log.infov("Uploading XML file: {0}", xmlFileName);
             sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
-            Log.infov("XML file uploaded successfully: {}", xmlFileName);
-            Log.infov("XML content: {}", xmlMetadata);
+            Log.infov("XML file uploaded successfully: {0}", xmlFileName);
+            Log.infov("XML content: {0}", xmlMetadata);
         } catch (Exception e) {
-            Log.errorv(e, "Failed to upload XML file {}: {}", xmlFileName, e.getMessage());
+            Log.errorv(e, "Failed to upload XML file {0}: {1}", xmlFileName, e.getMessage());
             throw e;
         }
-        Log.infov("Successfully uploaded family history report files for external ID: {}", status.getXid());
+        Log.infov("Successfully uploaded family history report files for external ID: {0}", status.getXid());
     }
 
     /**
@@ -364,7 +364,7 @@ public class FamilyHistoryReportService {
         try {
             // Skip if psaId is null or 0 to avoid foreign key constraint violations
             if (this.psaId == 0) {
-                Log.warnv("Skipping RespondentPSA status update for respondent {} - invalid psaId: {}",
+                Log.warnv("Skipping RespondentPSA status update for respondent {0} - invalid psaId: {1}",
                         respondentId, psaId);
                 return;
             }
@@ -372,8 +372,8 @@ public class FamilyHistoryReportService {
             // Verify the post-survey action exists before creating RespondentPSA record
             Long psaCount = PostSurveyAction.count("id = ?1", psaId);
             if (psaCount == 0) {
-                Log.warnv("Skipping RespondentPSA status update for respondent {} - " +
-                        "post-survey action {} does not exist", respondentId, psaId);
+                Log.warnv("Skipping RespondentPSA status update for respondent {0} - " +
+                        "post-survey action {1} does not exist", respondentId, psaId);
                 return;
             }
 
@@ -386,12 +386,12 @@ public class FamilyHistoryReportService {
                 respondentPSA.respondentId = respondentId;
                 respondentPSA.psaId = psaId;
                 respondentPSA.status = "STARTED";
-                Log.debugv("Created new RespondentPSA record for respondent {} and PSA {}",
+                Log.debugv("Created new RespondentPSA record for respondent {0} and PSA {1}",
                         respondentId, psaId);
             }
 
             if (throwable != null) {
-                Log.errorv(throwable, "CompletableFuture completed exceptionally for respondent {}: {}",
+                Log.errorv(throwable, "CompletableFuture completed exceptionally for respondent {0}: {1}",
                         respondentId, throwable.getMessage());
 
                 // Update RespondentPSA with error status
@@ -399,7 +399,7 @@ public class FamilyHistoryReportService {
                 respondentPSA.error = throwable.getMessage();
 
             } else {
-                Log.infov("CompletableFuture completed successfully for respondent {}", respondentId);
+                Log.infov("CompletableFuture completed successfully for respondent {0}", respondentId);
 
                 // Update RespondentPSA with success status
                 respondentPSA.status = "COMPLETED";
@@ -409,11 +409,11 @@ public class FamilyHistoryReportService {
             // Increment the tries value
             respondentPSA.tries = respondentPSA.tries + 1;
             respondentPSA.persist();
-            Log.debugv("Updated RespondentPSA status to {} for respondent {} and PSA {}",
+            Log.debugv("Updated RespondentPSA status to {0} for respondent {1} and PSA {2}",
                     respondentPSA.status, respondentId, psaId);
 
         } catch (Exception e) {
-            Log.errorv(e, "Failed to update RespondentPSA status for respondent {} and PSA {}: {}",
+            Log.errorv(e, "Failed to update RespondentPSA status for respondent {0} and PSA {1}: {2}",
                     respondentId, psaId, e.getMessage());
             // Don't rethrow - this is a status tracking operation that shouldn't fail the main process
         }
@@ -440,7 +440,7 @@ public class FamilyHistoryReportService {
      */
     @Transactional
     public byte[] generateFamilyHistoryPdf(Long respondentId) {
-        Log.debugv("Generating PDF for respondent: {}", respondentId);
+        Log.debugv("Generating PDF for respondent: {0}", respondentId);
 
         // Activate request context for calling request-scoped beans
         ManagedContext requestContext = Arc.container().requestContext();
@@ -478,7 +478,8 @@ public class FamilyHistoryReportService {
      * @see #xmlTemplate
      */
     private String generateXmlMetadata(Status status) {
-        Log.debugv("Generating XML metadata for respondent: {} with external ID: {}", status);
+        Log.debugv("Generating XML metadata for respondent: {0} with external ID: {1}",
+                status.getRespondentId(), status.getXid());
 
         String xmlDoc = xmlTemplate;
         // Any value in the status document can be included in the xml.

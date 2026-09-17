@@ -198,11 +198,11 @@ public class PDFService {
                     continue;
                 }
 
-                Log.debugv("FHHS PDFService.generatePDF - Processing response: {}", response.title);
-                Log.debugv("  response.pdf is null: {}", (response.pdf == null));
+                Log.debugv("FHHS PDFService.generatePDF - Processing response: {0}", response.title);
+                Log.debugv("  response.pdf is null: {0}", (response.pdf == null));
                 if (response.pdf != null) {
-                    Log.debugv("  response.pdf.title: {}", response.pdf.title);
-                    Log.debugv("  response.pdf.content length: {}", (response.pdf.content != null ? response.pdf.content.length : "null"));
+                    Log.debugv("  response.pdf.title: {0}", response.pdf.title);
+                    Log.debugv("  response.pdf.content length: {0}", (response.pdf.content != null ? response.pdf.content.length : "null"));
                 }
 
                 // If the PDF payload is missing, render a safe error block instead of crashing
@@ -881,11 +881,11 @@ public class PDFService {
             pdfDoc.content = new Content[]{errorContent};
             reportResponse.pdf = pdfDoc;
             
-            Log.errorv("FHHS PDFService.callReport - Error for {}", rpt.name);
-            Log.errorv("  Error message: {}", cleanErrorMessage);
-            Log.errorv("  PDF title: {}", pdfDoc.title);
-            Log.errorv("  PDF content length: {}", (pdfDoc.content != null ? pdfDoc.content.length : "null"));
-            Log.errorv("  PDF content[0].text: {}", (pdfDoc.content != null && pdfDoc.content.length > 0 ? pdfDoc.content[0].text : "null"));
+            Log.errorv("FHHS PDFService.callReport - Error for {0}", rpt.name);
+            Log.errorv("  Error message: {0}", cleanErrorMessage);
+            Log.errorv("  PDF title: {0}", pdfDoc.title);
+            Log.errorv("  PDF content length: {0}", (pdfDoc.content != null ? pdfDoc.content.length : "null"));
+            Log.errorv("  PDF content[0].text: {0}", (pdfDoc.content != null && pdfDoc.content.length > 0 ? pdfDoc.content[0].text : "null"));
             
             return reportResponse;
         } catch (Exception e) {

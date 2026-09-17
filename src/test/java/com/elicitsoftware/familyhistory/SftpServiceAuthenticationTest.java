@@ -37,7 +37,7 @@ public class SftpServiceAuthenticationTest {
                 Log.error("❌ SFTP connection test FAILED - Check configuration and logs");
             }
         } catch (Exception e) {
-            Log.errorv(e, "❌ SFTP connection test FAILED with exception: {}", e.getMessage());
+            Log.errorv(e, "❌ SFTP connection test FAILED with exception: {0}", e.getMessage());
         }
     }
 }
