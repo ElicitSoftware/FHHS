@@ -9,8 +9,14 @@
 -- ***LICENSE_END***
 ---
 -- SURVEYS --
-INSERT INTO survey.surveys(id, display_order, name, title, description, initial_display_key, post_survey_url)
-VALUES (nextval('survey.surveys_seq'), 1,'Family History Survey', 'Family History', 'This survey is designed to help you and your healthcare provider better understand your hereditary risk for cancer. By collecting information about your own health and the cancer history of your blood relatives - parents, siblings, children, grandparents, aunts, and uncles - this tool can support decisions about additional testing, personalize treatment, and ultimately improve care for you and your family.', '0001-0001-0000-0001-0000-0000-0000', NULL);
+-- survey_key is the cross-instance identity of this authored survey: Survey's V001
+-- declares it NOT NULL with no default precisely because it must not be generated
+-- per-deployment. The literal below is therefore fixed and must never change --
+-- every FHHS install seeds the same authored Family History Survey, so they all
+-- have to agree on its key for a definition export from one instance to import
+-- into another. Generating it (gen_random_uuid()) would defeat that.
+INSERT INTO survey.surveys(id, survey_key, display_order, name, title, description, initial_display_key, post_survey_url)
+VALUES (nextval('survey.surveys_seq'), '5e91c606-59a1-450a-a8d7-2f1530ff472b', 1,'Family History Survey', 'Family History', 'This survey is designed to help you and your healthcare provider better understand your hereditary risk for cancer. By collecting information about your own health and the cancer history of your blood relatives - parents, siblings, children, grandparents, aunts, and uncles - this tool can support decisions about additional testing, personalize treatment, and ultimately improve care for you and your family.', '0001-0001-0000-0001-0000-0000-0000', NULL);
 
 -- This needs to be reworked. The dimension tables are build on the fly. Maybe we should add the ones we want
 -- in the create script and change they dynamic generation in survey to if not exists.

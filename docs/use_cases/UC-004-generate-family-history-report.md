@@ -76,6 +76,10 @@ SFTP delivery can be disabled entirely via configuration; when disabled, no conn
 
 The set of reports assembled into the combined PDF is determined by the survey's configured report list, not hardcoded in FHHS. The default configuration composes the Proband (UC-001), Cancer Summary (UC-002), and Pedigree (UC-003) reports, in that order.
 
+### BR-005: XML Metadata Placeholders
+
+The XML metadata file is built from the configurable `family.history.sftp.xml.template`. The template may use `{RespondentId}`, `{Xid}`, `{SurveyId}`, `{FirstName}`, `{LastName}`, `{MiddleName}`, `{Dob}`, `{Email}`, `{Phone}`, `{DepartmentName}`, `{DepartmentID}`, `{AccessCode}` (the respondent's survey access code), `{Status}`, `{Created}`, and `{Finalized}`. A missing value is substituted as empty text, and any other placeholder, including the former `{Token}`, is left unchanged.
+
 ---
 
 ## Reference
