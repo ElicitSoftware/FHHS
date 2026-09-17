@@ -367,8 +367,8 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <source>25</source>
+                    <target>25</target>
                     <show>private</show>
                     <failOnError>false</failOnError>
                     <failOnWarnings>false</failOnWarnings>
