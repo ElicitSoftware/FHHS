@@ -125,7 +125,7 @@ public class FamilyHistoryReportService {
      * <li>{Email}, {Phone} - Contact information</li>
      * <li>{DepartmentName}, {DepartmentID} - Department details</li>
      * <li>{SurveyId} - Survey identifier</li>
-     * <li>{Token} - Authentication token</li>
+     * <li>{AccessCode} - The respondent's survey access code</li>
      * <li>{Status} - Current status</li>
      * <li>{Created} - Creation date</li>
      * </ul>
@@ -494,7 +494,7 @@ public class FamilyHistoryReportService {
         xmlDoc = xmlDoc.replace("{Phone}", nullSafe(status.getPhone()));
         xmlDoc = xmlDoc.replace("{DepartmentName}", nullSafe(status.getDepartmentName()));
         xmlDoc = xmlDoc.replace("{DepartmentID}", Long.toString(status.getDepartmentId()));
-        xmlDoc = xmlDoc.replace("{Token}", nullSafe(status.getToken()));
+        xmlDoc = xmlDoc.replace("{AccessCode}", nullSafe(status.getAccessCode()));
         xmlDoc = xmlDoc.replace("{Status}", nullSafe(status.getStatus()));
         xmlDoc = xmlDoc.replace("{Created}", nullSafe(status.getCreated()));
         xmlDoc = xmlDoc.replace("{Finalized}", nullSafe(status.getFinalized()));

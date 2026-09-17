@@ -27,29 +27,29 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * The Respondent entity is mapped to the "respondents" table within the "survey" schema
  * and is managed through JPA. It supports named queries for retrieving specific respondent
- * data based on survey and token criteria.
+ * data based on survey and access code criteria.
  * <p>
  * Key features of this class include:
  * - Tracking of creation, first access, and finalization timestamps.
  * - Management of an active status to indicate if the respondent is currently participating.
- * - Storage of a unique token to identify individual respondents securely.
+ * - Storage of a unique access code to identify individual respondents securely.
  * - Reference to the associated survey.
  * <p>
  * Named Queries:
- * - "Respondent.findBySurveyAndToken": Finds a respondent by the given survey ID and token.
- * - "Respondent.findActiveByToken": Retrieves active respondents associated with a specific token,
+ * - "Respondent.findBySurveyAndAccessCode": Finds a respondent by the given survey ID and access code.
+ * - "Respondent.findActiveByAccessCode": Retrieves active respondents associated with a specific access code,
  * ordered by survey ID.
  * <p>
  * The entity includes utility methods such as:
- * - `findBySurveyAndToken`: Static method to retrieve a respondent based on survey ID and token.
+ * - `findBySurveyAndAccessCode`: Static method to retrieve a respondent based on survey ID and access code.
  * - `getElapsedTime`: Calculates the elapsed time between the first access and finalization
  * timestamps, if available, formatted as HH:mm:ss.
  */
 @Entity
 @Table(name = "respondents", schema = "survey")
 @NamedQueries({
-        @NamedQuery(name = "Respondent.findBySurveyAndToken", query = "SELECT R FROM Respondent R where R.survey.id = :survey_id and R.token = :token"),
-        @NamedQuery(name = "Respondent.findActiveByToken", query = "SELECT R FROM Respondent R where R.token = :token and R.active = true order by R.survey.id")
+        @NamedQuery(name = "Respondent.findBySurveyAndAccessCode", query = "SELECT R FROM Respondent R where R.survey.id = :survey_id and R.accessCode = :accessCode"),
+        @NamedQuery(name = "Respondent.findActiveByAccessCode", query = "SELECT R FROM Respondent R where R.accessCode = :accessCode and R.active = true order by R.survey.id")
 })
 public class Respondent extends PanacheEntityBase {
 
@@ -108,20 +108,21 @@ public class Respondent extends PanacheEntityBase {
     public Survey survey;
 
     /**
-     * Unique token for accessing the survey.
+     * Unique access code the respondent enters to reach the survey.
      */
-    public String token;
+    @Column(name = "access_code")
+    public String accessCode;
 
     /**
-     * Finds a respondent by survey ID and token.
+     * Finds a respondent by survey ID and access code.
      *
      * @param survey_id the survey ID
-     * @param token the respondent token
+     * @param accessCode the respondent access code
      * @return the matching Respondent or null if not found
      */
     @Transient
-    public static Respondent findBySurveyAndToken(Integer survey_id, String token) {
-        return Respondent.find("survey.id = :survey_id and token = :token", Parameters.with("survey_id", survey_id).and("token", token)).firstResult();
+    public static Respondent findBySurveyAndAccessCode(Integer survey_id, String accessCode) {
+        return Respondent.find("survey.id = :survey_id and accessCode = :accessCode", Parameters.with("survey_id", survey_id).and("accessCode", accessCode)).firstResult();
     }
 
     /**

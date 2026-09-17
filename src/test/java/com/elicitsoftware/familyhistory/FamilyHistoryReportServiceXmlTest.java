@@ -109,6 +109,41 @@ class FamilyHistoryReportServiceXmlTest {
         assertEquals("<c>" + status.getCreated() + "</c><f>" + status.getFinalized() + "</f>", xml);
     }
 
+    /** UC-004 BR-005: {AccessCode} carries the respondent's survey access code. */
+    @Test
+    void generateXmlMetadata_accessCode_substitutesRespondentAccessCode() throws Exception {
+        FamilyHistoryReportService service = newService("<code>{AccessCode}</code>");
+        Status status = statusWith(1L, "X", "Jane");
+        status.setAccessCode("Bx7kQ2mNp");
+
+        String xml = invokeGenerateXmlMetadata(service, status);
+
+        assertEquals("<code>Bx7kQ2mNp</code>", xml);
+    }
+
+    /** UC-004 BR-005: a missing access code substitutes as empty text. */
+    @Test
+    void generateXmlMetadata_accessCodeNull_substitutesEmptyString() throws Exception {
+        FamilyHistoryReportService service = newService("<code>{AccessCode}</code>");
+        Status status = statusWith(1L, "X", "Jane");
+
+        String xml = invokeGenerateXmlMetadata(service, status);
+
+        assertEquals("<code></code>", xml);
+    }
+
+    /** UC-004 BR-005: the former {Token} placeholder was renamed without an alias. */
+    @Test
+    void generateXmlMetadata_formerTokenPlaceholder_isLeftUnsubstituted() throws Exception {
+        FamilyHistoryReportService service = newService("<code>{Token}</code>");
+        Status status = statusWith(1L, "X", "Jane");
+        status.setAccessCode("Bx7kQ2mNp");
+
+        String xml = invokeGenerateXmlMetadata(service, status);
+
+        assertEquals("<code>{Token}</code>", xml);
+    }
+
     @Test
     void generateXmlMetadata_unrecognizedPlaceholder_isLeftUnsubstituted() throws Exception {
         FamilyHistoryReportService service = newService("<x>{NotAPlaceholder}</x>");

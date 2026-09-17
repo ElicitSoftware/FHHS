@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS survey.respondents
     active          boolean DEFAULT true,
     logins          integer DEFAULT 0,
     survey_id       bigint NOT NULL,
-    token           character varying(255),
+    access_code     character varying(255),
     CONSTRAINT respondents_pk PRIMARY KEY (id),
     CONSTRAINT respondents_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id)
 );
