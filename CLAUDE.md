@@ -18,10 +18,37 @@ around them.
 - OpenTelemetry, SmallRye Health, Micrometer/Prometheus metrics
 - Calls an external R/Kinship2-based pedigree-drawing HTTP service
 
-When using the Quarkus Agent MCP tools, this is an **existing project** — start
-with `quarkus_update` and `quarkus_skills` per those tools' instructions. See
-[AGENTS.md](AGENTS.md) for the full Quarkus-agent workflow (extension-first
-development, hot reload, test running, error recovery).
+## MCP Servers and Skills
+
+Use the configured MCP servers and their skills instead of raw Maven, web
+search, or recalled API knowledge.
+
+**Quarkus (`quarkus-agent` plugin)** — this is an **existing project**: start
+with `quarkus_update`, then `quarkus_skills` for every extension you are about
+to touch; never `quarkus_create`. Look up Quarkus configuration and APIs with
+`quarkus_searchDocs`, not Context7 or web search. Manage dev mode with
+`quarkus_start` / `quarkus_stop` / `quarkus_status` / `quarkus_logs`; reload
+after code changes via `quarkus_callTool` → `devui-logstream_forceRestart`,
+and do a full stop/start after any `pom.xml` change. Run tests through
+`quarkus_callTool` → `devui-testing_runTests` (or `devui-testing_runTest`
+with a class name), not `mvn test`, and never `mvn clean` while dev mode is
+running. `quarkus_searchTools` lists the Dev MCP tools on the running app;
+re-run it after adding or removing an extension. The full workflow
+(extension-first rule, error recovery) is in [AGENTS.md](AGENTS.md).
+
+**Vaadin (`vaadin-skills` plugin)** — not applicable. FHHS is headless REST;
+do not load the Vaadin skills or MCP tools for this module.
+
+**IntelliJ IDEA (`idea` MCP server)** — `.run/FHHS.run.xml` is the
+Quarkus dev-mode run configuration; launch it with
+`execute_run_configuration` (see `get_run_configurations`) rather than
+hand-rolling `mvn quarkus:dev`. When the project is open in the IDE, prefer
+`search_symbol`, `get_symbol_info`, `analyze_calls`, `get_file_problems`,
+`lint_files`, `rename_refactoring`, `reformat_file`, and `build_project` over
+grep-and-edit. The database tools (`list_database_connections`,
+`introspect_schema`, `execute_sql_query`, `preview_table_data`) can inspect
+the local `survey` schema; the `xdebug_*` tools set breakpoints and step
+through a running debug session.
 
 ## AIUP Workflow
 
