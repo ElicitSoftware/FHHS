@@ -25,12 +25,13 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Verifies V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql, which replaces the
- * surrogate-id-based reorder in V0.0.5__UPDATE_CANCER_QUESTONS.sql - see
- * research/Kimball_type2.md section 2. Runs the real Flyway history (via
- * {@link PostgresTestResource}, whose Kimball Type 2 bootstrap columns/triggers on
- * survey.sections/questions/sections_questions make durable ids equal the fixture's
- * surrogate ids), then asserts on the resulting state of survey.sections_questions.
+ * Verifies the order of the Cancers section after the greenfield Flyway history has run:
+ * V0.0.1__POPULATE_FHHS_DATA.sql seeds the Triple Negative breast cancer question at
+ * display_order 8 directly (the reorder V0.0.5 / V0.0.8 applied on the released V2.x track
+ * is folded into the seed, and both are no-ops on this track - see
+ * research/Kimball_type2.md section 2). Runs the real Flyway history via
+ * {@link PostgresTestResource}, then asserts on the resulting state of
+ * survey.sections_questions.
  */
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
@@ -74,15 +75,15 @@ class CancerQuestionReorderMigrationTest {
 
         assertEquals(0, duplicates.size(),
                 "found duplicate 'current' sections_questions rows for the same durable id "
-                        + "- the migration's close+insert must leave exactly one current row per id");
+                        + "- the seed must leave exactly one current row per id");
     }
 
     @Test
     @Transactional
     void shiftedQuestion_movedFromDisplayOrderEightToNine() {
-        // V0.0.1__POPULATE_FHHS_DATA.sql seeds question_id=11 at section_id=14,
+        // Before the reorder was folded into the seed, question_id=11 sat at section_id=14,
         // display_order=8 (the row immediately before the triple-negative question's
-        // insert point). V0.0.8 must have shifted it to display_order=9 to make room.
+        // insert point). V0.0.1 must now seed it at display_order=9 to make room.
         BigDecimal displayOrder = (BigDecimal) entityManager.createNativeQuery(
                         "SELECT sq.display_order " +
                                 "FROM survey.sections_questions sq " +

@@ -193,9 +193,8 @@ public class ManualSchemaMigrator {
                 // as a validation failure by default, indistinguishable from a real checksum
                 // mismatch without this. That matters here because validatesCleanly() uses
                 // validate() as its "is this database on the greenfield track" probe: after any
-                // migration fails partway through a boot (e.g. V0.0.3 depending on Survey's ETL
-                // having run at least once — see DeploymentScript.md's restart-then-restart
-                // fresh-install sequence) and the app restarts, the remaining pending versions
+                // migration fails partway through a boot (a seed hitting a constraint on a
+                // schema it was not written against, say) and the app restarts, the remaining pending versions
                 // would otherwise be misread as "unupgraded v2.x history", routing a genuinely
                 // fresh/greenfield database through db/migration-v3 (the legacy-column-name
                 // track) and failing for real. Ignoring pending-migration errors here restricts

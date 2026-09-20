@@ -124,6 +124,9 @@ class ManualSchemaMigratorUpgradeTest {
                 .baselineDescription("Empty Database")
                 .validateOnMigrate(true)
                 .connectRetries(10)
+                // Mirrors ManualSchemaMigrator: a greenfield-only version that the upgrade
+                // track has not applied yet (V0.0.9) is pending, not a validation failure.
+                .ignoreMigrationPatterns("*:pending")
                 .placeholders(placeholders)
                 .load();
     }

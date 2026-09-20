@@ -38,6 +38,17 @@
 > configuration `ManualSchemaMigrator` uses for its "is this clean" probe. Confirmed end-to-end:
 > a full `docker compose up -d && restart && restart` fresh install now succeeds completely —
 > all of Survey, Admin, and FHHS report healthy with every migration applied.
+>
+> **Update (2026-09-19):** The greenfield track (`db/migration`, still unreleased) was found
+> broken again once Survey's `V015` made the eight Type 2 `*_key` columns `NOT NULL` with no
+> default: `V0.0.1` supplied none, and — because Postgres sequences are not transactional —
+> its first failed attempt left every `nextval()`-driven id shifted, so the retry then failed
+> earlier still on `ontology.dimension = 1`. `V0.0.1`/`V0.0.2` were rewritten with literal ids
+> and fixed UUIDv5 keys (derived under the `survey_key` namespace from `<table>:<id>`), the
+> Cancers-section reorder was folded into the seed, and `V0.0.3`, `V0.0.5` and `V0.0.8` became
+> documented no-ops on this track (kept so `repair()` still lines the versions up with
+> `db/migration-v3`). Since `V0.0.3` no longer needs the ETL-built `fact_sections_view`, a
+> fresh install is now a single `docker compose up -d` — no restart passes.
 
 ## Overview
 

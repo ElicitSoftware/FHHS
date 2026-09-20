@@ -63,13 +63,16 @@ CREATE SEQUENCE IF NOT EXISTS survey.surveys_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.surveys
 (
     id                  bigint NOT NULL,
+    -- Cross-instance-portable identity (Survey V001); V0.0.1 supplies a fixed literal.
+    survey_key          uuid NOT NULL,
     display_order       integer,
     name                character varying(255),
     title               character varying(255),
     description         character varying(2000),
     initial_display_key character varying(255),
     post_survey_url     character varying(2000),
-    CONSTRAINT surveys_pk PRIMARY KEY (id)
+    CONSTRAINT surveys_pk PRIMARY KEY (id),
+    CONSTRAINT surveys_survey_key_un UNIQUE (survey_key)
 );
 
 -- -----------------------------------------------------------------------------
@@ -106,6 +109,8 @@ CREATE TABLE IF NOT EXISTS survey.reports
     description   character varying(2000),
     url           character varying(2000),
     display_order integer,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    report_key            uuid NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT reports_pk PRIMARY KEY (id),
     CONSTRAINT reports_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id)
 );
@@ -118,11 +123,24 @@ CREATE TABLE IF NOT EXISTS survey.reports
 --    verbatim from the Survey module's schema (same source Admin's bootstrap
 --    uses), since FHHS's INSERTs reference every column below.
 -- -----------------------------------------------------------------------------
+-- Durable-id sequences (Survey V001). V0.0.1 sets every durable id explicitly and then
+-- moves these past the seeded ids; V0.0.9 does the same idempotently.
+CREATE SEQUENCE IF NOT EXISTS survey.select_groups_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.select_items_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.questions_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.sections_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.steps_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.steps_sections_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.sections_questions_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.relationships_durable_seq START WITH 1 INCREMENT BY 1;
+
 CREATE SEQUENCE IF NOT EXISTS survey.dimensions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.dimensions
 (
     id   integer NOT NULL DEFAULT NEXTVAL('survey.dimensions_seq'),
     name character varying(50),
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    dimension_key uuid NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT dimensions_pk PRIMARY KEY (id),
     CONSTRAINT dimensions_un UNIQUE (name)
 );
@@ -135,6 +153,8 @@ CREATE TABLE IF NOT EXISTS survey.ontology
     name      character varying(255) NOT NULL,
     tag       character varying(255) NOT NULL,
     dimension integer,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    ontology_key uuid                NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT ontology_pk PRIMARY KEY (id),
     CONSTRAINT ontology_dimensions_fk FOREIGN KEY (dimension) REFERENCES survey.dimensions (id),
     CONSTRAINT ontology_un UNIQUE (name, tag)
@@ -150,6 +170,8 @@ CREATE TABLE IF NOT EXISTS survey.select_groups
     data_type        character varying(50) NOT NULL DEFAULT 'Text',
     -- Kimball Type 2 SCD column -- see survey.questions comment above.
     select_group_id  integer,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    select_group_key uuid NOT NULL,
     CONSTRAINT select_groups_pk PRIMARY KEY (id),
     CONSTRAINT select_groups_name_un UNIQUE (survey_id, name)
 );
@@ -211,7 +233,8 @@ CREATE TABLE IF NOT EXISTS survey.questions
     effective_to      timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
     published_by      text,
     published_comment text,
-    is_draft          boolean NOT NULL DEFAULT false,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    question_key      uuid NOT NULL,
     CONSTRAINT questions_pk PRIMARY KEY (id),
     CONSTRAINT select_groups_fk FOREIGN KEY (select_group_id)
         REFERENCES survey.select_groups (id),
@@ -254,7 +277,8 @@ CREATE TABLE IF NOT EXISTS survey.sections
     effective_to      timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
     published_by      text,
     published_comment text,
-    is_draft          boolean NOT NULL DEFAULT false,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    section_key       uuid NOT NULL,
     CONSTRAINT sections_pk PRIMARY KEY (id)
 );
 CREATE OR REPLACE FUNCTION survey.set_section_durable_id() RETURNS trigger AS $BODY$
@@ -289,9 +313,10 @@ CREATE TABLE IF NOT EXISTS survey.sections_questions
     effective_to         timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
     published_by         text,
     published_comment    text,
-    is_draft             boolean NOT NULL DEFAULT false,
     question_version     integer NOT NULL DEFAULT 0,
     section_version      integer NOT NULL DEFAULT 0,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    sections_question_key uuid NOT NULL,
     CONSTRAINT sections_questions_pk PRIMARY KEY (id),
     CONSTRAINT sections_questions_question_fk FOREIGN KEY (question_id)
         REFERENCES survey.questions (id),
@@ -331,6 +356,8 @@ CREATE TABLE IF NOT EXISTS survey.steps
     -- nextval()), so the trigger below is a no-op for it; kept for parity with
     -- sections/questions and for any other fixture that inserts without setting it.
     step_id        integer,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    step_key       uuid NOT NULL,
     CONSTRAINT steps_pk PRIMARY KEY (id)
 );
 CREATE OR REPLACE FUNCTION survey.set_step_durable_id() RETURNS trigger AS $BODY$
@@ -355,6 +382,9 @@ CREATE TABLE IF NOT EXISTS survey.steps_sections
     section_id            integer               NOT NULL,
     section_display_order integer               NOT NULL,
     display_key           character varying(34) NOT NULL,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    steps_sections_id     integer,
+    steps_sections_key    uuid                  NOT NULL,
     CONSTRAINT steps_sections_pk PRIMARY KEY (id),
     CONSTRAINT steps_sections_fk FOREIGN KEY (section_id)
         REFERENCES survey.sections (id),
@@ -376,6 +406,8 @@ CREATE TABLE IF NOT EXISTS survey.metadata
     sections_question_id  integer,
     ontology_id           integer NOT NULL,
     value                 character varying(255),
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    metadata_key          uuid NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT metadata_pk PRIMARY KEY (id),
     CONSTRAINT metadata_ontology_fk FOREIGN KEY (ontology_id)
         REFERENCES survey.ontology (id),
@@ -399,6 +431,9 @@ CREATE TABLE IF NOT EXISTS survey.select_items
     display_text     character varying(255),
     display_order    integer NOT NULL,
     coded_value      character varying(255),
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    select_item_id   integer,
+    select_item_key  uuid NOT NULL,
     CONSTRAINT select_items_pk PRIMARY KEY (id),
     CONSTRAINT select_items_group_fk FOREIGN KEY (select_group_id)
         REFERENCES survey.select_groups (id)
@@ -458,6 +493,9 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     reference_value          character varying(255),
     default_upstream_value   character varying(255),
     override_upstream_value  character varying(255),
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    relationship_id          integer,
+    relationship_key         uuid NOT NULL,
     CONSTRAINT relationships_pk PRIMARY KEY (id),
     CONSTRAINT action_fk FOREIGN KEY (action_id)
         REFERENCES survey.action_types (id),
@@ -499,6 +537,8 @@ CREATE TABLE IF NOT EXISTS survey.post_survey_actions
     description     character varying(1000),
     url             character varying(500)  NOT NULL,
     execution_order integer                 NOT NULL DEFAULT 1,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    post_survey_action_key uuid              NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT post_survey_actions_pk PRIMARY KEY (id),
     CONSTRAINT post_survey_actions_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id)
