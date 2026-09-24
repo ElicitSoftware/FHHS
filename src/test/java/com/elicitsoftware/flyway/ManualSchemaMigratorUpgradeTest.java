@@ -81,24 +81,33 @@ class ManualSchemaMigratorUpgradeTest {
         // production FHHS database's Flyway history looks today.
         flywayFor("classpath:db/test-legacy,classpath:db/migration-v3").migrate();
 
-        // ManualSchemaMigrator.validatesCleanly(): db/migration's V0.0.1 now uses the new
-        // Kimball column names, so its checksum no longer matches this "v2.x" history's
-        // V0.0.1 — this must fail validation, exactly like a real un-upgraded database would.
+        // ManualSchemaMigrator.validatesCleanly(): db/migration's V0.0.3, V0.0.5 and V0.0.8 are
+        // empty on the greenfield track, so their checksums no longer match this "v2.x"
+        // history's -- this must fail validation, exactly like a real un-upgraded database
+        // would. (V0.0.1 and V0.0.2 no longer exist on the greenfield track at all -- the survey
+        // is imported, not seeded (UC-005) -- and a missing migration is deliberately not a
+        // signal, so the checksum mismatch is what carries the routing decision.) Validated
+        // against db/migration alone, as production does: db/test is the test fixture location
+        // and now carries the survey seed.
         assertThrows(FlywayValidateException.class,
-                () -> flywayFor("classpath:db/test,classpath:db/migration").validate(),
-                "A pre-fix history must NOT validate cleanly against db/migration -- its V0.0.1 "
-                        + "checksum differs now that the Kimball column names are baked in");
+                () -> flywayFor("classpath:db/migration").validate(),
+                "A pre-fix history must NOT validate cleanly against db/migration -- the emptied "
+                        + "greenfield copies of V0.0.3/V0.0.5/V0.0.8 have different checksums");
 
         // ManualSchemaMigrator's upgrade branch: migrate via db/migration-v3 (a full no-op here
         // -- there is no new version beyond what the seed step already applied), then repair
         // against db/migration so every future boot's validate() succeeds there directly.
         flywayFor("classpath:db/test-legacy,classpath:db/migration-v3").migrate();
-        flywayFor("classpath:db/test,classpath:db/migration").repair();
+        flywayFor("classpath:db/migration").repair();
 
         // This is the whole point of repair(): the NEXT boot must validate cleanly against
-        // db/migration with no further routing through db/migration-v3.
-        assertDoesNotThrow(() -> flywayFor("classpath:db/test,classpath:db/migration").validate(),
+        // db/migration with no further routing through db/migration-v3 -- even though the
+        // history still records V0.0.1 and V0.0.2, which db/migration no longer carries
+        // (UC-005): the converged database must not be misread as v2.x history again.
+        assertDoesNotThrow(() -> flywayFor("classpath:db/migration").validate(),
                 "After repair(), db/migration must validate cleanly so every future boot uses it directly");
+        assertEquals(2, countHistoryRows("0.0.1", "0.0.2"),
+                "the seed rows stay in the history; they are tolerated, not deleted");
 
         // repair() only rewrites checksums in the history table -- it never touches actual
         // table data or schema. The pre-existing rows this "v2.x" database seeded must still be
@@ -125,10 +134,44 @@ class ManualSchemaMigratorUpgradeTest {
                 .validateOnMigrate(true)
                 .connectRetries(10)
                 // Mirrors ManualSchemaMigrator: a greenfield-only version that the upgrade
-                // track has not applied yet (V0.0.9) is pending, not a validation failure.
-                .ignoreMigrationPatterns("*:pending")
+                // track has not applied yet (V0.0.9) is pending, not a validation failure; and
+                // a recorded version the greenfield track no longer carries (V0.0.1, V0.0.2 --
+                // the survey is imported, not seeded, UC-005) is missing, not a failure either.
+                .ignoreMigrationPatterns("*:pending", "*:missing")
                 .placeholders(placeholders)
                 .load();
+    }
+
+    /**
+     * UC-005: a database initialised on the greenfield track while it still seeded the survey
+     * (or the test fixture, which applies the same versions) records V0.0.1 and V0.0.2. Once
+     * those files are gone from db/migration, that history must still validate cleanly there,
+     * or every such install would be routed back through the upgrade track and fail.
+     */
+    @Test
+    void greenfieldHistoryWithRemovedSeeds_stillValidatesCleanly() throws SQLException {
+        flywayFor("classpath:db/test,classpath:db/migration").migrate();
+        assertEquals(2, countHistoryRows("0.0.1", "0.0.2"), "the seed versions were applied");
+
+        assertDoesNotThrow(() -> flywayFor("classpath:db/migration").validate(),
+                "recorded versions that db/migration no longer carries must be tolerated, not fatal");
+    }
+
+    private int countHistoryRows(String... versions) throws SQLException {
+        int count = 0;
+        try (Connection conn = DriverManager.getConnection(container.getJdbcUrl(), OWNER_USER, PASSWORD)) {
+            for (String version : versions) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT COUNT(*) FROM survey.flyway_fhhs_history WHERE version = ?")) {
+                    ps.setString(1, version);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        rs.next();
+                        count += rs.getInt(1);
+                    }
+                }
+            }
+        }
+        return count;
     }
 
     private void assertPreExistingLegacyDataUntouched() throws SQLException {

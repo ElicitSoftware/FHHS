@@ -8,6 +8,11 @@
 -- <https://polyformproject.org/licenses/noncommercial/1.0.0>
 -- ***LICENSE_END***
 ---
+-- TEST FIXTURE (UC-005). This was the greenfield seed of the Family History Survey until the
+-- survey started arriving by import: a deployment imports FHHS/family-history-survey.elicit
+-- through Admin, and FHHS reports not-ready until it has. The tests keep this copy so they
+-- run against the real survey structure without an import; it is applied only under the
+-- %test profile (quarkus.flyway.owner.locations includes db/test there).
 -- Seeds the authored Family History Survey into Survey's `survey` schema.
 --
 -- IDENTITY RULES (read before editing):

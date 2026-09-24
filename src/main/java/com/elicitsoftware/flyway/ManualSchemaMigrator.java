@@ -200,7 +200,14 @@ public class ManualSchemaMigrator {
                 // track) and failing for real. Ignoring pending-migration errors here restricts
                 // validate()'s verdict to actual checksum mismatches, which is the only signal
                 // that legitimately means "needs the upgrade track".
-                .ignoreMigrationPatterns("*:pending")
+                // "*:missing" is ignored for the same reason (UC-005): db/migration no longer
+                // carries V0.0.1 and V0.0.2 (the survey is imported, not seeded), but every
+                // database that once applied them -- a converged v2.x upgrade, or a greenfield
+                // install from before the change -- still records them. Without this, validate()
+                // would report them as applied-but-unresolved, misread that as v2.x history and
+                // route a healthy database back through db/migration-v3, where the checksums
+                // repair() had just realigned would fail for real on every boot.
+                .ignoreMigrationPatterns("*:pending", "*:missing")
                 .placeholders(placeholders)
                 .load();
     }

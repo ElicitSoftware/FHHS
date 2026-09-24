@@ -8,6 +8,9 @@
 -- <https://polyformproject.org/licenses/noncommercial/1.0.0>
 -- ***LICENSE_END***
 ---
+-- TEST FIXTURE (UC-005). The report definitions and the post-survey action the Family History
+-- Survey needs, seeded here for the tests only; a deployment gets them from the imported
+-- FHHS/family-history-survey.elicit, which carries both.
 -- Literal ids and fixed keys: see the identity rules at the top of V0.0.1.
 -- REPORTS --
 INSERT INTO survey.reports(id, survey_id, name, description, url, display_order, report_key) VALUES (1, 1, 'Respondent', 'Respondent', 'http://host.docker.internal:8082/proband/report', 0, '3b53e682-e521-509a-8d18-3a22e50401c4');
