@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.UUID;
 
 /**
  * Service for generating family history reports as PDF and XML metadata files
@@ -103,12 +104,38 @@ public class FamilyHistoryReportService {
     int asyncThreads;
 
     /**
-     * Post survey action ID for tracking upload status.
-     * Configured via the {@code family.history.upload.psa.id} property.
-     * Defaults to 1 if not specified.
+     * The post-survey action FHHS records its uploads against, found by its key
+     * ({@code family.history.upload.psa.key}) because its id is whatever the import minted
+     * (UC-005 BR-004). {@code family.history.upload.psa.id}, if set, overrides the lookup.
      */
-    @ConfigProperty(name = "family.history.upload.psa.id", defaultValue = "1")
-    int psaId;
+    @ConfigProperty(name = "family.history.upload.psa.key")
+    String psaKey;
+
+    /** An explicit id, for a deployment that prefers to pin it; wins over the key. */
+    @ConfigProperty(name = "family.history.upload.psa.id")
+    Optional<Integer> configuredPsaId;
+
+    /** The resolved id, remembered once found; {@code -1} until then. */
+    private volatile int resolvedPsaId = -1;
+
+    /**
+     * The id of the post-survey action to record against, or {@code 0} when it cannot be
+     * found -- in which case no execution record is written, as before (UC-004).
+     */
+    int psaId() {
+        if (configuredPsaId.isPresent()) {
+            return configuredPsaId.get();
+        }
+        if (resolvedPsaId < 0) {
+            PostSurveyAction action = PostSurveyAction.find("postSurveyActionKey = ?1", UUID.fromString(psaKey)).firstResult();
+            if (action == null) {
+                // Not remembered: the survey (and its action) may be imported later.
+                return 0;
+            }
+            resolvedPsaId = action.id;
+        }
+        return resolvedPsaId;
+    }
 
     /**
      * XML template used for generating metadata files.
@@ -265,11 +292,11 @@ public class FamilyHistoryReportService {
             return;
         }
 
-        if (psaId != 0) {
+        if (psaId() != 0) {
             // Get RespondentPSA records that have failed (status = FAILED and uploadedDt is null)
             // and haven't exceeded retry limits (tries < 50)
             List<RespondentPSA> unsentPSAs = RespondentPSA.find("psaId = ?1 AND status = ?2 AND uploadedDt IS NULL AND tries < ?3",
-                    psaId, "FAILED", 50).list();
+                    psaId(), "FAILED", 50).list();
             
             Log.infov("Found {0} unsent uploads to retry", unsentPSAs.size());
 
@@ -363,31 +390,31 @@ public class FamilyHistoryReportService {
     public void updateRespondentPSAStatus(Long respondentId, Throwable throwable) {
         try {
             // Skip if psaId is null or 0 to avoid foreign key constraint violations
-            if (this.psaId == 0) {
+            if (psaId() == 0) {
                 Log.warnv("Skipping RespondentPSA status update for respondent {0} - invalid psaId: {1}",
-                        respondentId, psaId);
+                        respondentId, psaId());
                 return;
             }
 
             // Verify the post-survey action exists before creating RespondentPSA record
-            Long psaCount = PostSurveyAction.count("id = ?1", psaId);
+            Long psaCount = PostSurveyAction.count("id = ?1", psaId());
             if (psaCount == 0) {
                 Log.warnv("Skipping RespondentPSA status update for respondent {0} - " +
-                        "post-survey action {1} does not exist", respondentId, psaId);
+                        "post-survey action {1} does not exist", respondentId, psaId());
                 return;
             }
 
             // Find or create RespondentPSA record to track execution status
             RespondentPSA respondentPSA = RespondentPSA.find("respondentId = ?1 and psaId = ?2",
-                    respondentId, psaId).firstResult();
+                    respondentId, psaId()).firstResult();
 
             if (respondentPSA == null) {
                 respondentPSA = new RespondentPSA();
                 respondentPSA.respondentId = respondentId;
-                respondentPSA.psaId = psaId;
+                respondentPSA.psaId = psaId();
                 respondentPSA.status = "STARTED";
                 Log.debugv("Created new RespondentPSA record for respondent {0} and PSA {1}",
-                        respondentId, psaId);
+                        respondentId, psaId());
             }
 
             if (throwable != null) {
@@ -410,11 +437,11 @@ public class FamilyHistoryReportService {
             respondentPSA.tries = respondentPSA.tries + 1;
             respondentPSA.persist();
             Log.debugv("Updated RespondentPSA status to {0} for respondent {1} and PSA {2}",
-                    respondentPSA.status, respondentId, psaId);
+                    respondentPSA.status, respondentId, psaId());
 
         } catch (Exception e) {
             Log.errorv(e, "Failed to update RespondentPSA status for respondent {0} and PSA {1}: {2}",
-                    respondentId, psaId, e.getMessage());
+                    respondentId, psaId(), e.getMessage());
             // Don't rethrow - this is a status tracking operation that shouldn't fail the main process
         }
     }

@@ -3,12 +3,14 @@ left to right direction
 
 actor "Survey Platform" as survey
 actor "Scheduler" as scheduler
+actor "Deployment Operator" as operator
 
 rectangle "FHHS" {
     usecase "UC-001\nGenerate Proband Report" as UC001
     usecase "UC-002\nGenerate Cancer Summary Report" as UC002
     usecase "UC-003\nGenerate Pedigree Report" as UC003
     usecase "UC-004\nGenerate Family History Report" as UC004
+    usecase "UC-005\nRefuse Service Until the Survey Is Imported" as UC005
 }
 
 survey --> UC001
@@ -16,5 +18,11 @@ survey --> UC002
 survey --> UC003
 survey --> UC004
 scheduler --> UC004
+operator --> UC005
+survey --> UC005 : report requests refused\nuntil the survey is imported
+UC005 ..> UC001 : <<precondition>>
+UC005 ..> UC002 : <<precondition>>
+UC005 ..> UC003 : <<precondition>>
+UC005 ..> UC004 : <<precondition>>
 
 @enduml

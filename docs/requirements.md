@@ -13,6 +13,7 @@ functional requirement below is one of its system actors (see
 | FR-003 | Generate Pedigree Report              | As a Survey Platform, I want to request a pedigree diagram report for a respondent so that the family structure and cancer history are shown visually. | High     | Implemented |
 | FR-004 | Generate Family History Report        | As a Survey Platform, I want to trigger generation and delivery of the full family-history report so that the study site receives it without the participant waiting on it. | High     | Implemented |
 | FR-005 | Retry Pending Family History Reports  | As a Scheduler, I want to periodically re-attempt family-history reports that haven't completed so that transient failures don't lose a report permanently. | High     | Implemented |
+| FR-006 | Refuse Service Until the Survey Is Imported | As a Deployment Operator, I want FHHS to start against a database that does not yet hold the Family History Survey, tell me in the log and on its readiness probe to import it through Admin, refuse report requests with that same message meanwhile, and become ready by itself once the import lands so that a fresh deployment never needs a restart or a seeded survey. | High     | Implemented |
 
 ## Non-Functional Requirements (NFR)
 
@@ -36,3 +37,4 @@ functional requirement below is one of its system actors (see
 | C-005 | External Pedigree Service | Pedigree diagram rendering requires an external R/Kinship2-based HTTP service reachable at the configured `pedigree.url`. | Technical   | High     | Verified |
 | C-006 | Deployment                | Must be deployable as a Docker container alongside Survey, Admin, and PostgreSQL via `docker-compose`. | Operational | High     | Verified |
 | C-007 | Terminology               | The credential a respondent enters to reach a survey is the **access code** (`survey.respondents.access_code`, `Status.accessCode`, the `{AccessCode}` XML placeholder). "Token" is reserved for the question-text placeholder (`survey.relationships.token`) and must not be used for the respondent credential. | Business    | Medium   | Implemented |
+| C-008 | Survey Arrives by Import   | No migration seeds the Family History Survey, its report definitions or its post-survey action; a deployment imports `family-history-survey.elicit` through Admin. FHHS recognises the survey by its key (`family.history.survey.key`) and finds its post-survey action by key, never by an assumed id. | Operational | High     | Implemented |
