@@ -143,7 +143,7 @@ class ManualSchemaMigratorUpgradeTest {
     }
 
     /**
-     * UC-005: a database initialised on the greenfield track while it still seeded the survey
+     * UC-005: a database initialized on the greenfield track while it still seeded the survey
      * (or the test fixture, which applies the same versions) records V0.0.1 and V0.0.2. Once
      * those files are gone from db/migration, that history must still validate cleanly there,
      * or every such install would be routed back through the upgrade track and fail.

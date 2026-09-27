@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * UC-005 (Refuse Service Until the Survey Is Imported): the survey is recognised by its key,
+ * UC-005 (Refuse Service Until the Survey Is Imported): the survey is recognized by its key,
  * readiness follows it, and the report endpoints refuse without it. The test fixture seeds the
  * Family History Survey (db/test), so presence is the ordinary case here; absence is exercised
  * with a key nothing carries.

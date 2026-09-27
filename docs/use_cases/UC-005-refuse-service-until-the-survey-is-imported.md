@@ -53,7 +53,7 @@
 
 ## Business Rules
 
-### BR-001: The survey is recognised by its key
+### BR-001: The survey is recognized by its key
 
 "Any survey exists" is not the test. FHHS switches on the Family History Survey's step names and reads reporting columns generated from its question set, so only a survey with the configured key counts. The key is fixed across sites and revisions and travels with the definition file.
 
