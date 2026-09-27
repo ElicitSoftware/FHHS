@@ -28,7 +28,7 @@ import java.util.UUID;
  * seeded by a migration; a deployment imports it through Admin. Until that has happened this
  * application starts, says so once in the log (step 2), reports not-ready
  * ({@link FamilyHistorySurveyHealthCheck}) and refuses report requests
- * ({@link FamilyHistorySurveyRequiredFilter}). The survey is recognised by its key (BR-001), not
+ * ({@link FamilyHistorySurveyRequiredFilter}). The survey is recognized by its key (BR-001), not
  * by "any survey exists", because a site running a different survey would otherwise pass the
  * check and fail later on a missing step name.
  * <p>
