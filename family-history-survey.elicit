@@ -10,14 +10,14 @@
 # steps_sections: 24
 # questions: 53
 # sections_questions: 128
-# relationships: 124
+# relationships: 128
 # reports: 3
 # post_survey_actions: 1
 # dimensions: 3
 # ontology: 68
 # metadata: 99
-# generated: 2026-09-27T16:59:36.597094914-04:00
-# survey_revision: 2026-09-27T16:59:36.597094914-04:00
+# generated: 2026-09-27T20:41:18.369463158-04:00
+# survey_revision: 2026-09-27T20:41:18.369463158-04:00
 
 surveys: 1|5e91c606-59a1-450a-a8d7-2f1530ff472b|Family History Survey|1|Family History|This survey is designed to help you and your healthcare provider better understand your hereditary risk for cancer. By collecting information about your own health and the cancer history of your blood relatives - parents, siblings, children, grandparents, aunts, and uncles - this tool can support decisions about additional testing, personalize treatment, and ultimately improve care for you and your family.|0001-0001-0000-0001-0000-0000-0000|||
 select_groups: 1|919700d1-56b1-51ff-aebe-37c984376e2b|PatientOrNot|Boolean if patient or not|Text|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
@@ -367,28 +367,28 @@ relationships: 52|4347b409-b20b-5bde-a961-52ff7f1c78b4||68|||70|5|1|Show Other A
 relationships: 53|70aac29e-8fae-5ab2-b584-ed69c4a295a4||71|||72|1|1|Show Unknown Age|C1||unknown cancer||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 54|2896a223-4bf1-535a-9a5c-a3dd5c5b0d51|2|3|7|||5|3|Replace the default text of the Family section|G1||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 55|c64f4430-f775-5863-a212-eb1e47baa7bf|2|3|7|||5|3|Replace the default text of the Family section|S1||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-relationships: 56|8183e8ad-effe-5c74-b612-3c95f8e853df|7|73|7|5|79|5|1|Replace the default text of the Mother living|S1||{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-relationships: 57|626ee3b8-59ee-5d5b-b5c5-7f352adde16b|7|73|7|5|74|5|1|Replace the default text of the Mother living|S1||{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 56|8183e8ad-effe-5c74-b612-3c95f8e853df|7|73|7|5|79|5|1|Replace the default text of the Mother living|||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 57|626ee3b8-59ee-5d5b-b5c5-7f352adde16b|7|73|7|5|74|5|1|Replace the default text of the Mother living|||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 58|407f2594-7c57-5b06-ba49-50772af96b35|7|74|7|5|75|3|3|Replace the mother age text |S1|Alive|{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 59|eee478e2-b4d3-5be3-8a17-fbbb2bed28d2|7|74|7|5|75|3|1|Show mother current age||Alive|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 60|c3d5c932-8a02-59b2-88c9-e2447a5a2f0b|7|74|7|5|76|3|1|Show mother age at death||Deceased|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 61|07a4c2f0-1274-5b85-8a5f-83d22ef18b12|7|74|7|5|75|5|3|Replace the default text of the Mother age|S1|Alive|{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 62|2b79bf99-c376-5252-89d7-df49df85b3eb|7|74|7|5|76|5|3|Replace the age at death default text|S1|Deceased|{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 63|6ebe0657-2dad-5651-ae9c-a425efba3aef|7|73|7|5|77|5|1|Replace the default text of mother siblings. |||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-relationships: 64|d4114950-9b94-5410-b864-546fda7042b6|7|73|7|5|77|5|3|Replace the default text of mother siblings. |S1||{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 64|d4114950-9b94-5410-b864-546fda7042b6|3|6|7|5|77|5|3|Replace the default text of mother siblings. |S1||{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 65|722e3f76-0111-535c-8d4f-6010807da6bf|7|77|7|5|78|2|2|Ask for mother's sibling names||0|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 66|c88de108-875d-5f3c-beed-8b94c456cdf9|7|79|7|6||3|1|Show Mother Cancers|CS2|Yes|{<G1>'s\|Your} Mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 67|88d3158f-fd6a-5782-8d1d-86997b155863|2|3|11|||5|3|Replace the default text of the Family section|G1||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 68|774febc9-2688-5a2c-b800-27266c8e171d|2|3|11|||5|3|Replace the default text of the Family section|S1||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-relationships: 69|c640074b-cb3b-51f5-968c-dbbddef980bd|11|80|11|7|86|5|1|Replace the default text of the Father living|S1||{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-relationships: 70|ef3770cb-c522-5958-ad62-6a09c92d9c80|11|80|11|7|81|5|1|Replace the default text of the Father living|S1||{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 69|c640074b-cb3b-51f5-968c-dbbddef980bd|11|80|11|7|86|5|1|Replace the default text of the Father living|||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 70|ef3770cb-c522-5958-ad62-6a09c92d9c80|11|80|11|7|81|5|1|Replace the default text of the Father living|||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 71|d4ebe192-03e7-5729-8e26-ede18872f02b|11|81|11|7|82|3|3|Replace the father age text |S1|Alive|{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 72|f5f19bfe-d088-5cdd-9953-8f63c02e4028|11|81|11|7|82|3|1|Show father current age||Alive|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 73|294a93d6-9fde-5378-876b-63e07ab8c866|11|81|11|7|83|3|1|Show father age at death||Deceased|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 74|a5cafc61-a859-50c9-8e3a-6dbcbe94bd9b|11|81|11|7|82|5|3|Replace the default text of the father age|S1|Alive|{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 75|48ee47da-8bf2-5dcc-bc02-9157864b072e|11|81|11|7|83|5|1|Replace the father age at death default text|S1|Deceased|{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 76|dcc4b0c6-151c-5daa-aafd-c2cbd98f2a7c|11|80|11|7|84|5|1|Replace the default text of fatherher siblings. |||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-relationships: 77|8f36a31f-867e-5307-8e36-e81e8c90c2e8|11|80|11|7|84|5|3|Replace the default text of father siblings. |S1||{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 77|8f36a31f-867e-5307-8e36-e81e8c90c2e8|3|7|11|7|84|5|3|Replace the default text of father siblings. |S1||{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 78|72bb33e4-aa00-5e18-b101-a02d19923e99|11|84|11|7|85|2|2|Ask for father's sibling names||0|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 79|29bed997-0661-5883-9b1f-32d9be9e5834|11|86|11|8||3|1|Show father cancers|CS2|Yes|{<G1>'s\|Your} Father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 80|fbad0636-7a45-530e-831b-e2caa93ad351|2|3|6|||5|3|Replace default name of who's sibling |R1||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
@@ -436,6 +436,10 @@ relationships: 121|e3ee8c28-eda1-534c-8168-ff410f0fe387|14|120|14|23|122|3|1|Sho
 relationships: 122|9573bf08-403b-59d6-8ed6-d80a539af1f5|14|124|14|24||3|1|Show father sibling cancer||Yes|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 123|35777e84-5f24-5329-8d40-5ae0fe9077f3||19|||125|1|1|Show Triple Negative|||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 124|09364623-c35a-501f-adf6-f6350db687e3|3|126|3|3|127|6|1|Show other race||Other|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 125|876ec180-4429-401f-9f8c-ff5d8eb701a7|3|6|7|5|74|5|3|Mother living: name the mother|S1||{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 126|f36777af-a2b2-491a-ac19-622e9f6bcb15|3|6|7|5|79|5|3|Mother cancer: name the mother|S1||{<G1>'s\|your} mother||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 127|edc4c466-2687-4a2a-85e0-14036af9db27|3|7|11|7|81|5|3|Father living: name the father|S1||{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 128|131430a7-b443-44a7-ae4f-ca845c6a86df|3|7|11|7|86|5|3|Father cancer: name the father|S1||{<G1>'s\|your} father||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 reports: 1|3b53e682-e521-509a-8d18-3a22e50401c4|Respondent|Respondent|http://host.docker.internal:8082/proband/report|0
 reports: 2|fde15f3a-57ea-5066-ac75-b55181a2a92e|Cancer Summary|Cancer Summary|http://host.docker.internal:8082/casummary/report|1
 reports: 3|854f50d7-da7d-51e4-ad52-926851b2be9e|Family Pedigree|Family Pedigree|http://host.docker.internal:8082/pedigree/report|2
