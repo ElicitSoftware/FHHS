@@ -70,7 +70,7 @@ Any family-history report execution left in `FAILED` status (not yet uploaded, w
 
 ### BR-003: SFTP Delivery Can Be Disabled
 
-SFTP delivery can be disabled entirely via configuration; when disabled, no connection test, generation, upload, or retry occurs for any respondent.
+SFTP delivery is disabled unless configuration enables it; while disabled, no connection test, generation, upload, or retry occurs for any respondent. A deployment turns it on once it has an SFTP target to deliver to.
 
 ### BR-004: Report Composition Is Configuration-Driven
 

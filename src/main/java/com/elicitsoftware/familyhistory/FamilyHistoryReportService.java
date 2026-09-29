@@ -89,10 +89,11 @@ public class FamilyHistoryReportService {
     /**
      * Whether the SFTP upload feature is enabled.
      * Configured via the {@code family.history.sftp.enabled} property.
-     * Defaults to {@code true}. When {@code false}, no connection test,
+     * Defaults to {@code false}: a deployment opts in to SFTP delivery once it
+     * has an SFTP target to point at. When {@code false}, no connection test,
      * report generation/upload, or retry processing is performed.
      */
-    @ConfigProperty(name = "family.history.sftp.enabled", defaultValue = "true")
+    @ConfigProperty(name = "family.history.sftp.enabled", defaultValue = "false")
     boolean sftpEnabled;
 
     /**
