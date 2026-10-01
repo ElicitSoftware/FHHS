@@ -31,7 +31,7 @@ functional requirement below is one of its system actors (see
 | ID    | Title                     | Constraint                                                                                          | Category    | Priority | Status |
 |-------|----------------------------|------------------------------------------------------------------------------------------------------|-------------|----------|--------|
 | C-001 | Runtime Platform          | Backend must run on Java 25 (`maven.compiler.release=25`).                                           | Technical   | High     | Verified |
-| C-002 | Application Framework     | Backend must be built on Quarkus 3.37.x.                                                             | Technical   | High     | Verified |
+| C-002 | Application Framework     | Backend must be built on Quarkus 3.40.x (LTS).                                                       | Technical   | High     | Verified |
 | C-003 | Database Platform         | System must use PostgreSQL, sharing the `survey` schema owned by the Elicit Survey application.      | Technical   | High     | Verified |
 | C-004 | Data Access Layer         | Data access must use Hibernate ORM with Panache (active-record entities) — not jOOQ.                 | Technical   | High     | Verified |
 | C-005 | External Pedigree Service | Pedigree diagram rendering requires an external R/Kinship2-based HTTP service reachable at the configured `pedigree.url`. | Technical   | High     | Verified |
