@@ -12,12 +12,12 @@ package com.elicitsoftware.model;
  */
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -122,7 +122,8 @@ public class Respondent extends PanacheEntityBase {
      */
     @Transient
     public static Respondent findBySurveyAndAccessCode(Integer survey_id, String accessCode) {
-        return Respondent.find("survey.id = :survey_id and accessCode = :accessCode", Parameters.with("survey_id", survey_id).and("accessCode", accessCode)).firstResult();
+        return Respondent.find("survey.id = :survey_id and accessCode = :accessCode",
+                Map.of("survey_id", survey_id, "accessCode", accessCode)).firstResult();
     }
 
     /**
