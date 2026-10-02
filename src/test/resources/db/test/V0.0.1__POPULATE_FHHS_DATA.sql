@@ -41,7 +41,8 @@
 --    afterwards by V0.0.5 / V0.0.8; on this greenfield track both are no-ops.
 --
 -- SURVEYS --
-INSERT INTO survey.surveys(id, survey_key, display_order, name, title, description, initial_display_key, post_survey_url) VALUES (1, '5e91c606-59a1-450a-a8d7-2f1530ff472b', 1,'Family History Survey', 'Family History', 'This survey is designed to help you and your healthcare provider better understand your hereditary risk for cancer. By collecting information about your own health and the cancer history of your blood relatives - parents, siblings, children, grandparents, aunts, and uncles - this tool can support decisions about additional testing, personalize treatment, and ultimately improve care for you and your family.', '0001-0001-0000-0001-0000-0000-0000', NULL);
+-- report_schema: what Survey's first build of the survey records (UC-005 BR-006); the bootstrap created the schema.
+INSERT INTO survey.surveys(id, survey_key, display_order, name, title, description, initial_display_key, post_survey_url, report_schema) VALUES (1, '5e91c606-59a1-450a-a8d7-2f1530ff472b', 1,'Family History Survey', 'Family History', 'This survey is designed to help you and your healthcare provider better understand your hereditary risk for cancer. By collecting information about your own health and the cancer history of your blood relatives - parents, siblings, children, grandparents, aunts, and uncles - this tool can support decisions about additional testing, personalize treatment, and ultimately improve care for you and your family.', '0001-0001-0000-0001-0000-0000-0000', NULL, 'report_family_history_survey');
 
 -- DIMENSIONS --
 INSERT INTO survey.dimensions(id, name, dimension_key) VALUES (1, 'age', '78a10283-8197-5e18-9026-21562a9a088e');

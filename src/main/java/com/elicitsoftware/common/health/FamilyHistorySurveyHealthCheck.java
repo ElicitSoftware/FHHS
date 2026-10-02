@@ -26,7 +26,7 @@ import org.eclipse.microprofile.health.Readiness;
 @ApplicationScoped
 public class FamilyHistorySurveyHealthCheck implements HealthCheck {
 
-    static final String NAME = "Family History Survey installed";
+    static final String NAME = "Family History Survey installed and built";
 
     @Inject
     FamilyHistorySurveyCheck surveyCheck;
@@ -37,7 +37,7 @@ public class FamilyHistorySurveyHealthCheck implements HealthCheck {
 
     @Override
     public HealthCheckResponse call() {
-        if (surveyCheck.isSurveyInstalled()) {
+        if (surveyCheck.isReady()) {
             return HealthCheckResponse.up(NAME);
         }
         return HealthCheckResponse.named(NAME).down()

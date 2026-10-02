@@ -14,7 +14,8 @@
 -- =============================================================================
 -- FHHS's db/migration scripts are NOT self-contained: they INSERT/UPDATE objects
 -- owned by the Survey module (surveys, questions, sections_questions, ...) and
--- read from surveyreport.fact_sections_view, which is populated by Survey's ETL —
+-- read from the survey's own reporting schema's fact_sections_view, which Survey's ETL
+-- creates and populates (Survey UC-008; here report_family_history_survey) —
 -- none of that exists on a throwaway test container. On the shared production
 -- database these objects already exist. This script creates the minimal set
 -- needed for db/migration to apply cleanly and for the @QuarkusTest suite to
@@ -49,10 +50,14 @@ $$;
 
 -- -----------------------------------------------------------------------------
 -- 2. Schemas. `survey` is also auto-created by quarkus.flyway.owner.schemas, so
---    guard it; `surveyreport` is not managed by Flyway and must be created here.
+--    guard it; `surveyreport` (the common reporting schema) and the Family
+--    History Survey's own reporting schema, report_family_history_survey, are
+--    not managed by Flyway and must be created here. The latter is what Survey's
+--    first build of the survey creates and names on survey.surveys.report_schema.
 -- -----------------------------------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS survey;
 CREATE SCHEMA IF NOT EXISTS surveyreport;
+CREATE SCHEMA IF NOT EXISTS report_family_history_survey;
 
 -- -----------------------------------------------------------------------------
 -- 3. survey.surveys — FK target for reports/respondents/sections_questions/etc.
@@ -71,8 +76,12 @@ CREATE TABLE IF NOT EXISTS survey.surveys
     description         character varying(2000),
     initial_display_key character varying(255),
     post_survey_url     character varying(2000),
+    -- The survey's own reporting schema at this site (Survey V021); FHHS resolves it
+    -- at request time (UC-005 BR-006). The fixture survey row sets it.
+    report_schema       character varying(63),
     CONSTRAINT surveys_pk PRIMARY KEY (id),
-    CONSTRAINT surveys_survey_key_un UNIQUE (survey_key)
+    CONSTRAINT surveys_survey_key_un UNIQUE (survey_key),
+    CONSTRAINT surveys_report_schema_un UNIQUE (report_schema)
 );
 
 -- -----------------------------------------------------------------------------
@@ -566,18 +575,18 @@ CREATE TABLE IF NOT EXISTS survey.respondent_psa
 );
 
 -- -----------------------------------------------------------------------------
--- 7. surveyreport.dim_step / dim_section — Kimball dimension tables. V0.0.6's
---    indexes reference these directly; fact_sections_view's step/section
---    columns come from a join against them in the real ETL.
+-- 7. report_family_history_survey.dim_step / dim_section — the survey schema's
+--    Kimball dimension tables; fact_sections_view's step/section columns come
+--    from a join against them in the real ETL.
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.dim_step
+CREATE TABLE IF NOT EXISTS report_family_history_survey.dim_step
 (
     id    integer NOT NULL,
     value character varying(255),
     CONSTRAINT dim_step_pk PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS surveyreport.dim_section
+CREATE TABLE IF NOT EXISTS report_family_history_survey.dim_section
 (
     id    integer NOT NULL,
     value character varying(255),
@@ -585,10 +594,10 @@ CREATE TABLE IF NOT EXISTS surveyreport.dim_section
 );
 
 -- -----------------------------------------------------------------------------
--- 8. surveyreport.fact_sections — base fact table V0.0.6's indexes are built
---    on. Columns limited to what those indexes reference.
+-- 8. report_family_history_survey.fact_sections — the base fact table, as
+--    Survey's per-schema template creates it (fixed columns only).
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.fact_sections
+CREATE TABLE IF NOT EXISTS report_family_history_survey.fact_sections
 (
     id               bigint NOT NULL,
     survey_id        integer,
@@ -602,9 +611,10 @@ CREATE TABLE IF NOT EXISTS surveyreport.fact_sections
 );
 
 -- -----------------------------------------------------------------------------
--- 9. surveyreport.fact_respondents — GRANT + index target (V0.0.6).
+-- 9. report_family_history_survey.fact_respondents — a view in the real schema;
+--    a table stands in for it here.
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.fact_respondents
+CREATE TABLE IF NOT EXISTS report_family_history_survey.fact_respondents
 (
     respondent_id bigint,
     survey_id     integer,
@@ -613,14 +623,13 @@ CREATE TABLE IF NOT EXISTS surveyreport.fact_respondents
 );
 
 -- -----------------------------------------------------------------------------
--- 10. surveyreport.fact_sections_view — stands in for the real ETL-populated,
---    dim_step/dim_section-joined view. CancerHistoryRepository reads every
---    demographic/cancer column below directly; V0.0.3__CREATE_FHHS_FACT_VIEW.sql
---    (still applied, then dropped by V0.0.7 later in the same migration run)
---    additionally needs id, step_key, section_key. A plain table works exactly
---    like a view for SELECT purposes, so tests can just INSERT fixture rows.
+-- 10. report_family_history_survey.fact_sections_view — stands in for the real
+--    ETL-populated, dim_step/dim_section-joined view. CancerHistoryRepository
+--    reads every demographic/cancer column below directly, in the schema it
+--    resolves from survey.surveys.report_schema. A plain table works exactly like
+--    a view for SELECT purposes, so tests can just INSERT fixture rows.
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.fact_sections_view
+CREATE TABLE IF NOT EXISTS report_family_history_survey.fact_sections_view
 (
     id                                       bigint NOT NULL,
     respondent_id                            bigint NOT NULL,
@@ -708,3 +717,4 @@ CREATE TABLE IF NOT EXISTS surveyreport.fact_sections_view
 -- -----------------------------------------------------------------------------
 GRANT USAGE ON SCHEMA survey TO survey_user, surveyadmin_user;
 GRANT USAGE ON SCHEMA surveyreport TO survey_user, surveyadmin_user, surveyreport_user;
+GRANT USAGE ON SCHEMA report_family_history_survey TO survey_user, surveyadmin_user, surveyreport_user;
