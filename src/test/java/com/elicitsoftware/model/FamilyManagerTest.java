@@ -25,9 +25,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * FamilyManager builds the entire pedigree tree by matching {@code FamilyHistoryRecord.step}
  * against hardcoded string literals ("Mother", "Sibling", "Mother's Sibling", ...). These
  * literals originate from {@code dim_step.value} via {@code fact_sections_view}. Under
- * Survey's planned Kimball Type 2 migration, {@code dim_step.value} is updated in place
- * (SCD Type 1) whenever a step is renamed in the Author Tool - see
- * {@code research/Kimball_type2.md} section 3. These tests lock down the current behavior
+ * Survey's Kimball Type 2 schema (Survey UC-002 BR-009), {@code dim_step.value} is updated
+ * in place (SCD Type 1) whenever a step is renamed in the Author Tool, so a rename changes
+ * these labels in every historical report. These tests lock down the current behavior
  * so that any refactor (or any future step rename) that changes this matching is caught
  * immediately instead of silently dropping family members from reports.
  */

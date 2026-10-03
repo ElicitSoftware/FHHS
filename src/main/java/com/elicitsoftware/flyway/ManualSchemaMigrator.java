@@ -39,9 +39,9 @@ import java.util.Map;
 // db/migration-v3/, src/test/resources/db/test-legacy/, and
 // ManualSchemaMigratorUpgradeTest.java should ALL be deleted, and
 // quarkus.flyway.owner.migrate-at-start should revert to the plain Quarkus-managed
-// auto-migration this class replaced (see application.properties). Tracked in
-// FHHS/research/Kimball_type2.md section 6 and DeploymentScript.md — check those before
-// removing, and update them when this class is actually deleted.
+// auto-migration this class replaced (see application.properties). Tracked in the
+// repo-root DeploymentScript.md — check it before removing, and update it when this
+// class is actually deleted.
 //
 // Runs Flyway manually against a database-detected brownfield/greenfield/converged location,
 // replacing Quarkus's migrate-at-start (deliberately disabled — see the comment on
@@ -52,9 +52,7 @@ import java.util.Map;
 // (com.elicitsoftware.flyway.ManualSchemaMigrator there) — ported here because FHHS's own
 // foundational V0.0.1__POPULATE_FHHS_DATA.sql referenced pre-Kimball column names
 // (survey.metadata's step_section_id/section_question_id, survey.relationships'
-// downstream_s_id) that don't exist on Survey's greenfield Kimball schema. See
-// FHHS/research/Kimball_type2.md and the plan at
-// /Users/mdemerat/.claude/plans/i-have-reset-the-whimsical-lampson.md.
+// downstream_s_id) that don't exist on Survey's greenfield Kimball schema.
 //
 // Tries db/migration (the greenfield, Kimball-column-aware schema) first. If it validates
 // cleanly there — either a genuinely fresh database, or a v2.x database that has already been

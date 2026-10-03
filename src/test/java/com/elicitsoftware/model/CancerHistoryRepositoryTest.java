@@ -28,7 +28,9 @@ import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link CancerHistoryRepository}, which is the single query in FHHS that reads
- * the survey's {@code fact_sections_view} - see {@code research/Kimball_type2.md} section 1.
+ * the survey's {@code fact_sections_view}, filtered by respondent only: it names no
+ * {@code step_key}/{@code section_key} literal, so Survey's dimension surrogate ids never
+ * reach it.
  * The query itself can't be run without a live Postgres instance, so these tests mock the
  * {@link EntityManager}/{@link Query} layer to lock down three things a refactor must not break:
  * <ol>
@@ -151,8 +153,8 @@ class CancerHistoryRepositoryTest {
 
     @Test
     void findFamilyHistoryByRespondentId_queriesFactSectionsViewNotTheRemovedFactView() {
-        // Regression guard for the exact risk research/Kimball_type2.md documents as resolved:
-        // FACT_FHHS_VIEW was dropped in V0.0.7 and must never be reintroduced.
+        // Regression guard: FACT_FHHS_VIEW, a union that filtered on hardcoded step_key and
+        // section_key literals, was dropped in V0.0.7 and must never be reintroduced.
         EntityManager em = mock(EntityManager.class);
         Query query = mock(Query.class);
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);

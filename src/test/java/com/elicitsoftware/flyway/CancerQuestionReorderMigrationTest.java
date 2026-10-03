@@ -28,8 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Verifies the order of the Cancers section after the greenfield Flyway history has run:
  * V0.0.1__POPULATE_FHHS_DATA.sql seeds the Triple Negative breast cancer question at
  * display_order 8 directly (the reorder V0.0.5 / V0.0.8 applied on the released V2.x track
- * is folded into the seed, and both are no-ops on this track - see
- * research/Kimball_type2.md section 2). Runs the real Flyway history via
+ * is folded into the seed, and both are no-ops on this track: V0.0.5 updated by surrogate
+ * ids that a fresh Kimball schema never has, so V0.0.8 redid it by durable key). Runs the
+ * real Flyway history via
  * {@link PostgresTestResource}, then asserts on the resulting state of
  * survey.sections_questions.
  */
