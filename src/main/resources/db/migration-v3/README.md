@@ -19,5 +19,5 @@ logs this on the boot it happens). At that point, also delete:
 and revert `quarkus.flyway.owner.migrate-at-start` in `application.properties` back to
 Quarkus-managed auto-migration.
 
-Tracked in `FHHS/research/Kimball_type2.md` (section 6) and the repo-root
-`DeploymentScript.md` — update both when this directory is actually removed.
+Tracked in the repo-root `DeploymentScript.md` — update it when this directory is actually
+removed.

@@ -1,6 +1,7 @@
 # Clinical Team Notification — Step/Section Renames Now Retroactive
 
-> Draft for step 5 of `research/Kimball_type2.md` section 8 (Implementation Steps).
+> Draft of the notice owed to the clinical team since Survey's Kimball Type 2 release: a
+> step or section renamed in the Author Tool now relabels every historical report.
 > Send as-is or adapt; not yet sent as of this writing.
 
 ---
