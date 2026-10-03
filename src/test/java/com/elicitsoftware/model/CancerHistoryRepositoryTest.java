@@ -28,21 +28,91 @@ import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link CancerHistoryRepository}, which is the single query in FHHS that reads
- * {@code surveyreport.fact_sections_view} - see {@code research/Kimball_type2.md} section 1.
+ * the survey's {@code fact_sections_view} - see {@code research/Kimball_type2.md} section 1.
  * The query itself can't be run without a live Postgres instance, so these tests mock the
- * {@link EntityManager}/{@link Query} layer to lock down two things a refactor must not break:
+ * {@link EntityManager}/{@link Query} layer to lock down three things a refactor must not break:
  * <ol>
  *   <li>the respondent_id parameter is bound as the query's only parameter</li>
+ *   <li>the view is qualified with the reporting schema resolved from the survey at call time,
+ *       never a hard-coded one (UC-005 BR-006)</li>
  *   <li>row-to-{@link FamilyHistoryRecord} mapping tolerates the JDBC type variance the class
  *       javadoc calls out (Long vs Integer, BigDecimal vs String, nulls)</li>
  * </ol>
  */
 class CancerHistoryRepositoryTest {
 
+    /** A check that answers with a fixed schema name and no database behind it. */
+    @jakarta.enterprise.inject.Vetoed
+    private static final class FixedSchemaCheck extends com.elicitsoftware.common.health.FamilyHistorySurveyCheck {
+        private final String schema;
+
+        FixedSchemaCheck(String schema) {
+            this.schema = schema;
+        }
+
+        @Override
+        public String missingMessage() {
+            return "survey.surveys.report_schema is null";
+        }
+
+        @Override
+        public boolean isSurveyInstalled() {
+            return true;
+        }
+
+        @Override
+        public String reportSchema() {
+            return schema;
+        }
+    }
+
     private CancerHistoryRepository newRepository(EntityManager em) {
+        return newRepository(em, "report_family_history_survey");
+    }
+
+    private CancerHistoryRepository newRepository(EntityManager em, String schema) {
         CancerHistoryRepository repo = new CancerHistoryRepository();
         repo.entityManager = em;
+        repo.surveyCheck = new FixedSchemaCheck(schema);
         return repo;
+    }
+
+    /** UC-005 BR-006: the query reads the schema the survey names, whatever a site called it. */
+    @Test
+    void findFamilyHistoryByRespondentId_qualifiesTheViewWithTheResolvedSchema() {
+        EntityManager em = mock(EntityManager.class);
+        Query query = mock(Query.class);
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        when(em.createNativeQuery(sqlCaptor.capture())).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of());
+
+        newRepository(em, "report_fhh_renamed").findFamilyHistoryByRespondentId(1L);
+
+        String sql = sqlCaptor.getValue();
+        assertTrue(sql.contains("FROM report_fhh_renamed.fact_sections_view f"), sql);
+        assertFalse(sql.contains("surveyreport."), "nothing hard-codes the old site-wide schema");
+    }
+
+    /** UC-005 A3 / BR-006: an unbuilt survey has no schema to read; the call fails with the instruction. */
+    @Test
+    void findFamilyHistoryByRespondentId_refusesWhenTheSurveyHasNoSchema() {
+        EntityManager em = mock(EntityManager.class);
+        CancerHistoryRepository repo = newRepository(em, null);
+
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> repo.findFamilyHistoryByRespondentId(1L));
+
+        assertTrue(e.getMessage().contains("report_schema is null"), e.getMessage());
+        verify(em, never()).createNativeQuery(anyString());
+    }
+
+    /** UC-005 BR-006: a stored name that is not an identifier is never spliced into SQL. */
+    @Test
+    void findFamilyHistoryByRespondentId_refusesASchemaNameThatIsNotAnIdentifier() {
+        EntityManager em = mock(EntityManager.class);
+        CancerHistoryRepository repo = newRepository(em, "report_x; drop schema survey");
+
+        assertThrows(IllegalStateException.class, () -> repo.findFamilyHistoryByRespondentId(1L));
+        verify(em, never()).createNativeQuery(anyString());
     }
 
     /** One raw row matching the SELECT column order in findFamilyHistoryByRespondentId. */

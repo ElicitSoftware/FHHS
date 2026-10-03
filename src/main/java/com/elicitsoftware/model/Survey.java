@@ -88,6 +88,14 @@ public class Survey extends PanacheEntityBase {
     public String postSurveyURL;
 
     /**
+     * The survey's own reporting schema at this site (Survey V021; Survey UC-008 BR-006):
+     * assigned by Survey's first build of the survey, changed by a rename, cleared by a drop,
+     * and null until built. FHHS reads it at request time and never writes it (UC-005 BR-006).
+     */
+    @Column(name = "report_schema", length = 63, insertable = false, updatable = false)
+    public String reportSchema;
+
+    /**
      * Set of report definitions associated with this survey.
      */
     @OneToMany(mappedBy = "survey", fetch = FetchType.EAGER)

@@ -27,24 +27,32 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * UC-005 step 4 / BR-003: while the survey is absent, report requests are refused with 503 and
- * the instruction; the endpoints that exist to say what is wrong stay reachable.
+ * UC-005 step 4 / A3 / BR-003: while the survey is absent, or present but unbuilt, report
+ * requests are refused with 503 and the instruction; the endpoints that exist to say what is
+ * wrong stay reachable.
  */
 class FamilyHistorySurveyRequiredFilterTest {
 
-    /** A check with a fixed answer and no database behind it; vetoed so CDI never sees a second bean. */
+    /** A check with fixed answers and no database behind it; vetoed so CDI never sees a second bean. */
     @Vetoed
     private static final class FixedCheck extends FamilyHistorySurveyCheck {
         private final boolean installed;
+        private final String schema;
 
-        FixedCheck(boolean installed) {
+        FixedCheck(boolean installed, String schema) {
             this.installed = installed;
+            this.schema = schema;
             this.surveyKey = "5e91c606-59a1-450a-a8d7-2f1530ff472b";
         }
 
         @Override
         public boolean isSurveyInstalled() {
             return installed;
+        }
+
+        @Override
+        public String reportSchema() {
+            return schema;
         }
     }
 
@@ -57,9 +65,26 @@ class FamilyHistorySurveyRequiredFilterTest {
     }
 
     private static FamilyHistorySurveyRequiredFilter filter(boolean installed) {
+        return filter(installed, installed ? "report_family_history_survey" : null);
+    }
+
+    private static FamilyHistorySurveyRequiredFilter filter(boolean installed, String schema) {
         FamilyHistorySurveyRequiredFilter filter = new FamilyHistorySurveyRequiredFilter();
-        filter.surveyCheck = new FixedCheck(installed);
+        filter.surveyCheck = new FixedCheck(installed, schema);
         return filter;
+    }
+
+    /** UC-005 A3: an imported but unbuilt survey is refused too, with the build instruction. */
+    @Test
+    void refusesReportRequestsWhileTheSurveyIsUnbuilt() {
+        ContainerRequestContext context = request("proband/report");
+
+        filter(true, null).filter(context);
+
+        ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
+        verify(context).abortWith(response.capture());
+        assertEquals(503, response.getValue().getStatus());
+        assertTrue(String.valueOf(response.getValue().getEntity()).contains("has not been built"));
     }
 
     /** UC-005 step 4: a report request is refused with 503 and the instruction. */

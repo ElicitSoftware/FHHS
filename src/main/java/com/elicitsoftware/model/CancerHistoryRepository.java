@@ -14,6 +14,7 @@ package com.elicitsoftware.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.elicitsoftware.common.health.FamilyHistorySurveyCheck;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -40,6 +41,10 @@ public class CancerHistoryRepository {
      */
     @Inject
     EntityManager entityManager;
+
+    /** Resolves the survey's reporting schema at query time (UC-005 BR-006). */
+    @Inject
+    FamilyHistorySurveyCheck surveyCheck;
 
     /**
      * Default constructor for CancerHistoryRepository.
@@ -115,6 +120,9 @@ public class CancerHistoryRepository {
      * fact_sections_view directly, we get all the demographic and cancer data without the
      * union overhead, and leverage database indexes for performance.
      * </p>
+     * The view lives in the Family History Survey's own reporting schema, whose name is read
+     * from {@code survey.surveys.report_schema} for every call and validated before it is
+     * spliced in (UC-005 BR-006); a schema name cannot be a bind parameter.
      *
      * @param respondentId the respondent identifier
      * @return list of FamilyHistoryRecord objects with complete family data
@@ -188,10 +196,10 @@ public class CancerHistoryRepository {
                     f.multiple_stomach_cancers,
                     f.multiple_testicular_cancers,
                     f.multiple_thyroid_cancers
-                FROM surveyreport.fact_sections_view f
+                FROM <SCHEMA>.fact_sections_view f
                 WHERE f.respondent_id = ?1
                 ORDER BY f.relationship, f.step
-                """;
+                """.replace("<SCHEMA>", surveyCheck.requireReportSchema());
 
         var query = entityManager.createNativeQuery(sql);
         query.setParameter(1, respondentId);

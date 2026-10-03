@@ -28,6 +28,8 @@ A configured questionnaire (owned by Elicit Survey) that respondents complete; F
 | description          | Description of the survey                              | String    | 500               | Optional                |
 | initialDisplayKey    | Display key of the survey's first step                | String    | 255               | Optional                |
 | postSurveyURL        | Legacy single post-survey callback URL                 | String    | 255               | Optional                |
+| surveyKey            | Cross-instance-portable identity; `family.history.survey.key` names the survey FHHS serves (UC-005 BR-001) | UUID | — | Not Null, Unique |
+| reportSchema         | The survey's own reporting schema at this site, named by Survey's first build and read by FHHS at request time (UC-005 BR-006); null until built | String | 63 | Optional, read-only here |
 
 ### RESPONDENT
 

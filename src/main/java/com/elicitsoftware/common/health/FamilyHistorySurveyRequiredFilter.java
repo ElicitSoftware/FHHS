@@ -19,8 +19,9 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 
 /**
- * Refuses report requests while the Family History Survey is absent (UC-005 step 4): every
- * report endpoint would otherwise fail part-way through on a missing step or column. The
+ * Refuses report requests while the Family History Survey is absent or unbuilt (UC-005 step 4,
+ * A3): every report endpoint would otherwise fail part-way through on a missing schema, step
+ * or column. The
  * answer is 503 with the same instruction the log and the readiness probe carry, so a caller
  * (Survey's report links, its post-survey action) sees why rather than a stack trace. The
  * liveness-style health endpoint and the debug endpoint stay reachable.
@@ -33,7 +34,7 @@ public class FamilyHistorySurveyRequiredFilter implements ContainerRequestFilter
 
     @Override
     public void filter(ContainerRequestContext requestContext) {
-        if (isAlwaysAllowed(requestContext.getUriInfo().getPath()) || surveyCheck.isSurveyInstalled()) {
+        if (isAlwaysAllowed(requestContext.getUriInfo().getPath()) || surveyCheck.isReady()) {
             return;
         }
         requestContext.abortWith(Response.status(Response.Status.SERVICE_UNAVAILABLE)
