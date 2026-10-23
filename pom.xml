@@ -307,6 +307,77 @@
                 </configuration>
             </plugin>
             <plugin>
+                <!--
+                    Pitest mutation testing (https://pitest.org). Not bound to any phase: it is slow
+                    and on demand only, run as `./mvnw test-compile pitest:mutationCoverage`, with the
+                    report at target/pit-reports/index.html.
+
+                    targetTests names the plain unit tests one by one, on purpose. A @QuarkusTest loads
+                    the application through QuarkusClassLoader, which reads the original bytes from
+                    target/classes and never sees Pitest's mutant, so every mutant it covers would be
+                    reported as surviving; it would also boot the application and a PostgreSQL
+                    container once per mutant. There is no glob that separates the two kinds, so a new
+                    plain unit test is added here by hand; leaving one out only lowers the score, where
+                    wrongly including a booted test would falsify it.
+
+                    ManualSchemaMigratorUpgradeTest is left out although it is a plain test: it starts a
+                    PostgreSQL container of its own.
+                -->
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.30.1</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.3</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <targetClasses>
+                        <param>com.elicitsoftware.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>com.elicitsoftware.casummary.ServiceTest</param>
+                        <param>com.elicitsoftware.common.health.DatabaseHealthCheckTest</param>
+                        <param>com.elicitsoftware.common.health.FamilyHistorySurveyRequiredFilterTest</param>
+                        <param>com.elicitsoftware.familyhistory.FamilyHistoryReportServiceXmlTest</param>
+                        <param>com.elicitsoftware.familyhistory.PDFServiceDrawingTest</param>
+                        <param>com.elicitsoftware.familyhistory.PDFServiceTest</param>
+                        <param>com.elicitsoftware.familyhistory.SftpServiceAuthSelectionTest</param>
+                        <param>com.elicitsoftware.familyhistory.SftpServiceLogicTest</param>
+                        <param>com.elicitsoftware.familyhistory.SftpStandaloneTest</param>
+                        <param>com.elicitsoftware.model.CancerHistoryRepositoryTest</param>
+                        <param>com.elicitsoftware.model.CardTest</param>
+                        <param>com.elicitsoftware.model.FamilyManagerTest</param>
+                        <param>com.elicitsoftware.model.FamilyMemberTest</param>
+                        <param>com.elicitsoftware.model.FamilyTest</param>
+                        <param>com.elicitsoftware.model.PersonTest</param>
+                        <param>com.elicitsoftware.model.RespondentTest</param>
+                        <param>com.elicitsoftware.model.RowConverterTest</param>
+                        <param>com.elicitsoftware.model.RowTest</param>
+                        <param>com.elicitsoftware.model.StatusTest</param>
+                        <param>com.elicitsoftware.pedigree.MultipartUtilityTest</param>
+                        <param>com.elicitsoftware.pedigree.ServiceTest</param>
+                        <param>com.elicitsoftware.proband.ServiceTest</param>
+                        <param>com.elicitsoftware.response.pdfbox.ColumnTest</param>
+                        <param>com.elicitsoftware.response.pdfbox.PDFPageTest</param>
+                        <param>com.elicitsoftware.response.pdfbox.PDFTableGeneratorTest</param>
+                        <param>com.elicitsoftware.response.pdfbox.TableBuilderTest</param>
+                        <param>com.elicitsoftware.response.pdfbox.TableTest</param>
+                    </targetTests>
+                    <jvmArgs>
+                        <jvmArg>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</jvmArg>
+                    </jvmArgs>
+                    <outputFormats>
+                        <format>HTML</format>
+                        <format>XML</format>
+                    </outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                    <threads>4</threads>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>license-maven-plugin</artifactId>
                 <version>2.7.1</version>

@@ -97,6 +97,27 @@ After running the `docker-compose` command, open [http://localhost:8080](http://
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+<!-- TESTING -->
+## Testing
+
+Run all unit and booted tests (needs Docker for the `@QuarkusTest` classes):
+
+```shell
+./mvnw test
+```
+
+Run Pitest mutation testing over the plain unit tests
+(`target/pit-reports/index.html`; about a minute, no Docker):
+
+```shell
+./mvnw test-compile pitest:mutationCoverage
+```
+
+Booted `@QuarkusTest` classes are left out because they cannot see Pitest's mutants. The
+plugin's `targetTests` in `pom.xml` lists the plain tests by name, so add a new one there.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 
 <!-- ROADMAP
