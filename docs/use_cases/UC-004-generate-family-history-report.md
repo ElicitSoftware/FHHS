@@ -21,7 +21,7 @@
 2. The system immediately acknowledges the request as accepted (BR-001) and continues the remaining steps in the background.
 3. The system generates a combined PDF report by invoking each report configured for the respondent's survey and assembling their content into a single document (BR-004).
 4. The system generates an XML metadata file describing the respondent, external ID, generation date, and produced files.
-5. The system uploads the PDF and XML files to the configured SFTP destination.
+5. The system uploads the PDF and XML files to the configured SFTP destination, after verifying the server's host key (BR-006).
 6. The system records the execution as successful, including the upload timestamp.
 
 ## Alternative Flows
@@ -79,6 +79,10 @@ The set of reports assembled into the combined PDF is determined by the survey's
 ### BR-005: XML Metadata Placeholders
 
 The XML metadata file is built from the configurable `family.history.sftp.xml.template`. The template may use `{RespondentId}`, `{Xid}`, `{SurveyId}`, `{FirstName}`, `{LastName}`, `{MiddleName}`, `{Dob}`, `{Email}`, `{Phone}`, `{DepartmentName}`, `{DepartmentID}`, `{AccessCode}` (the respondent's survey access code), `{Status}`, `{Created}`, and `{Finalized}`. A missing value is substituted as empty text, and any other placeholder, including the former `{Token}`, is left unchanged.
+
+### BR-006: Delivery Only to a Verified Server
+
+The report carries PHI, so it is handed only to a server that proves it holds a host key the deployment configured (`family.history.sftp.knownHosts`: known_hosts lines from `ssh-keyscan`, or a known_hosts file). With no key configured, or a server presenting a different one, the connection is refused and the execution fails (A1), to be retried once the configuration is corrected (A2). `family.history.sftp.strictHostKeyChecking=false` skips the check, for the bundled test SFTP server whose key changes on every start; FHHS logs a warning on each such connection (NFR-007).
 
 ---
 
