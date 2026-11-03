@@ -20,7 +20,9 @@ import io.quarkus.logging.Log;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * Service for handling SFTP file transfers using JSch library.
@@ -82,6 +84,21 @@ public class SftpService {
     @ConfigProperty(name = "family.history.sftp.privateKey")
     Optional<String> sftpPrivateKey;
     
+    /**
+     * The SFTP server's host key: one or more known_hosts lines (as printed by
+     * {@code ssh-keyscan -p <port> <host>}) or the path of a known_hosts file. The connection is
+     * refused without it, unless {@link #sftpStrictHostKeyChecking} is false.
+     */
+    @ConfigProperty(name = "family.history.sftp.knownHosts")
+    Optional<String> sftpKnownHosts;
+
+    /**
+     * false accepts any host key, so the server's identity is not verified. Only for the bundled
+     * test SFTP server, which makes a new host key every time it starts.
+     */
+    @ConfigProperty(name = "family.history.sftp.strictHostKeyChecking", defaultValue = "true")
+    boolean sftpStrictHostKeyChecking;
+
     /**
      * Remote path on SFTP server where files are uploaded. Only required when family.history.sftp.enabled=true.
      */
@@ -351,10 +368,45 @@ public class SftpService {
             throw new JSchException("No authentication method configured. Please set either family.history.sftp.password or family.history.sftp.privateKey");
         }
         
-        // Disable strict host key checking for Docker environment
-        session.setConfig("StrictHostKeyChecking", "no");
+        configureHostKeyChecking(jsch, session);
         session.setTimeout(sftpTimeout);
         
         return session;
+    }
+
+    /** A known_hosts line: hosts, key type, key; hashed hosts (|1|...) included. */
+    private static final Pattern KNOWN_HOSTS_LINE =
+            Pattern.compile("(?m)^\\s*(@\\S+\\s+)?\\S+\\s+(ssh-|ecdsa-|sk-)\\S+\\s+\\S+");
+
+    /**
+     * Verifies the server's host key against {@link #sftpKnownHosts}, so a report carrying PHI is
+     * never handed to a server that merely claims the configured address. Without known hosts the
+     * session is refused, unless host key checking was turned off explicitly.
+     */
+    void configureHostKeyChecking(JSch jsch, Session session) throws JSchException {
+        String knownHosts = sftpKnownHosts == null ? "" : sftpKnownHosts.map(String::trim).orElse("");
+        if (!knownHosts.isEmpty()) {
+            if (KNOWN_HOSTS_LINE.matcher(knownHosts).find()) {
+                jsch.setKnownHosts(new ByteArrayInputStream(knownHosts.getBytes(StandardCharsets.UTF_8)));
+            } else {
+                File file = new File(knownHosts);
+                if (!file.isAbsolute()) {
+                    file = new File(System.getProperty("user.dir"), knownHosts);
+                }
+                if (!file.isFile()) {
+                    throw new JSchException("Known hosts file not found: " + file.getAbsolutePath());
+                }
+                jsch.setKnownHosts(file.getAbsolutePath());
+            }
+            session.setConfig("StrictHostKeyChecking", "yes");
+        } else if (sftpStrictHostKeyChecking) {
+            throw new JSchException("No SFTP host key configured. Set family.history.sftp.knownHosts to the "
+                    + "server's known_hosts line(s) (ssh-keyscan -p " + sftpPort + " " + sftpHost
+                    + ") or to a known_hosts file");
+        } else {
+            Log.warnv("SFTP host key checking is off: the identity of {0} is not verified "
+                    + "(family.history.sftp.strictHostKeyChecking=false)", sftpHost);
+            session.setConfig("StrictHostKeyChecking", "no");
+        }
     }
 }

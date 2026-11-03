@@ -25,6 +25,7 @@ functional requirement below is one of its system actors (see
 | NFR-004 | External Call Observability    | 100% of calls to the external pedigree-drawing service must be wrapped in an OpenTelemetry client span recording status code and latency. | Maintainability | Medium   | Verified |
 | NFR-005 | Pedigree Service Timeout       | Calls to the external pedigree-drawing service must time out and fail gracefully (report still generated, with a placeholder) after 15 seconds. | Availability    | Medium   | Verified |
 | NFR-006 | Report Traceability            | 100% of family-history report execution records must carry a non-null respondent ID and externally-issued study ID (XID), so every generated report can be traced back to the respondent and study it was produced for. | Maintainability | High     | Open |
+| NFR-007 | Verified SFTP Destination      | A report is uploaded only to an SFTP server whose host key matches one the deployment configured (`family.history.sftp.knownHosts`); with no key configured the connection is refused. Turning verification off takes an explicit setting and is logged as a warning on every connection. | Security        | High     | Verified |
 
 ## Constraints (C)
 
