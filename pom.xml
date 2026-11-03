@@ -101,9 +101,9 @@
             <version>3.0.4</version>
         </dependency>
         <dependency>
-            <groupId>com.jcraft</groupId>
+            <groupId>com.github.mwiede</groupId>
             <artifactId>jsch</artifactId>
-            <version>0.1.55</version>
+            <version>2.28.8</version>
         </dependency>
         <dependency>
             <groupId>de.rototor.pdfbox</groupId>
@@ -173,13 +173,21 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- A real SSH server for SftpServiceHostKeyTest: the host key check is only proven
+                 by a handshake that accepts the right key and refuses a wrong one. -->
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>2.20.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.xmlgraphics</groupId>
             <artifactId>batik-all</artifactId>
-            <version>1.16</version>
+            <version>1.20</version>
         </dependency>
     </dependencies>
     <repositories>
