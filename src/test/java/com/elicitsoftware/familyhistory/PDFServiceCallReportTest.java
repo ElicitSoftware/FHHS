@@ -29,6 +29,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -57,6 +59,9 @@ class PDFServiceCallReportTest {
 
     /** The token the service under test holds; by default one that trusts the stand-in's origin. */
     private ServiceToken serviceToken;
+
+    /** The read timeout the service under test uses; null leaves the one it ships with. */
+    private Duration readTimeout;
 
     @AfterEach
     void stopServer() {
@@ -97,6 +102,9 @@ class PDFServiceCallReportTest {
         try {
             PDFService service = new PDFService();
             service.serviceToken = serviceToken != null ? serviceToken : ServiceCalls.serviceToken();
+            if (readTimeout != null) {
+                service.reportReadTimeout = readTimeout;
+            }
             return (ReportResponse) method.invoke(service, rpt, respondentId);
         } catch (InvocationTargetException e) {
             if (e.getCause() instanceof RuntimeException re) {
@@ -240,5 +248,49 @@ class PDFServiceCallReportTest {
             assertFalse(response.innerHTML.contains(ServiceCalls.TOKEN));
             assertFalse(response.pdf.content[0].text.contains(ServiceCalls.TOKEN));
         }
+    }
+
+    /**
+     * UC-004 BR-004, NFR-013: a report service that accepts the request and never answers is
+     * given up on at the read timeout, and its section carries the error like any report that
+     * could not be obtained.
+     */
+    @Test
+    void callReport_serviceNeverAnswers_givesUpAtTheReadTimeout() throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/", exchange -> {
+            calls.incrementAndGet();
+            try {
+                release.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            exchange.close();
+        });
+        server.start();
+        String origin = "http://localhost:" + server.getAddress().getPort();
+        serviceToken = ServiceCalls.serviceToken(origin);
+        readTimeout = Duration.ofMillis(500);
+
+        try {
+            ReportResponse response = assertTimeoutPreemptively(Duration.ofSeconds(20),
+                    () -> invokeCallReport(origin + "/", 42L));
+
+            assertEquals(1, calls.get());
+            assertEquals("Error: Cancer Summary", response.title);
+            assertNotNull(response.pdf);
+            assertTrue(response.pdf.content[0].text.startsWith("Error generating Cancer Summary report:"));
+        } finally {
+            release.countDown();
+        }
+    }
+
+    /** NFR-013: the bounds a delivery runs with are the ones Survey puts on the same call. */
+    @Test
+    void callReport_shipsWithTheSpecifiedBounds() {
+        assertEquals(Duration.ofSeconds(5), PDFService.REPORT_CONNECT_TIMEOUT);
+        assertEquals(Duration.ofSeconds(60), PDFService.REPORT_READ_TIMEOUT);
+        assertEquals(PDFService.REPORT_READ_TIMEOUT, new PDFService().reportReadTimeout);
     }
 }
