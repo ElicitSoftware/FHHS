@@ -74,10 +74,10 @@ schedules that drive it:
 
 ## Non-Functional Priorities (see `docs/requirements.md` for measurable NFRs)
 
-- **Security**: report endpoints that expose PHI-adjacent cancer/family
-  history data must be authenticated (role-based — e.g. `proband-user`,
-  `cssummary-user`); endpoints currently running `@PermitAll`
-  (`/pedigree/*`, `/familyhistory/*`) are a known gap to close.
+- **Security**: every REST endpoint answers only a caller that presents the
+  platform service token (`ELICIT_SERVICE_TOKEN`); with no token configured
+  FHHS refuses every request rather than serve unauthenticated. The network
+  boundary around FHHS stays in place beside it.
 - **Reliability**: family-history generation must not be lost if it fails
   partway — the scheduled sweep exists specifically to recover pending work.
 - **Traceability**: every report generated must be attributable to a

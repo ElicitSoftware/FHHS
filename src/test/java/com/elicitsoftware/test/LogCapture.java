@@ -30,20 +30,34 @@ public final class LogCapture extends Handler implements AutoCloseable {
 
     private static final String CATEGORY = "com.elicitsoftware";
 
-    private final Logger logger = Logger.getLogger(CATEGORY);
-    private final Level previousLevel = logger.getLevel();
+    private final Logger logger;
+    private final Level previousLevel;
+    private final boolean levelChanged;
     private final List<String> messages = new ArrayList<>();
     private final SimpleFormatter formatter = new SimpleFormatter();
 
-    private LogCapture() {
+    private LogCapture(String category, boolean everyLevel) {
+        logger = Logger.getLogger(category);
+        previousLevel = logger.getLevel();
+        levelChanged = everyLevel;
         setLevel(Level.ALL);
-        logger.setLevel(Level.ALL);
+        if (everyLevel) {
+            logger.setLevel(Level.ALL);
+        }
         logger.addHandler(this);
     }
 
     /** Starts capturing. */
     public static LogCapture start() {
-        return new LogCapture();
+        return new LogCapture(CATEGORY, true);
+    }
+
+    /**
+     * Starts capturing what every category writes at its configured level, the HTTP access log
+     * included: what an operator's log would hold.
+     */
+    public static LogCapture startAll() {
+        return new LogCapture("", false);
     }
 
     @Override
@@ -80,6 +94,8 @@ public final class LogCapture extends Handler implements AutoCloseable {
     @Override
     public void close() {
         logger.removeHandler(this);
-        logger.setLevel(previousLevel);
+        if (levelChanged) {
+            logger.setLevel(previousLevel);
+        }
     }
 }

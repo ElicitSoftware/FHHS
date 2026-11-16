@@ -23,7 +23,6 @@ import com.elicitsoftware.response.pdf.Content;
 import com.elicitsoftware.response.pdf.PDFDocument;
 import com.elicitsoftware.response.pdf.Style;
 import com.elicitsoftware.response.pdf.Table;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -92,11 +91,9 @@ public class Service {
      *
      * @param req the report request containing the respondent ID
      * @return a ReportResponse containing the title, HTML content, and PDF document
-     * @throws jakarta.ws.rs.WebApplicationException if the user lacks proper authorization
      */
     @Path("/report")
     @POST
-    @RolesAllowed("cssummary-user")
     @Consumes("application/json")
     @Produces("application/json")
     @Transactional

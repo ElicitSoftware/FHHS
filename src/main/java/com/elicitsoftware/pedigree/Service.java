@@ -11,6 +11,7 @@ package com.elicitsoftware.pedigree;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.common.security.ServiceToken;
 import com.elicitsoftware.model.Family;
 import com.elicitsoftware.model.FamilyManager;
 import com.elicitsoftware.request.ReportRequest;
@@ -67,6 +68,8 @@ public class Service {
         private static final HttpClient PEDIGREE_HTTP_CLIENT = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(2))
+            // UC-003 BR-003: the call carries the service token, so a redirect is never followed.
+            .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
     /**
@@ -93,6 +96,12 @@ public class Service {
      */
     @Inject
     Tracer tracer;
+
+    /**
+     * The platform service token, presented to the pedigree service on every call (UC-003 BR-003).
+     */
+    @Inject
+    ServiceToken serviceToken;
 
     /**
      * URL for the external pedigree generation service.
@@ -129,7 +138,6 @@ public class Service {
      *
      * @param req the report request containing the respondent ID
      * @return a ReportResponse containing the title, HTML content, and PDF document
-     * @throws jakarta.ws.rs.WebApplicationException if the user lacks proper authorization
      */
     @Path("/report")
     @POST
@@ -171,6 +179,14 @@ public class Service {
      * @return the service's answer, or {@code null} when the call failed (UC-003 A1)
      */
     private String callPedigree(String family, int rows) {
+        // UC-003 BR-003: pedigree.url is deployment configuration, so the token always goes with
+        // the call; without a token the call is not made at all (UC-006 A3).
+        String authorization = serviceToken.authorization().orElse(null);
+        if (authorization == null) {
+            Log.warnf("The pedigree service was not called: %s", ServiceToken.NOT_CONFIGURED);
+            return null;
+        }
+
         URI endpoint = URI.create(pedigreeURL);
         int endpointPort = resolvePort(endpoint);
 
@@ -196,6 +212,8 @@ public class Service {
             HttpRequest request = HttpRequest.newBuilder(endpoint)
                     .timeout(Duration.ofSeconds(15))
                     .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    // Sent, never recorded: the span and the log carry no request header.
+                    .header("Authorization", authorization)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(requestBody))
                     .build();
 

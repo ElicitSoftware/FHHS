@@ -14,6 +14,7 @@
 - The respondent has finalized the survey (`finalizedDt` is set).
 - A `POST_SURVEY_ACTION` for family history report generation is configured on the respondent's survey.
 - SFTP delivery is enabled in configuration (BR-003); otherwise this use case does not run.
+- The Survey Platform presents the platform service token (UC-006). The Scheduler is internal and presents nothing to start a retry.
 
 ## Main Success Scenario
 
@@ -81,7 +82,7 @@ SFTP delivery is disabled unless configuration enables it; while disabled, no co
 
 ### BR-004: Report Composition Is Configuration-Driven
 
-The set of reports assembled into the combined PDF is determined by the survey's configured report list, not hardcoded in FHHS. The default configuration composes the Proband (UC-001), Cancer Summary (UC-002), and Pedigree (UC-003) reports, in that order.
+The set of reports assembled into the combined PDF is determined by the survey's configured report list, not hardcoded in FHHS. The default configuration composes the Proband (UC-001), Cancer Summary (UC-002), and Pedigree (UC-003) reports, in that order. Each report is invoked at the address its definition carries. FHHS presents the service token on that call only when the address's origin is one the deployment trusts (`elicit.service.trusted-origins`, UC-006 BR-006), follows no redirect, and with no token configured does not make the call; the report's section then carries the error, as for any report that could not be obtained.
 
 ### BR-005: XML Metadata Placeholders
 

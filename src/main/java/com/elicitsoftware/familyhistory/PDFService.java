@@ -11,6 +11,7 @@ package com.elicitsoftware.familyhistory;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.common.security.ServiceToken;
 import com.elicitsoftware.model.ReportDefinition;
 import com.elicitsoftware.model.Respondent;
 import com.elicitsoftware.request.ReportRequest;
@@ -24,6 +25,9 @@ import io.quarkus.logging.Log;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer;
 import jakarta.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.client.ClientRequestFilter;
+import jakarta.ws.rs.core.HttpHeaders;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory;
 import org.apache.batik.bridge.BridgeContext;
@@ -160,6 +164,12 @@ public class PDFService {
      */
     @ConfigProperty(name = "app.base.url")
     String baseUrl;
+
+    /**
+     * The platform service token, presented to a report at a trusted origin (UC-004 BR-004).
+     */
+    @Inject
+    ServiceToken serviceToken;
 
     /**
      * Generates a PDF report for a specific respondent.
@@ -828,6 +838,10 @@ public class PDFService {
     /**
      * Calls a report service endpoint to generate report content.
      *
+     * <p>UC-004 BR-004: the address comes with the survey definition, so the service token goes
+     * with the call only when the address's origin is one the deployment trusts (UC-006 BR-006).
+     * No redirect is followed, and with no token configured the call is not made.</p>
+     *
      * @param rpt the report definition containing the service URL
      * @param respondentId the respondent ID for the report
      * @return the report response containing generated content
@@ -836,9 +850,27 @@ public class PDFService {
         try {
             ReportRequest request = new ReportRequest();
             request.id = respondentId;
-            ReportService reportService = RestClientBuilder.newBuilder()
-                    .baseUri(new URI(rpt.url))
-                    .build(ReportService.class);
+            if (!serviceToken.isConfigured()) {
+                // UC-006 A3: never an unauthenticated call "to see"; the report's section says why.
+                throw new IllegalStateException(ServiceToken.NOT_CONFIGURED);
+            }
+            URI uri = new URI(rpt.url);
+            RestClientBuilder builder = RestClientBuilder.newBuilder()
+                    .baseUri(uri)
+                    .followRedirects(false);
+            String authorization = serviceToken.authorizationFor(uri).orElse(null);
+            if (authorization != null) {
+                // Sent, never recorded: nothing here logs the request or its headers.
+                builder.register((ClientRequestFilter) context ->
+                        context.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, authorization));
+            } else {
+                // UC-006 A7: the origin is configuration and definition data, not respondent data.
+                Log.warnv("The {0} report is called without the service token: its origin {1} is not trusted. "
+                                + "List it in {2} if it is a service of this platform.", rpt.name,
+                        ServiceToken.originOf(uri).orElse("(not an http or https address)"),
+                        ServiceToken.ORIGINS_VARIABLE);
+            }
+            ReportService reportService = builder.build(ReportService.class);
             ReportResponse reportResponse = reportService.callReport(request);
             return reportResponse;
         } catch (jakarta.ws.rs.WebApplicationException e) {

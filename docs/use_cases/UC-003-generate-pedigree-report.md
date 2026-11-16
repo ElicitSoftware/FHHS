@@ -11,12 +11,13 @@
 ## Preconditions
 
 - The respondent has recorded their family structure (relatives and cancer history) via the survey.
+- The calling system presents the platform service token (UC-006).
 
 ## Main Success Scenario
 
 1. The Survey Platform requests a pedigree report for a respondent, identified by respondent ID.
 2. The system assembles the respondent's family structure and cancer history into a family data set.
-3. The system sends the family data to the external Pedigree Drawing Service and receives a rendered pedigree diagram.
+3. The system sends the family data to the external Pedigree Drawing Service, presenting the platform service token (BR-003), and receives a rendered pedigree diagram.
 4. The system builds a PDF containing the pedigree diagram, a color legend, and a note when any family member has multiple diagnoses of the same cancer type.
 5. The system returns the report title, diagram content, and PDF document to the caller.
 
@@ -24,7 +25,7 @@
 
 ### A1: Pedigree Drawing Service Is Unavailable or Returns an Error
 
-**Trigger:** The external Pedigree Drawing Service does not respond successfully within 15 seconds, or returns content that isn't a valid diagram (BR-001) (step 3).
+**Trigger:** The external Pedigree Drawing Service does not respond successfully within 15 seconds, refuses the call, or returns content that isn't a valid diagram (BR-001), or FHHS has no service token to present (BR-003) (step 3).
 **Flow:**
 
 1. The system substitutes a placeholder message for the diagram. Use case continues at step 4.
@@ -55,6 +56,10 @@ If the external Pedigree Drawing Service fails, times out, or returns invalid di
 ### BR-002: The Family Table Is Sent, Not Recorded
 
 The family table sent to the Pedigree Drawing Service is written to no log or trace. The log records how many rows and characters were sent and the status code the service answered with (NFR-009).
+
+### BR-003: The Drawing Service Is Called With the Service Token
+
+The call to `pedigree.url` always carries `Authorization: Bearer <service token>`: the address is deployment configuration, so it is trusted (UC-006 BR-006). No redirect is followed. With no token configured the call is not made and the report shows the placeholder (A1). The header is written to no log or trace.
 
 ---
 
