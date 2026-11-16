@@ -44,6 +44,13 @@
 
 1. The system answers 400 and reads no respondent data (NFR-010). Use case ends.
 
+### A4: Respondent Is Not of the Family History Survey
+
+**Trigger:** The respondent ID is that of a respondent of another survey, or of no respondent (UC-006 A8) (step 1).
+**Flow:**
+
+1. The system answers 404 with a fixed sentence and reads no report data. Use case ends.
+
 ## Postconditions
 
 ### Success Postconditions
