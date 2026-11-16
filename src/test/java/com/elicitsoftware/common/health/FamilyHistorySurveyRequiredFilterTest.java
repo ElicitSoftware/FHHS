@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -100,17 +99,14 @@ class FamilyHistorySurveyRequiredFilterTest {
         assertTrue(String.valueOf(response.getValue().getEntity()).contains("Apply Survey Definition"));
     }
 
-    /** UC-005 BR-003: the health endpoint is never refused; it is the only path that is not. */
+    /** UC-005 BR-003: no REST path is exempt; the readiness probe is served outside the REST layer. */
     @Test
-    void healthStaysReachable() {
-        for (String path : new String[] {"familyhistory/health", "/familyhistory/health"}) {
+    void refusesEveryPathWhileTheSurveyIsAbsent() {
+        for (String path : new String[] {"familyhistory/generate", "/pedigree/report", "no/such/path"}) {
             ContainerRequestContext context = request(path);
             filter(false).filter(context);
-            verify(context, never()).abortWith(org.mockito.ArgumentMatchers.any());
+            verify(context).abortWith(org.mockito.ArgumentMatchers.any());
         }
-        assertTrue(FamilyHistorySurveyRequiredFilter.isAlwaysAllowed("familyhistory/health"));
-        assertFalse(FamilyHistorySurveyRequiredFilter.isAlwaysAllowed("familyhistory/generate"));
-        assertFalse(FamilyHistorySurveyRequiredFilter.isAlwaysAllowed("familyhistory/debug/status/7"));
     }
 
     /** UC-005: once the survey is present nothing is refused. */

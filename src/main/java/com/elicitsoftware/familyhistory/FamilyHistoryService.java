@@ -13,7 +13,6 @@ package com.elicitsoftware.familyhistory;
 
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.request.ReportRequest;
-import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -29,8 +28,8 @@ import io.quarkus.logging.Log;
  * 
  * <p>This service provides endpoints that can be called by post-survey actions
  * to generate and upload family history reports after a survey is completed.
- * The service handles asynchronous report generation and provides health monitoring
- * capabilities.</p>
+ * The service handles asynchronous report generation. Liveness and readiness are answered
+ * by the standard probes under {@code /q/health}.</p>
  * 
  * <p>The service is designed to be used as part of the Family Health History System (FHHS)
  * workflow, specifically for processing completed family history surveys and generating
@@ -91,7 +90,6 @@ public class FamilyHistoryService {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @PermitAll
     @Transactional
     public Response generateFamilyHistoryReport(@Valid @NotNull ReportRequest request) {
         try {
@@ -122,20 +120,6 @@ public class FamilyHistoryService {
                     .entity(new FamilyHistoryReportResponse(START_FAILED_MESSAGE, false))
                     .build();
         }
-    }
-    
-        /**
-     * Health check endpoint to verify the service is running.
-     * 
-     * @return HTTP 200 OK response indicating the service is healthy
-     */
-    @Path("/health")
-    @GET
-    @Produces(MediaType.APPLICATION_JSON)
-    @PermitAll
-    public Response healthCheck() {
-        return Response.ok(new FamilyHistoryReportResponse("Family History Service is healthy", true))
-                .build();
     }
     
     /**

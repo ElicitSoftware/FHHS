@@ -11,7 +11,7 @@
 ## Preconditions
 
 - The respondent has a record in FHHS's shared database and has recorded family history answers.
-- The calling system presents a credential with the `cssummary-user` role (BR-001).
+- The calling system presents the platform service token (UC-006).
 
 ## Main Success Scenario
 
@@ -30,12 +30,12 @@
 
 1. The system returns a report stating that no relatives reported cancer, rather than failing the request. Use case ends.
 
-### A2: Caller Lacks the Required Role
+### A2: Caller Is Not Authenticated
 
-**Trigger:** The caller's credential does not include the `cssummary-user` role (BR-001) (step 1).
+**Trigger:** The request carries no service token, or a wrong one (UC-006 A1, A2) (step 1).
 **Flow:**
 
-1. The system rejects the request as unauthorized. Use case ends.
+1. The system answers 401 and reads no respondent data. Use case ends.
 
 ### A3: Request Has No Respondent ID
 
@@ -52,13 +52,13 @@
 
 ### Failure Postconditions
 
-- No report is generated; the caller receives an authorization error.
+- No report is generated; the caller receives an error status.
 
 ## Business Rules
 
-### BR-001: Cancer Summary Report Authorization
+### BR-001: Only an Authenticated Service May Ask
 
-Only callers presenting a credential with the `cssummary-user` role may request a cancer summary report for a respondent.
+Only a caller presenting the platform service token may request a cancer summary report (UC-006). FHHS has no roles: the token says that a platform module is calling, and the decision on whose behalf was made by that module.
 
 ### BR-002: Report HTML Carries Text, Not Markup, From Answers
 

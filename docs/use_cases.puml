@@ -11,6 +11,7 @@ rectangle "FHHS" {
     usecase "UC-003\nGenerate Pedigree Report" as UC003
     usecase "UC-004\nGenerate Family History Report" as UC004
     usecase "UC-005\nRefuse Service Until the Survey Is Imported" as UC005
+    usecase "UC-006\nAuthenticate the Calling Service" as UC006
 }
 
 survey --> UC001
@@ -24,5 +25,12 @@ UC005 ..> UC001 : <<precondition>>
 UC005 ..> UC002 : <<precondition>>
 UC005 ..> UC003 : <<precondition>>
 UC005 ..> UC004 : <<precondition>>
+operator --> UC006
+survey --> UC006 : presents the service token
+UC006 ..> UC001 : <<precondition>>
+UC006 ..> UC002 : <<precondition>>
+UC006 ..> UC003 : <<precondition>>
+UC006 ..> UC004 : <<precondition>>
+UC006 ..> UC005 : <<precondition>>
 
 @enduml

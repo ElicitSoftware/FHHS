@@ -20,7 +20,7 @@
 1. The operator starts FHHS on a database with no Family History Survey.
 2. The system starts, finds no survey with the configured key, and writes one warning to the service log naming the key and the import to perform.
 3. The system reports not-ready on its readiness probe, carrying the same instruction, so the container stays unhealthy rather than exited.
-4. While the survey is absent, the system refuses every report request with 503 and the same instruction; the health endpoint still answers.
+4. While the survey is absent, the system refuses every authenticated report request with 503 and the same instruction (BR-003); the readiness probe still answers.
 5. The operator imports the survey definition through Admin, whose apply also has Survey build the survey's reporting schema.
 6. On its next readiness probe the system finds the survey with its reporting schema named, reports ready, and serves reports from then on, each report resolving the schema's name at the time it runs (BR-006). No restart was needed.
 
@@ -73,7 +73,7 @@ While the survey is absent, every readiness probe and every request re-checks, s
 
 ### BR-003: Refusal explains
 
-A refused request answers 503 with the same instruction the log and the readiness probe carry. The health endpoint, which exists to say the service is running, is never refused.
+A refused request answers 503 with the same instruction the log and the readiness probe carry. The readiness probe is never refused. The instruction is given only to an authenticated caller: the service token is checked first (UC-006 BR-005), so a request without it is answered 401 whether or not the survey is there.
 
 ### BR-004: The post-survey action is found by its key
 

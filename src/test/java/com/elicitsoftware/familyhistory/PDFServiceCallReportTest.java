@@ -11,9 +11,12 @@ package com.elicitsoftware.familyhistory;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.common.security.ServiceToken;
 import com.elicitsoftware.model.ReportDefinition;
 import com.elicitsoftware.response.ReportResponse;
+import com.elicitsoftware.test.LogCapture;
 import com.elicitsoftware.test.PostgresTestResource;
+import com.elicitsoftware.test.ServiceCalls;
 import com.sun.net.httpserver.HttpServer;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -26,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -47,6 +51,13 @@ class PDFServiceCallReportTest {
 
     private HttpServer server;
 
+    /** What the stand-in was last sent as its Authorization header, and how often it was called. */
+    private volatile String presentedAuthorization;
+    private final AtomicInteger calls = new AtomicInteger();
+
+    /** The token the service under test holds; by default one that trusts the stand-in's origin. */
+    private ServiceToken serviceToken;
+
     @AfterEach
     void stopServer() {
         if (server != null) {
@@ -58,6 +69,8 @@ class PDFServiceCallReportTest {
     private String startServer(int status, String contentType, String body) throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext("/", exchange -> {
+            presentedAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
+            calls.incrementAndGet();
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             if (contentType != null) {
                 exchange.getResponseHeaders().add("Content-Type", contentType);
@@ -68,6 +81,9 @@ class PDFServiceCallReportTest {
             }
         });
         server.start();
+        if (serviceToken == null) {
+            serviceToken = ServiceCalls.serviceToken("http://localhost:" + server.getAddress().getPort());
+        }
         return "http://localhost:" + server.getAddress().getPort() + "/";
     }
 
@@ -79,7 +95,9 @@ class PDFServiceCallReportTest {
         Method method = PDFService.class.getDeclaredMethod("callReport", ReportDefinition.class, long.class);
         method.setAccessible(true);
         try {
-            return (ReportResponse) method.invoke(new PDFService(), rpt, respondentId);
+            PDFService service = new PDFService();
+            service.serviceToken = serviceToken != null ? serviceToken : ServiceCalls.serviceToken();
+            return (ReportResponse) method.invoke(service, rpt, respondentId);
         } catch (InvocationTargetException e) {
             if (e.getCause() instanceof RuntimeException re) {
                 throw re;
@@ -135,5 +153,92 @@ class PDFServiceCallReportTest {
         assertEquals("Error: Cancer Summary", response.title);
         assertNotNull(response.pdf);
         assertTrue(response.pdf.content[0].text.startsWith("Error generating Cancer Summary report:"));
+    }
+
+    private static final String OK_BODY = "{\"title\":\"Cancer Summary\",\"innerHTML\":\"<p>ok</p>\"}";
+
+    /** UC-004 BR-004, UC-006 BR-006: a report at a trusted origin is sent the service token. */
+    @Test
+    void callReport_trustedOrigin_presentsTheServiceToken() throws Exception {
+        String url = startServer(200, "application/json", OK_BODY);
+
+        ReportResponse response = invokeCallReport(url, 42L);
+
+        assertEquals("Bearer " + ServiceCalls.TOKEN, presentedAuthorization);
+        assertEquals("<p>ok</p>", response.innerHTML);
+    }
+
+    /**
+     * UC-006 A7, BR-006: an address whose origin the deployment did not list is called without
+     * the token, however the definition spells it. Here the listed origin is the same host on
+     * another port.
+     */
+    @Test
+    void callReport_originNotTrusted_sendsNoToken() throws Exception {
+        serviceToken = ServiceCalls.serviceToken("http://localhost:1");
+        String url = startServer(200, "application/json", OK_BODY);
+
+        try (LogCapture log = LogCapture.start()) {
+            invokeCallReport(url, 42L);
+
+            assertEquals(1, calls.get());
+            assertNull(presentedAuthorization, "the token must not reach an origin that is not trusted");
+            assertTrue(log.contains("ELICIT_SERVICE_TRUSTED_ORIGINS"), log.text());
+            assertFalse(log.contains(ServiceCalls.TOKEN), log.text());
+        }
+    }
+
+    /** UC-006 A3: with no token configured the call is not made, and the report's section says why. */
+    @Test
+    void callReport_withoutAServiceToken_makesNoCall() throws Exception {
+        serviceToken = ServiceCalls.serviceTokenNotConfigured();
+        String url = startServer(200, "application/json", OK_BODY);
+
+        ReportResponse response = invokeCallReport(url, 42L);
+
+        assertEquals(0, calls.get(), "no request may leave without the token");
+        assertEquals("Error: Cancer Summary", response.title);
+        assertTrue(response.innerHTML.contains("service token not configured"), response.innerHTML);
+    }
+
+    /** UC-004 BR-004: a redirect is not followed, so the token cannot be carried to another address. */
+    @Test
+    void callReport_redirect_isNotFollowed() throws Exception {
+        String elsewhere = startServer(200, "application/json", OK_BODY);
+        HttpServer target = server;
+        HttpServer redirecting = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        redirecting.createContext("/", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            exchange.getResponseHeaders().add("Location", elsewhere);
+            exchange.sendResponseHeaders(307, -1);
+            exchange.close();
+        });
+        redirecting.start();
+        try {
+            serviceToken = ServiceCalls.serviceToken("http://localhost:" + redirecting.getAddress().getPort());
+
+            ReportResponse response = invokeCallReport("http://localhost:" + redirecting.getAddress().getPort() + "/", 42L);
+
+            assertEquals(0, calls.get(), "the redirect target must not be called");
+            assertNotEquals("<p>ok</p>", response.innerHTML);
+        } finally {
+            redirecting.stop(0);
+            target.stop(0);
+        }
+    }
+
+    /** UC-006 BR-004: the token is sent, and written to no log record at any level, also when the call fails. */
+    @Test
+    void callReport_doesNotLogTheServiceToken() throws Exception {
+        String url = startServer(500, "text/plain", "refused");
+
+        try (LogCapture log = LogCapture.start()) {
+            ReportResponse response = invokeCallReport(url, 42L);
+
+            assertEquals("Bearer " + ServiceCalls.TOKEN, presentedAuthorization);
+            assertFalse(log.contains(ServiceCalls.TOKEN), log.text());
+            assertFalse(response.innerHTML.contains(ServiceCalls.TOKEN));
+            assertFalse(response.pdf.content[0].text.contains(ServiceCalls.TOKEN));
+        }
     }
 }

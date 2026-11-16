@@ -14,6 +14,7 @@ package com.elicitsoftware.familyhistory;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.request.ReportRequest;
 import com.elicitsoftware.test.PostgresTestResource;
+import com.elicitsoftware.test.ServiceCalls;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
@@ -23,7 +24,6 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
@@ -74,7 +74,7 @@ class FamilyHistoryServiceTest {
 
     @Test
     void generateFamilyHistoryReport_missingRespondentId_returnsBadRequestWithoutStartingGeneration() {
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .body(requestFor(0))
                 .when().post("/familyhistory/generate")
@@ -87,7 +87,7 @@ class FamilyHistoryServiceTest {
     /** UC-004 A4: no body at all. */
     @Test
     void generateFamilyHistoryReport_noBody_returnsBadRequestWithoutStartingGeneration() {
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .when().post("/familyhistory/generate")
                 .then()
@@ -100,7 +100,7 @@ class FamilyHistoryServiceTest {
     @Test
     void generateFamilyHistoryReport_emptyOrNegativeRespondentId_returnsBadRequest() {
         for (String body : new String[] {"{}", "{\"id\":-1}"}) {
-            given()
+            ServiceCalls.given()
                     .contentType(ContentType.JSON)
                     .body(body)
                     .when().post("/familyhistory/generate")
@@ -115,7 +115,7 @@ class FamilyHistoryServiceTest {
     void generateFamilyHistoryReport_noStatusRecordFound_returnsBadRequest() {
         stubStatusFind(42L, null);
 
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .body(requestFor(42L))
                 .when().post("/familyhistory/generate")
@@ -134,7 +134,7 @@ class FamilyHistoryServiceTest {
         status.setXid("EXT-1");
         stubStatusFind(42L, status);
 
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .body(requestFor(42L))
                 .when().post("/familyhistory/generate")
@@ -154,7 +154,7 @@ class FamilyHistoryServiceTest {
         stubStatusFind(42L, status);
         when(reportService.generateAndUploadFamilyHistoryReport(any())).thenThrow(new RuntimeException("jdbc:postgresql://db:5432/survey cause-marker"));
 
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .body(requestFor(42L))
                 .when().post("/familyhistory/generate")
@@ -167,26 +167,12 @@ class FamilyHistoryServiceTest {
     }
 
     // ------------------------------------------------------------------
-    // healthCheck
-    // ------------------------------------------------------------------
-
-    @Test
-    void healthCheck_alwaysReturnsOk() {
-        given()
-                .when().get("/familyhistory/health")
-                .then()
-                .statusCode(200)
-                .body("success", equalTo(true))
-                .body("message", equalTo("Family History Service is healthy"));
-    }
-
-    // ------------------------------------------------------------------
     // NFR-008: no diagnostic endpoint
     // ------------------------------------------------------------------
 
     @Test
     void statusLookupPath_isNotServed() {
-        given()
+        ServiceCalls.given()
                 .when().get("/familyhistory/debug/status/99")
                 .then()
                 .statusCode(404);

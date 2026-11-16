@@ -12,6 +12,7 @@ package com.elicitsoftware.common.health;
  */
 
 import com.elicitsoftware.test.PostgresTestResource;
+import com.elicitsoftware.test.ServiceCalls;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -81,7 +82,7 @@ class FamilyHistorySurveyCheckTest {
             assertEquals(HealthCheckResponse.Status.DOWN, down.getStatus());
             assertTrue(String.valueOf(down.getData().orElseThrow().get("reason")).contains("has not been built"));
             given().when().get("/q/health/ready").then().statusCode(503);
-            assertEquals(503, given().contentType("application/json").body("{}").when().post("/familyhistory/generate").getStatusCode(),
+            assertEquals(503, ServiceCalls.given().contentType("application/json").body("{}").when().post("/familyhistory/generate").getStatusCode(),
                     "the filter refuses report requests while the survey is unbuilt");
         } finally {
             setReportSchema("report_family_history_survey");
@@ -123,7 +124,7 @@ class FamilyHistorySurveyCheckTest {
     /** UC-005 step 4: the report endpoints answer once the survey is present (no 503). */
     @Test
     void reportEndpointsAreNotRefusedWhenTheSurveyIsPresent() {
-        int status = given().contentType("application/json").body("{\"id\":999999}")
+        int status = ServiceCalls.given().contentType("application/json").body("{\"id\":999999}")
                 .when().post("/proband/report").getStatusCode();
         assertTrue(status != 503, "the filter must not refuse while the survey is installed, got " + status);
     }

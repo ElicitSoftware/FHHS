@@ -13,6 +13,7 @@ package com.elicitsoftware.request;
 
 import com.elicitsoftware.model.CancerHistoryRepository;
 import com.elicitsoftware.test.PostgresTestResource;
+import com.elicitsoftware.test.ServiceCalls;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -20,7 +21,6 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static io.restassured.RestAssured.given;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
@@ -38,7 +38,7 @@ class ReportRequestValidationTest {
     @ParameterizedTest
     @ValueSource(strings = {"/proband/report", "/casummary/report", "/pedigree/report"})
     void noBody_isAnsweredBadRequest(String path) {
-        given().contentType(ContentType.JSON)
+        ServiceCalls.given().contentType(ContentType.JSON)
                 .when().post(path)
                 .then().statusCode(400);
 
@@ -48,7 +48,7 @@ class ReportRequestValidationTest {
     @ParameterizedTest
     @ValueSource(strings = {"/proband/report", "/casummary/report", "/pedigree/report"})
     void missingRespondentId_isAnsweredBadRequest(String path) {
-        given().contentType(ContentType.JSON).body("{}")
+        ServiceCalls.given().contentType(ContentType.JSON).body("{}")
                 .when().post(path)
                 .then().statusCode(400);
 
@@ -58,7 +58,7 @@ class ReportRequestValidationTest {
     @ParameterizedTest
     @ValueSource(strings = {"/proband/report", "/casummary/report", "/pedigree/report"})
     void negativeRespondentId_isAnsweredBadRequest(String path) {
-        given().contentType(ContentType.JSON).body("{\"id\":-1}")
+        ServiceCalls.given().contentType(ContentType.JSON).body("{\"id\":-1}")
                 .when().post(path)
                 .then().statusCode(400);
 

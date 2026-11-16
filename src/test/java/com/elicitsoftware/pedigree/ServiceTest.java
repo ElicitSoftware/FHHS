@@ -19,6 +19,7 @@ import com.elicitsoftware.response.ReportResponse;
 import com.elicitsoftware.response.pdf.Content;
 import com.elicitsoftware.response.pdf.Style;
 import com.elicitsoftware.test.LogCapture;
+import com.elicitsoftware.test.ServiceCalls;
 import com.sun.net.httpserver.HttpServer;
 import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.AfterEach;
@@ -222,6 +223,10 @@ class ServiceTest {
 
     private HttpServer drawingService;
 
+    /** What the stand-in was last sent as its Authorization header, and how often it was called. */
+    private volatile String presentedAuthorization;
+    private final java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+
     @AfterEach
     void stopDrawingService() {
         if (drawingService != null) {
@@ -234,6 +239,8 @@ class ServiceTest {
         drawingService = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         drawingService.createContext("/svg", exchange -> {
             exchange.getRequestBody().readAllBytes();
+            presentedAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
+            calls.incrementAndGet();
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(status, bytes.length);
             try (OutputStream out = exchange.getResponseBody()) {
@@ -256,6 +263,7 @@ class ServiceTest {
 
         Service service = newService(manager);
         service.tracer = OpenTelemetry.noop().getTracer("test");
+        service.serviceToken = ServiceCalls.serviceToken();
         Field url = Service.class.getDeclaredField("pedigreeURL");
         url.setAccessible(true);
         url.set(service, pedigreeUrl);
@@ -316,6 +324,67 @@ class ServiceTest {
             assertFalse(log.contains("Zzyzx-Marker"), log.text());
             assertFalse(log.contains("famid"), log.text());
             assertTrue(log.contains("1 rows"), log.text());
+        }
+    }
+
+    /** UC-003 BR-003, UC-006 BR-006: the configured drawing service is always sent the service token. */
+    @Test
+    void report_presentsTheServiceTokenToTheDrawingService() throws Exception {
+        Service service = reportingService(startDrawingService(200, "<svg></svg>"));
+
+        service.report(requestFor(42L));
+
+        assertEquals("Bearer " + ServiceCalls.TOKEN, presentedAuthorization);
+    }
+
+    /** UC-006 BR-004: the token is sent, and written to no log record at any level. */
+    @Test
+    void report_doesNotLogTheServiceToken() throws Exception {
+        Service service = reportingService(startDrawingService(500, "refused"));
+
+        try (LogCapture log = LogCapture.start()) {
+            service.report(requestFor(42L));
+
+            assertFalse(log.contains(ServiceCalls.TOKEN), log.text());
+            assertFalse(log.contains("Bearer"), log.text());
+        }
+    }
+
+    /** UC-006 A3, UC-003 A1: with no token configured the call is not made; the placeholder is shown. */
+    @Test
+    void report_withoutAServiceToken_doesNotCallTheDrawingService() throws Exception {
+        Service service = reportingService(startDrawingService(200, "<svg></svg>"));
+        service.serviceToken = ServiceCalls.serviceTokenNotConfigured();
+
+        ReportResponse response = service.report(requestFor(42L));
+
+        assertEquals(0, calls.get(), "no request may leave without the token");
+        assertEquals(Service.DIAGRAM_UNAVAILABLE, response.innerHTML);
+    }
+
+    /** UC-003 BR-003: a redirect is not followed, so the token cannot be carried to another address. */
+    @Test
+    void report_doesNotFollowARedirectFromTheDrawingService() throws Exception {
+        String elsewhere = startDrawingService(200, "<svg></svg>");
+        HttpServer target = drawingService;
+        HttpServer redirecting = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        redirecting.createContext("/svg", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            exchange.getResponseHeaders().add("Location", elsewhere);
+            exchange.sendResponseHeaders(307, -1);
+            exchange.close();
+        });
+        redirecting.start();
+        try {
+            Service service = reportingService("http://127.0.0.1:" + redirecting.getAddress().getPort() + "/svg");
+
+            ReportResponse response = service.report(requestFor(42L));
+
+            assertEquals(0, calls.get(), "the redirect target must not be called");
+            assertEquals(Service.DIAGRAM_UNAVAILABLE, response.innerHTML);
+        } finally {
+            redirecting.stop(0);
+            target.stop(0);
         }
     }
 }

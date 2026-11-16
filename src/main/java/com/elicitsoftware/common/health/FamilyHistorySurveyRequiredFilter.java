@@ -11,7 +11,9 @@ package com.elicitsoftware.common.health;
  * ***LICENSE_END***
  */
 
+import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.core.MediaType;
@@ -27,6 +29,7 @@ import jakarta.ws.rs.ext.Provider;
  * liveness-style health endpoint stays reachable.
  */
 @Provider
+@Priority(Priorities.USER)
 public class FamilyHistorySurveyRequiredFilter implements ContainerRequestFilter {
 
     @Inject
@@ -34,18 +37,12 @@ public class FamilyHistorySurveyRequiredFilter implements ContainerRequestFilter
 
     @Override
     public void filter(ContainerRequestContext requestContext) {
-        if (isAlwaysAllowed(requestContext.getUriInfo().getPath()) || surveyCheck.isReady()) {
+        if (surveyCheck.isReady()) {
             return;
         }
         requestContext.abortWith(Response.status(Response.Status.SERVICE_UNAVAILABLE)
                 .type(MediaType.TEXT_PLAIN)
                 .entity(surveyCheck.missingMessage())
                 .build());
-    }
-
-    /** The endpoint that answers without the survey: it only says the service is running. */
-    static boolean isAlwaysAllowed(String path) {
-        String p = path.startsWith("/") ? path.substring(1) : path;
-        return p.equals("familyhistory/health");
     }
 }
