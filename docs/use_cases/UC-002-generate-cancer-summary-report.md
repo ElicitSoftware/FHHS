@@ -37,6 +37,13 @@
 
 1. The system rejects the request as unauthorized. Use case ends.
 
+### A3: Request Has No Respondent ID
+
+**Trigger:** The request has no body, or its respondent ID is missing or not a positive number (step 1).
+**Flow:**
+
+1. The system answers 400 and reads no respondent data (NFR-010). Use case ends.
+
 ## Postconditions
 
 ### Success Postconditions
@@ -52,6 +59,10 @@
 ### BR-001: Cancer Summary Report Authorization
 
 Only callers presenting a credential with the `cssummary-user` role may request a cancer summary report for a respondent.
+
+### BR-002: Report HTML Carries Text, Not Markup, From Answers
+
+The HTML fragment is built from markup FHHS writes itself. Everything it places inside that markup from the survey -- answer text, including the name of an "other" cancer, and step names -- is HTML-encoded (NFR-011), so it is shown as typed and never interpreted. The PDF table carries the same text unencoded.
 
 ---
 

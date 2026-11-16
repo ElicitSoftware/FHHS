@@ -11,6 +11,8 @@ package com.elicitsoftware.request;
  * ***LICENSE_END***
  */
 
+import jakarta.validation.constraints.Positive;
+
 /**
  * Request object for generating reports based on a specific respondent/participant.
  * <p>
@@ -34,7 +36,9 @@ public class ReportRequest {
     /**
      * The unique identifier of the respondent/participant for whom the report is requested.
      * This ID is used to query the database for relevant family history health survey data.
+     * A request whose ID is missing or not positive is answered 400 (NFR-010).
      */
+    @Positive
     public long id;
     
     /**

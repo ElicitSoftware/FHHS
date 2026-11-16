@@ -79,13 +79,14 @@ public class Card {
      *   <li>A content section containing all rows</li>
      *   <li>Proper HTML formatting and separators</li>
      * </ul>
+     * The title is HTML-encoded, as each row encodes its own text (UC-001 BR-002, UC-002 BR-002).
      *
      * @return a String containing the complete HTML representation of the card
      */
     public String getHTML() {
         StringBuilder html = new StringBuilder();
         html.append("<div class=\"card\">");
-        html.append("<div class=\"card--header\"><p>" + this.title + "</p></div><div class=\"card--content\">");
+        html.append("<div class=\"card--header\"><p>" + Html.escape(this.title) + "</p></div><div class=\"card--content\">");
 
 
         for (Row row : rows.values()) {

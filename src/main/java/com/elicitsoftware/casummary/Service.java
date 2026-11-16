@@ -27,6 +27,8 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -98,7 +100,7 @@ public class Service {
     @Consumes("application/json")
     @Produces("application/json")
     @Transactional
-    public ReportResponse report(ReportRequest req) {
+    public ReportResponse report(@Valid @NotNull ReportRequest req) {
         Log.debugf("Generating cancer summary report for respondent id=%d", req.id);
 
         Table table = new Table();

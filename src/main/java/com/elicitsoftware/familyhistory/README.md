@@ -66,15 +66,14 @@ The migration file is located at:
 
 ### Generate Family History Report
 
-**POST** `/api/familyhistory/generate`
+**POST** `/familyhistory/generate`
 
 Triggers family history report generation for a respondent.
 
 **Request Body:**
 ```json
 {
-  "respondentId": 12345,
-  "externalId": "STUDY_001_PARTICIPANT_001"
+  "id": 12345
 }
 ```
 
@@ -88,7 +87,7 @@ Triggers family history report generation for a respondent.
 
 ### Health Check
 
-**GET** `/api/familyhistory/health`
+**GET** `/familyhistory/health`
 
 Returns the health status of the family history service.
 
@@ -131,15 +130,15 @@ The service integrates with the survey system through post-survey actions:
 You can test the service manually by calling the endpoint:
 
 ```bash
-curl -X POST http://localhost:8082/api/familyhistory/generate \
+curl -X POST http://localhost:8082/familyhistory/generate \
   -H "Content-Type: application/json" \
-  -d '{"respondentId": 1, "externalId": "TEST_001"}'
+  -d '{"id": 1}'
 ```
 
 ### Health Check
 
 ```bash
-curl http://localhost:8082/api/familyhistory/health
+curl http://localhost:8082/familyhistory/health
 ```
 
 ## Development Notes

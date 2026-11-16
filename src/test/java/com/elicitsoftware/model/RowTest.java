@@ -59,4 +59,26 @@ class RowTest {
                 html
         );
     }
+
+    /** UC-001 BR-002, UC-002 BR-002: survey text is shown as typed, inside markup the report wrote. */
+    @Test
+    void getHTML_encodesMarkupCharactersInLabelAndValue() {
+        Row row = new Row("Mother", "<img src=x onerror=alert(1)>", "a&b'c\"d");
+        String html = row.getHTML();
+
+        assertEquals(
+                "<span class=\"card--content--label\">&lt;img src=x onerror=alert(1)&gt;</span>"
+                        + "<span class=\"card--content--response\">: a&amp;b&#39;c&quot;d</span><br/>",
+                html
+        );
+    }
+
+    /** The PDF table reads the getters, which return the text as it is. */
+    @Test
+    void getters_returnTextUnencoded() {
+        Row row = new Row("Mother", "<img src=x onerror=alert(1)>", "a&b'c\"d");
+
+        assertEquals("<img src=x onerror=alert(1)>", row.getLabel());
+        assertEquals("a&b'c\"d", row.getValue());
+    }
 }

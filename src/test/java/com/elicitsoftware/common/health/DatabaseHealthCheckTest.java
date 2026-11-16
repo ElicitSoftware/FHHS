@@ -48,15 +48,15 @@ class DatabaseHealthCheckTest {
     }
 
     @Test
-    void call_getConnectionThrows_reportsDownWithMessage() throws SQLException {
+    void call_getConnectionThrows_reportsDownWithAFixedName() throws SQLException {
         DataSource dataSource = mock(DataSource.class);
         when(dataSource.getConnection()).thenThrow(new SQLException("connection refused"));
 
         HealthCheckResponse response = newCheck(dataSource).call();
 
         assertEquals(HealthCheckResponse.Status.DOWN, response.getStatus());
-        assertTrue(response.getName().contains("connection refused"),
-                "the health check name should surface the underlying SQLException message: " + response.getName());
+        // NFR-010: the probe names the failure; the cause goes to the log, not to the caller.
+        assertEquals("Database connection failed", response.getName());
     }
 
     @Test

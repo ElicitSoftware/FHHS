@@ -123,7 +123,8 @@ class FamilyHistorySurveyCheckTest {
     /** UC-005 step 4: the report endpoints answer once the survey is present (no 503). */
     @Test
     void reportEndpointsAreNotRefusedWhenTheSurveyIsPresent() {
-        int status = given().when().get("/familyhistory/debug/status/999999").getStatusCode();
+        int status = given().contentType("application/json").body("{\"id\":999999}")
+                .when().post("/proband/report").getStatusCode();
         assertTrue(status != 503, "the filter must not refuse while the survey is installed, got " + status);
     }
 }

@@ -880,11 +880,9 @@ public class PDFService {
             pdfDoc.content = new Content[]{errorContent};
             reportResponse.pdf = pdfDoc;
             
-            Log.errorv("FHHS PDFService.callReport - Error for {0}", rpt.name);
-            Log.errorv("  Error message: {0}", cleanErrorMessage);
-            Log.errorv("  PDF title: {0}", pdfDoc.title);
-            Log.errorv("  PDF content length: {0}", (pdfDoc.content != null ? pdfDoc.content.length : "null"));
-            Log.errorv("  PDF content[0].text: {0}", (pdfDoc.content != null && pdfDoc.content.length > 0 ? pdfDoc.content[0].text : "null"));
+            // NFR-009: the report's name and the status, not what the service answered with.
+            Log.errorv("FHHS PDFService.callReport - Error for {0} (HTTP {1}) for respondent {2}", rpt.name,
+                    e.getResponse() != null ? String.valueOf(e.getResponse().getStatus()) : "no response", respondentId);
             
             return reportResponse;
         } catch (Exception e) {

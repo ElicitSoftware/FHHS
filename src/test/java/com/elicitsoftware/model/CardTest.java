@@ -62,4 +62,18 @@ class CardTest {
         assertTrue(html.contains("Breast Cancer"));
         assertTrue(html.contains("Lung Cancer"));
     }
+
+    /** UC-002 BR-002: the title is a step name from the survey; the card's own markup stays markup. */
+    @Test
+    void getHTML_encodesMarkupCharactersInTheTitle() {
+        Card card = new Card("<script>alert(1)</script> & Mother's side");
+        card.addRows(List.of(new Row("Mother", "Breast Cancer", 45)));
+
+        String html = card.getHTML();
+
+        assertFalse(html.contains("<script>"));
+        assertTrue(html.contains("<p>&lt;script&gt;alert(1)&lt;/script&gt; &amp; Mother&#39;s side</p>"));
+        assertTrue(html.startsWith("<div class=\"card\"><div class=\"card--header\">"));
+        assertTrue(html.endsWith("<br/><hr/></div></div>"));
+    }
 }

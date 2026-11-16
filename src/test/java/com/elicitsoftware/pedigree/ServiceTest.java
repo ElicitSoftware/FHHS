@@ -15,12 +15,20 @@ import com.elicitsoftware.model.Family;
 import com.elicitsoftware.model.FamilyManager;
 import com.elicitsoftware.model.FamilyMember;
 import com.elicitsoftware.request.ReportRequest;
+import com.elicitsoftware.response.ReportResponse;
 import com.elicitsoftware.response.pdf.Content;
 import com.elicitsoftware.response.pdf.Style;
+import com.elicitsoftware.test.LogCapture;
+import com.sun.net.httpserver.HttpServer;
+import io.opentelemetry.api.OpenTelemetry;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -31,10 +39,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for {@code pedigree.Service}, exercising the JAX-RS resource as plain Java
  * (no CDI/Quarkus bootstrap - there's no reachable Postgres in this environment). Private
  * helper methods are invoked via reflection since they contain non-trivial logic that isn't
- * otherwise reachable without going through {@code report()}'s real outbound HTTP call.
- * {@code report()} and {@code callPedigree()} are intentionally NOT tested here - they make
- * a real {@code java.net.http.HttpClient} call to an external pedigree-drawing service and
- * are out of scope for a plain unit test.
+ * otherwise reachable without going through {@code report()}'s outbound HTTP call.
+ * {@code report()} itself is exercised against a local stand-in for the pedigree-drawing
+ * service (JDK {@code HttpServer}), which is how UC-003 A1, BR-001 and BR-002 are checked.
  */
 class ServiceTest {
 
@@ -48,29 +55,6 @@ class ServiceTest {
         Method m = Service.class.getDeclaredMethod(name, paramTypes);
         m.setAccessible(true);
         return m.invoke(service, args);
-    }
-
-    // ------------------------------------------------------------------
-    // getFamily(ReportRequest) - public method, no network call
-    // ------------------------------------------------------------------
-
-    @Test
-    void getFamily_returnsFamilyToStringFromInjectedManager() {
-        FamilyManager manager = Mockito.mock(FamilyManager.class);
-        Family family = new Family();
-        FamilyMember m = new FamilyMember();
-        m.ID = 7;
-        m.name = "Respondent";
-        family.family.add(m);
-        Mockito.when(manager.getFamily(42L)).thenReturn(family);
-
-        ReportRequest req = new ReportRequest();
-        req.id = 42L;
-
-        String result = newService(manager).getFamily(req);
-
-        assertEquals(family.toString(), result);
-        Mockito.verify(manager).getFamily(42L);
     }
 
     // ------------------------------------------------------------------
@@ -213,23 +197,125 @@ class ServiceTest {
         assertTrue(content[3].text.contains("multiple diagnoses"));
     }
 
+    /** UC-003 BR-001: the placeholder is a fixed sentence; what the service answered is not repeated. */
     @Test
-    void getPDFContent_invalidSvg_rendersErrorTextInsteadOfSvg() throws Exception {
+    void getPDFContent_invalidSvg_rendersTheFixedPlaceholderInsteadOfSvg() throws Exception {
         String error = "Server returned non-OK status: 500";
         Content[] content = (Content[]) invokePrivate(newService(null), "getPDFContent",
                 new Class<?>[]{String.class, boolean.class}, error, false);
 
         assertNull(content[0].svg);
-        assertNotNull(content[0].text);
-        assertTrue(content[0].text.contains("Pedigree diagram unavailable"));
-        assertTrue(content[0].text.contains(error));
+        assertEquals(Service.DIAGRAM_UNAVAILABLE, content[0].text);
     }
 
     @Test
-    void getPDFContent_nullSvg_rendersNoResponseMessage() throws Exception {
+    void getPDFContent_nullSvg_rendersTheFixedPlaceholder() throws Exception {
         Content[] content = (Content[]) invokePrivate(newService(null), "getPDFContent",
                 new Class<?>[]{String.class, boolean.class}, new Object[]{null, false});
 
-        assertTrue(content[0].text.contains("No response from pedigree service"));
+        assertEquals(Service.DIAGRAM_UNAVAILABLE, content[0].text);
+    }
+
+    // ------------------------------------------------------------------
+    // report(ReportRequest) against a local stand-in for the drawing service
+    // ------------------------------------------------------------------
+
+    private HttpServer drawingService;
+
+    @AfterEach
+    void stopDrawingService() {
+        if (drawingService != null) {
+            drawingService.stop(0);
+        }
+    }
+
+    /** Starts a local HTTP server answering {@code POST /svg} with the given status and body. */
+    private String startDrawingService(int status, String body) throws Exception {
+        drawingService = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        drawingService.createContext("/svg", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(status, bytes.length);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(bytes);
+            }
+        });
+        drawingService.start();
+        return "http://127.0.0.1:" + drawingService.getAddress().getPort() + "/svg";
+    }
+
+    private Service reportingService(String pedigreeUrl) throws Exception {
+        FamilyManager manager = Mockito.mock(FamilyManager.class);
+        Family family = new Family();
+        FamilyMember member = new FamilyMember();
+        member.ID = 9; // not the proband, whose display name is fixed
+        member.name = "Zzyzx-Marker";
+        family.family.add(member);
+        Mockito.when(manager.getFamily(42L)).thenReturn(family);
+        assertTrue(family.toString().contains("Zzyzx-Marker"), "the family table carries the name");
+
+        Service service = newService(manager);
+        service.tracer = OpenTelemetry.noop().getTracer("test");
+        Field url = Service.class.getDeclaredField("pedigreeURL");
+        url.setAccessible(true);
+        url.set(service, pedigreeUrl);
+        return service;
+    }
+
+    private static ReportRequest requestFor(long respondentId) {
+        ReportRequest req = new ReportRequest();
+        req.id = respondentId;
+        return req;
+    }
+
+    @Test
+    void report_serviceAnswersWithADiagram_returnsItAsHtmlAndPdfContent() throws Exception {
+        String svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>";
+        Service service = reportingService(startDrawingService(200, svg));
+
+        ReportResponse response = service.report(requestFor(42L));
+
+        assertEquals(svg, response.innerHTML);
+        assertEquals(svg, response.pdf.content[0].svg);
+    }
+
+    /** UC-003 A1, BR-001: a failed call leaves the fixed placeholder and nothing of the answer. */
+    @Test
+    void report_serviceAnswersWithAnError_showsOnlyTheFixedPlaceholder() throws Exception {
+        Service service = reportingService(startDrawingService(500, "internal-detail-marker at pedigree-host"));
+
+        ReportResponse response = service.report(requestFor(42L));
+
+        assertEquals(Service.DIAGRAM_UNAVAILABLE, response.innerHTML);
+        assertNull(response.pdf.content[0].svg);
+        assertEquals(Service.DIAGRAM_UNAVAILABLE, response.pdf.content[0].text);
+    }
+
+    /** UC-003 A1, BR-001: so does a service that cannot be reached. */
+    @Test
+    void report_serviceCannotBeReached_showsOnlyTheFixedPlaceholder() throws Exception {
+        String url = startDrawingService(200, "<svg></svg>");
+        drawingService.stop(0);
+        Service service = reportingService(url);
+
+        ReportResponse response = service.report(requestFor(42L));
+
+        assertEquals(Service.DIAGRAM_UNAVAILABLE, response.innerHTML);
+        assertEquals(Service.DIAGRAM_UNAVAILABLE, response.pdf.content[0].text);
+        assertFalse(response.innerHTML.contains("127.0.0.1"));
+    }
+
+    /** UC-003 BR-002, NFR-009: the family table is sent, not logged; its size is. */
+    @Test
+    void report_logsTheSizeOfTheFamilyTableAndNotItsContent() throws Exception {
+        Service service = reportingService(startDrawingService(200, "<svg></svg>"));
+
+        try (LogCapture log = LogCapture.start()) {
+            service.report(requestFor(42L));
+
+            assertFalse(log.contains("Zzyzx-Marker"), log.text());
+            assertFalse(log.contains("famid"), log.text());
+            assertTrue(log.contains("1 rows"), log.text());
+        }
     }
 }

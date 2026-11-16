@@ -63,6 +63,42 @@ class ServiceTest {
         );
     }
 
+    /** A record whose only diagnosis is an "other" cancer with the given typed name. */
+    private static FamilyHistoryRecord otherCancerRecord(String step, String cancerName) {
+        return new FamilyHistoryRecord(
+                step, null, null, null, null,
+                null, null, null,
+                null, null,
+                null, null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                "true", 60, cancerName,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, null,
+                null, "false",
+                null, null,
+                null, null,
+                null, null
+        );
+    }
+
     private Service newService(CancerHistoryRepository repo) {
         Service service = new Service();
         service.cancerHistoryRepository = repo;
@@ -153,5 +189,33 @@ class ServiceTest {
         newService(repo).report(req);
 
         Mockito.verify(repo).findFamilyHistoryByRespondentId(555L);
+    }
+
+    /** UC-001 BR-002: typed text is encoded in the HTML and reaches the PDF table as typed. */
+    @Test
+    void report_answerTextWithMarkup_isEncodedInHtmlAndUnchangedInThePdfTable() {
+        String typed = "<img src=x onerror=alert(1)> & co";
+        CancerHistoryRepository repo = Mockito.mock(CancerHistoryRepository.class);
+        Mockito.when(repo.findFamilyHistoryByRespondentId(1L)).thenReturn(new java.util.ArrayList<>(List.of(
+                otherCancerRecord("Proband", typed)
+        )));
+
+        ReportRequest req = new ReportRequest();
+        req.id = 1L;
+        ReportResponse response = newService(repo).report(req);
+
+        assertFalse(response.innerHTML.contains("<img"), response.innerHTML);
+        assertTrue(response.innerHTML.contains("&lt;img src=x onerror=alert(1)&gt; &amp; co"), response.innerHTML);
+        assertTrue(response.innerHTML.contains("<span class=\"card--content--label\">"), "the report's own markup stays markup");
+
+        String[][] body = response.pdf.content[0].table.body;
+        boolean typedTextInPdf = false;
+        for (String[] row : body) {
+            for (String cell : row) {
+                assertFalse(cell != null && cell.contains("&lt;"), "the PDF table is not encoded: " + cell);
+                typedTextInPdf |= typed.equals(cell);
+            }
+        }
+        assertTrue(typedTextInPdf, "the PDF table carries the text as typed");
     }
 }
