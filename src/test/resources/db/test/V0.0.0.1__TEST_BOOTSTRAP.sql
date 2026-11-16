@@ -28,35 +28,11 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. Roles. The Testcontainers `postgres` user is a superuser, so CREATE ROLE
---    works. PostgreSQL has no CREATE ROLE IF NOT EXISTS, so guard each one.
+-- 1, 2. Roles and the survey and surveyreport schemas: created by
+--    db/testcontainers-init.sql, as the container's superuser, before this
+--    script. Nothing here needs one. The survey's own reporting schema is
+--    created here by the schema owner, as Survey creates it on a site.
 -- -----------------------------------------------------------------------------
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'surveyadmin_user') THEN
-        CREATE ROLE surveyadmin_user;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'survey_user') THEN
-        CREATE ROLE survey_user;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'elicit_owner') THEN
-        CREATE ROLE elicit_owner;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'surveyreport_user') THEN
-        CREATE ROLE surveyreport_user;
-    END IF;
-END
-$$;
-
--- -----------------------------------------------------------------------------
--- 2. Schemas. `survey` is also auto-created by quarkus.flyway.owner.schemas, so
---    guard it; `surveyreport` (the common reporting schema) and the Family
---    History Survey's own reporting schema, report_family_history_survey, are
---    not managed by Flyway and must be created here. The latter is what Survey's
---    first build of the survey creates and names on survey.surveys.report_schema.
--- -----------------------------------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS survey;
-CREATE SCHEMA IF NOT EXISTS surveyreport;
 CREATE SCHEMA IF NOT EXISTS report_family_history_survey;
 
 -- -----------------------------------------------------------------------------
@@ -712,9 +688,68 @@ CREATE TABLE IF NOT EXISTS report_family_history_survey.fact_sections_view
 );
 
 -- -----------------------------------------------------------------------------
--- 11. Let the application roles use the schemas (postgres owns every object
---    here, so the later per-object GRANTs in db/migration succeed regardless).
+-- 11. The grants a site's database carries on these objects before FHHS's own
+--    migrations run: the ones Survey's migrations give survey_user on its
+--    tables and sequences (Survey V001 and later), and the ones Survey's
+--    reporting schema build gives on the survey's star. FHHS connects as
+--    survey_user, so anything missing from here and from db/migration is
+--    refused in a test as it would be on a site.
 -- -----------------------------------------------------------------------------
-GRANT USAGE ON SCHEMA survey TO survey_user, surveyadmin_user;
-GRANT USAGE ON SCHEMA surveyreport TO survey_user, surveyadmin_user, surveyreport_user;
-GRANT USAGE ON SCHEMA report_family_history_survey TO survey_user, surveyadmin_user, surveyreport_user;
+GRANT USAGE ON SCHEMA report_family_history_survey TO survey_user, surveyreport_user;
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.surveys TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.respondents TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.reports TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.dimensions TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.ontology TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.select_groups TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.question_types TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.questions TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.sections TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.sections_questions TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.steps TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.steps_sections TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.metadata TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.select_items TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.operator_types TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.action_types TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.relationships TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.post_survey_actions TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.respondent_psa TO survey_user;
+
+GRANT USAGE ON SEQUENCE survey.surveys_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.respondents_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.reports_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.select_groups_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.select_items_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.questions_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.sections_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.steps_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.steps_sections_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.sections_questions_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.relationships_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.dimensions_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.ontology_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.select_groups_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.question_types_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.questions_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.sections_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.sections_questions_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.steps_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.steps_sections_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.metadata_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.select_items_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.operator_types_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.action_types_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.relationships_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.post_survey_actions_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.respondent_psa_seq TO survey_user;
+
+GRANT INSERT, SELECT, UPDATE ON report_family_history_survey.dim_step TO survey_user;
+GRANT SELECT ON report_family_history_survey.dim_step TO surveyreport_user;
+GRANT INSERT, SELECT, UPDATE ON report_family_history_survey.dim_section TO survey_user;
+GRANT SELECT ON report_family_history_survey.dim_section TO surveyreport_user;
+GRANT INSERT, SELECT, UPDATE ON report_family_history_survey.fact_sections TO survey_user;
+GRANT SELECT ON report_family_history_survey.fact_sections TO surveyreport_user;
+GRANT SELECT ON report_family_history_survey.fact_respondents TO survey_user, surveyreport_user;
+GRANT SELECT ON report_family_history_survey.fact_sections_view TO survey_user, surveyreport_user;
