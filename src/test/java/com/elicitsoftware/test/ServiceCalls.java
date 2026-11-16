@@ -11,6 +11,7 @@ package com.elicitsoftware.test;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.common.security.RespondentScope;
 import com.elicitsoftware.common.security.ServiceToken;
 import io.restassured.RestAssured;
 import io.restassured.specification.RequestSpecification;
@@ -48,5 +49,24 @@ public final class ServiceCalls {
     /** What a deployment without {@code ELICIT_SERVICE_TOKEN} has. */
     public static ServiceToken serviceTokenNotConfigured() {
         return new ServiceToken(Optional.empty(), Optional.empty(), Optional.of("http://localhost:8083/svg"));
+    }
+
+    /**
+     * A scope that lets every respondent through, for a test that builds a service by hand and
+     * is about what the service does once the respondent is accepted (RespondentScopeTest is
+     * the one about the scope itself).
+     */
+    public static RespondentScope anyRespondent() {
+        return new RespondentScope() {
+            @Override
+            public boolean contains(long respondentId) {
+                return true;
+            }
+
+            @Override
+            public void require(String endpoint, long respondentId) {
+                // accepted
+            }
+        };
     }
 }

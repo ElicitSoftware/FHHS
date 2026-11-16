@@ -22,6 +22,7 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -57,6 +58,10 @@ class ServiceTokenEndpointsTest {
 
     @InjectSpy
     CancerHistoryRepository cancerHistoryRepository;
+
+    /** Accepts every respondent: these tests are about the token, RespondentScopeTest about the scope. */
+    @InjectMock
+    RespondentScope respondentScope;
 
     @Inject
     ServiceToken serviceToken;

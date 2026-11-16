@@ -11,6 +11,7 @@ package com.elicitsoftware.familyhistory;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.common.security.RespondentScope;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.request.ReportRequest;
 import com.elicitsoftware.test.PostgresTestResource;
@@ -48,6 +49,10 @@ class FamilyHistoryServiceTest {
 
     @InjectMock
     FamilyHistoryReportService reportService;
+
+    /** Accepts every respondent: these tests are about the delivery, RespondentScopeTest about the scope. */
+    @InjectMock
+    RespondentScope respondentScope;
 
     @BeforeEach
     void setUp() {

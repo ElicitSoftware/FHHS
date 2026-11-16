@@ -76,6 +76,14 @@
 
 1. The system calls the address without the token and writes a warning naming the origin and the variable to list it in. What the called service answers is handled as for any report call (UC-004 BR-004).
 
+### A8: The Respondent Is Not of the Family History Survey
+
+**Trigger:** An authenticated request names a respondent who belongs to another survey, or an ID no respondent has (step 3).
+**Flow:**
+
+1. The system answers 404 with a fixed sentence, the same for both cases, and writes a warning naming the path and the respondent ID.
+2. No report data is read and no delivery is started. Use case ends.
+
 ## Postconditions
 
 ### Success Postconditions
@@ -120,16 +128,20 @@ A configured token has at least 32 characters (A4). `openssl rand -hex 32` produ
 
 The token says that a platform module is calling. It carries no identity and no role, and FHHS holds none: the calling module decided on whose behalf the report is requested before it called.
 
+### BR-009: Only Respondents of the Family History Survey
+
+FHHS serves one survey (`family.history.survey.key`, UC-005). Every request that names a respondent is checked against it before any report data is read: a report or a delivery is produced only for a respondent of that survey. A respondent of another survey and an ID that does not exist get the same 404, so the answer does not say which it was. Each accepted request is recorded at INFO with its path and the respondent ID, and nothing else (NFR-009). This is the whole of FHHS's authorization (BR-008): it knows which survey it serves, not on whose behalf a module asks.
+
 ---
 
 ## Reference
 
 Traces to FR-007, NFR-001 and C-010. Implemented by `ServiceToken` (the configured value, the
 startup checks and warnings, the comparison and the trusted-origin rule), `ServiceTokenFilter`
-(the 401 and the 503), `ServiceTokenHealthCheck` (readiness), `pedigree.Service.callPedigree` and
+(the 401 and the 503), `ServiceTokenHealthCheck` (readiness), `RespondentScope` (BR-009), `pedigree.Service.callPedigree` and
 `PDFService.callReport` (the two outbound calls). `FamilyHistorySurveyRequiredFilter` runs after
 it (BR-005). Verified by `ServiceTokenTest`, `ServiceTokenFilterTest`, `ServiceTokenEndpointsTest`,
-`ServiceTokenUnsetTest`, `pedigree.ServiceTest`, `PDFServiceCallReportTest` and
+`ServiceTokenUnsetTest`, `RespondentScopeTest`, `pedigree.ServiceTest`, `PDFServiceCallReportTest` and
 `ResourceInventoryTest`.
 
 ### Status Values
