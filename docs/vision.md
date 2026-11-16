@@ -26,7 +26,7 @@ schedules that drive it:
 - **Survey Platform** — the Elicit Survey application. On respondent
   finalization it consults `post_survey_actions` and makes authenticated HTTP
   POST calls into FHHS's report endpoints (`/proband/report`,
-  `/casummary/report`, `/pedigree/report`, `/pedigree/family`,
+  `/casummary/report`, `/pedigree/report`,
   `/familyhistory/generate`). This is FHHS's primary actor.
 - **Scheduler** — FHHS's own internal `@Scheduled` job, which periodically
   drains a queue of pending `RespondentPSA`/`Status` rows and generates and

@@ -17,6 +17,8 @@ import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -57,6 +59,9 @@ public class FamilyHistoryService {
     @Inject
     FamilyHistoryReportService reportService;
 
+    /** UC-004 BR-009: what a caller is told when the request could not be started. */
+    static final String START_FAILED_MESSAGE = "Failed to start the family history report";
+
     /**
      * Endpoint for generating and uploading a family history report.
      * 
@@ -73,10 +78,11 @@ public class FamilyHistoryService {
      * @return HTTP response indicating success or failure:
      *         <ul>
      *         <li>200 OK - Report generation successfully initiated</li>
-     *         <li>400 Bad Request - Missing or invalid respondent ID</li>
-     *         <li>500 Internal Server Error - Unexpected error during processing</li>
+     *         <li>400 Bad Request - No body, a respondent ID that is not positive (UC-004 A4),
+     *             or no status record for the respondent</li>
+     *         <li>500 Internal Server Error - Unexpected error during processing; the body is a
+     *             fixed sentence and the cause is logged (UC-004 BR-009)</li>
      *         </ul>
-     * @throws IllegalArgumentException if the request parameter is null
      * @see ReportRequest
      * @see FamilyHistoryReportResponse
      * @see FamilyHistoryReportService#generateAndUploadFamilyHistoryReport(Status)
@@ -87,17 +93,9 @@ public class FamilyHistoryService {
     @Produces(MediaType.APPLICATION_JSON)
     @PermitAll
     @Transactional
-    public Response generateFamilyHistoryReport(ReportRequest request) {
+    public Response generateFamilyHistoryReport(@Valid @NotNull ReportRequest request) {
         try {
             Log.infov("Received family history report generation request for respondent: {0}", request.id);
-
-            // Validate request
-            if (request.id == 0) {
-                Log.warn("Missing respondent ID in request");
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new FamilyHistoryReportResponse("Missing respondent ID", false))
-                    .build();
-            }
 
             Status status = Status.find("respondentId", request.id).firstResult();
 
@@ -109,8 +107,6 @@ public class FamilyHistoryService {
                     .build();
             }
 
-            Log.infov("Found status record for respondent {0}: external ID = {1}", request.id, status.getXid());
-
             // Start the asynchronous report generation and upload
             reportService.generateAndUploadFamilyHistoryReport(status);
 
@@ -120,9 +116,10 @@ public class FamilyHistoryService {
                     .build();
 
         } catch (Exception e) {
-            Log.errorv(e, "Failed to initiate family history report generation: {0}", e.getMessage());
+            // UC-004 BR-009: the cause goes to the log, the caller gets a fixed sentence.
+            Log.errorv(e, "Failed to initiate family history report generation for respondent {0}", request.id);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new FamilyHistoryReportResponse("Failed to generate report: " + e.getMessage(), false))
+                    .entity(new FamilyHistoryReportResponse(START_FAILED_MESSAGE, false))
                     .build();
         }
     }
@@ -141,42 +138,6 @@ public class FamilyHistoryService {
                 .build();
     }
     
-    /**
-     * Debug endpoint to check status records for a respondent.
-     * 
-     * @param respondentId the respondent ID to check
-     * @return HTTP response with status information
-     */
-    @Path("/debug/status/{respondentId}")
-    @GET
-    @Produces(MediaType.APPLICATION_JSON)
-    @PermitAll
-    public Response debugStatus(@PathParam("respondentId") long respondentId) {
-        try {
-            Log.infov("Checking status records for respondent: {0}", respondentId);
-
-            Status status = Status.find("respondentId", respondentId).firstResult();
-
-            if (status == null) {
-                Log.warnv("No status record found for respondent: {0}", respondentId);
-                return Response.ok(new FamilyHistoryReportResponse("No status record found for respondent " + respondentId, false))
-                        .build();
-            }
-
-            Log.infov("Found status record for respondent {0}: XID = {1}", respondentId, status.getXid());
-            return Response.ok(new FamilyHistoryReportResponse(
-                    String.format("Status found - ID: %d, XID: %s, RespondentId: %d",
-                            status.getId(), status.getXid(), status.getRespondentId()), true))
-                    .build();
-
-        } catch (Exception e) {
-            Log.errorv(e, "Failed to check status for respondent {0}: {1}", respondentId, e.getMessage());
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new FamilyHistoryReportResponse("Error checking status: " + e.getMessage(), false))
-                    .build();
-        }
-    }
-
     /**
      * Response object for family history report operations.
      * 

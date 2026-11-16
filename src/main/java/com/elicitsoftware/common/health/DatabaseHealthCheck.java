@@ -11,6 +11,7 @@ package com.elicitsoftware.common.health;
  * ***LICENSE_END***
  */
 
+import io.quarkus.logging.Log;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Readiness;
@@ -60,7 +61,9 @@ public class DatabaseHealthCheck implements HealthCheck {
             
             return HealthCheckResponse.up("Database connection healthy");
         } catch (Exception e) {
-            return HealthCheckResponse.down("Database connection failed: " + e.getMessage());
+            // NFR-010: the probe says that the database is unreachable; the log says why.
+            Log.warn("Database health check failed", e);
+            return HealthCheckResponse.down("Database connection failed");
         }
     }
 }

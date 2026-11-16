@@ -143,6 +143,20 @@ public class SftpService {
     }
 
     /**
+     * UC-004 BR-007: whether a name stays inside the directory it is written to. A plain name is
+     * not empty, is not {@code .} or {@code ..}, and has no path separator and no control character.
+     *
+     * @param fileName the name to check
+     * @return {@code true} if the name is a plain file name
+     */
+    static boolean isPlainFileName(String fileName) {
+        if (fileName == null || fileName.isEmpty() || fileName.equals(".") || fileName.equals("..")) {
+            return false;
+        }
+        return fileName.chars().noneMatch(c -> c == '/' || c == '\\' || Character.isISOControl(c));
+    }
+
+    /**
      * Uploads a file to the configured SFTP server using JSch library.
      * 
      * <p>Establishes a secure SFTP connection to the configured server and uploads
@@ -151,14 +165,21 @@ public class SftpService {
      * 
      * @param fileName the name of the file to upload
      * @param fileData the content of the file as byte array
+     * @throws IllegalArgumentException if the file name is not a plain name in the configured
+     *                                  directory (UC-004 BR-007); nothing is connected or written
      * @throws RuntimeException if upload fails due to connection issues or I/O errors
      */
     public void uploadFile(String fileName, byte[] fileData) {
+        if (!isPlainFileName(fileName)) {
+            throw new IllegalArgumentException("The file name is not a plain name in the upload directory");
+        }
+
         Session session = null;
         ChannelSftp sftpChannel = null;
         
         try {
-            Log.debugv("Connecting to SFTP server {0}:{1} for file upload: {2}", sftpHost, sftpPort, fileName);
+            // UC-004 BR-008: the file name is built from the XID, so records carry the size instead.
+            Log.debugv("Connecting to SFTP server {0}:{1} for a file upload ({2} bytes)", sftpHost, sftpPort, fileData.length);
             
             // Create JSch session with authentication
             session = createAuthenticatedSession();
@@ -183,17 +204,17 @@ public class SftpService {
                 sftpChannel.put(inputStream, fileName, ChannelSftp.OVERWRITE);
             }
             
-            Log.infov("Successfully uploaded file: {0} ({1} bytes) to SFTP server {2}:{3}{4}",
-                     fileName, fileData.length, sftpHost, sftpPort, sftpPath);
+            Log.infov("Successfully uploaded a file ({0} bytes) to SFTP server {1}:{2}{3}",
+                     fileData.length, sftpHost, sftpPort, sftpPath);
             
         } catch (JSchException e) {
-            Log.errorv(e, "SFTP connection failed for file {0}: {1}", fileName, e.getMessage());
+            Log.errorv(e, "SFTP connection failed for a file upload ({0} bytes): {1}", fileData.length, e.getMessage());
             throw new RuntimeException("Failed to connect to SFTP server", e);
         } catch (SftpException e) {
-            Log.errorv(e, "SFTP operation failed for file {0}: {1}", fileName, e.getMessage());
+            Log.errorv(e, "SFTP operation failed for a file upload ({0} bytes): {1}", fileData.length, e.getMessage());
             throw new RuntimeException("Failed to upload file to SFTP server", e);
         } catch (IOException e) {
-            Log.errorv(e, "I/O error during file upload {0}: {1}", fileName, e.getMessage());
+            Log.errorv(e, "I/O error during a file upload ({0} bytes): {1}", fileData.length, e.getMessage());
             throw new RuntimeException("I/O error during file upload", e);
         } finally {
             // Clean up resources

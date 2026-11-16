@@ -141,10 +141,12 @@ public class Row {
      *   <li>Value is wrapped in "card--content--response" class</li>
      *   <li>Includes proper formatting with colon separator and line break</li>
      * </ul>
+     * The label and the value are HTML-encoded (UC-001 BR-002, UC-002 BR-002); {@link #getLabel()}
+     * and {@link #getValue()} return them as they are, for the PDF table.
      *
      * @return a formatted HTML string representing this row
      */
     public String getHTML() {
-        return "<span class=\"card--content--label\">" + label + "</span>" + "<span class=\"card--content--response\">: " + value + "</span><br/>";
+        return "<span class=\"card--content--label\">" + Html.escape(label) + "</span>" + "<span class=\"card--content--response\">: " + Html.escape(value) + "</span><br/>";
     }
 }

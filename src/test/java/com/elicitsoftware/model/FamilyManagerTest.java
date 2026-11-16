@@ -11,6 +11,7 @@ package com.elicitsoftware.model;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.test.LogCapture;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -552,5 +553,25 @@ class FamilyManagerTest {
         List<FamilyHistoryRecord> result = manager.findByRespondentid(7L);
 
         assertSame(stubbed, result);
+    }
+
+    // ------------------------------------------------------------------
+    // NFR-009: building the family writes no answers to the log
+    // ------------------------------------------------------------------
+
+    @Test
+    void addFamily_probandWithCancer_logsNoAnswers() {
+        FamilyManager manager = newManager();
+
+        try (LogCapture log = LogCapture.start()) {
+            manager.addFamily(List.of(
+                    rec("Proband", "Female", 30, "alive").breastCancer("true", 87, "false")
+                            .otherCancer("true", 61, "Zzyzx-Marker", "false").build()));
+
+            assertNotNull(findByName(manager.getFamily(), "Respondent"));
+            assertFalse(log.contains("Proband cancer mapping"), log.text());
+            assertFalse(log.contains("Zzyzx-Marker"), log.text());
+            assertFalse(log.contains("87"), log.text());
+        }
     }
 }

@@ -13,7 +13,6 @@ package com.elicitsoftware.model;
 
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
-import io.quarkus.logging.Log;
 
 import javax.management.relation.RelationException;
 import java.util.ArrayList;
@@ -325,18 +324,6 @@ public class FamilyManager {
                 }
                 if (hasCancerHistory(fact.unknownCancer)) {
                     p.setUnknown_Cancer(Objects.requireNonNullElse(fact.unknownCancerAge, UKN_AGE).toString());
-                }
-
-                if ("Proband".equals(fact.step) || "Proband Cancer".equals(fact.step)) {
-                    Log.infof(
-                            "Proband cancer mapping: step=%s breast=%s age=%s uterine=%s age=%s familyMember=%s",
-                            fact.step,
-                            fact.breastCancer,
-                            fact.breastCancerAge,
-                            fact.endometrialOrUterineCancer,
-                            fact.endometrialOrUterineCancerAge,
-                            p.getFamilyMember()
-                    );
                 }
             } catch (RelationException e) {
                 // There are some steps that are not relationships. i.e. Demographics

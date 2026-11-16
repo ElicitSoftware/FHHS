@@ -29,6 +29,13 @@
 
 1. The system substitutes a placeholder message for the diagram. Use case continues at step 4.
 
+### A2: Request Has No Respondent ID
+
+**Trigger:** The request has no body, or its respondent ID is missing or not a positive number (step 1).
+**Flow:**
+
+1. The system answers 400 and reads no respondent data (NFR-010). Use case ends.
+
 ## Postconditions
 
 ### Success Postconditions
@@ -43,7 +50,11 @@
 
 ### BR-001: Pedigree Diagram Degrades Gracefully
 
-If the external Pedigree Drawing Service fails, times out, or returns invalid diagram content, the report must still be generated, showing a placeholder message instead of the diagram rather than failing the request.
+If the external Pedigree Drawing Service fails, times out, or returns invalid diagram content, the report must still be generated, showing a placeholder message instead of the diagram rather than failing the request. The placeholder is the fixed sentence "Pedigree diagram unavailable." in the HTML and in the PDF; the cause (the service's status code or the connection error) is written to the log and the trace, never into the report (NFR-010).
+
+### BR-002: The Family Table Is Sent, Not Recorded
+
+The family table sent to the Pedigree Drawing Service is written to no log or trace. The log records how many rows and characters were sent and the status code the service answered with (NFR-009).
 
 ---
 
@@ -60,10 +71,3 @@ If the external Pedigree Drawing Service fails, times out, or returns invalid di
 | Tested      | All tests pass, pending final acceptance.        |
 | Done        | Fully implemented, tested, and accepted.         |
 | Obsolete    | No longer valid, superseded by another use case. |
-
-### Note
-
-FHHS also exposes `POST /pedigree/family`, a debug/introspection endpoint that
-returns the assembled family data as plain text without rendering a diagram.
-It supports step 2 above during troubleshooting and is not modeled as a
-separate use case.

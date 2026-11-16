@@ -24,7 +24,7 @@ import jakarta.ws.rs.ext.Provider;
  * or column. The
  * answer is 503 with the same instruction the log and the readiness probe carry, so a caller
  * (Survey's report links, its post-survey action) sees why rather than a stack trace. The
- * liveness-style health endpoint and the debug endpoint stay reachable.
+ * liveness-style health endpoint stays reachable.
  */
 @Provider
 public class FamilyHistorySurveyRequiredFilter implements ContainerRequestFilter {
@@ -43,9 +43,9 @@ public class FamilyHistorySurveyRequiredFilter implements ContainerRequestFilter
                 .build());
     }
 
-    /** The endpoints that answer without the survey: they exist to say what is wrong. */
+    /** The endpoint that answers without the survey: it only says the service is running. */
     static boolean isAlwaysAllowed(String path) {
         String p = path.startsWith("/") ? path.substring(1) : path;
-        return p.equals("familyhistory/health") || p.startsWith("familyhistory/debug/");
+        return p.equals("familyhistory/health");
     }
 }

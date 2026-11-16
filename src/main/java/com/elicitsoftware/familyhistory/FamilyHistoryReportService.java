@@ -27,12 +27,16 @@ import io.quarkus.logging.Log;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Service for generating family history reports as PDF and XML metadata files
@@ -159,13 +163,20 @@ public class FamilyHistoryReportService {
      * </ul>
      */
     @ConfigProperty(name = "family.history.sftp.xml.template", defaultValue = """
-            "<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <pdf>
                 <externalSourceId>{RespondentId}</externalSourceId>
                 <mrn>{Xid}</mrn>
             </pdf>
             """)
     String xmlTemplate;
+
+    /** UC-004 BR-005: a placeholder in the XML template, such as {@code {Xid}}. */
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\{(\\w+)\\}");
+
+    /** UC-004 BR-007: the error recorded when the XID cannot name the delivery files. */
+    static final String INVALID_XID_MESSAGE =
+            "The respondent's external ID is missing or cannot be used as a file name";
 
         /**
      * Injected SFTP service for file upload operations.
@@ -335,42 +346,62 @@ public class FamilyHistoryReportService {
      */
     @Transactional
     public void doGenerateAndUploadFamilyHistoryReport(Status status) throws Exception {
-        Log.infov("Generating family history report for respondent {0} with external ID {1}",
-                status.getRespondentId(), status.getXid());
+        long respondentId = status.getRespondentId();
+
+        // UC-004 BR-007: an XID that cannot name a file fails here, before any work is done.
+        String baseName = deliveryBaseName(status.getXid());
+
+        // UC-004 BR-008: records below name the respondent ID, the kind of file and its size.
+        Log.infov("Generating family history report for respondent {0}", respondentId);
 
         // Generate PDF report
-        Log.infov("Starting PDF generation for respondent: {0}", status.getRespondentId());
-        byte[] pdfData = generateFamilyHistoryPdf(status.getRespondentId());
-        String pdfFileName = status.getXid() + ".pdf";
-        Log.infov("PDF generated successfully: {0} ({1} bytes)", pdfFileName, pdfData.length);
+        Log.infov("Starting PDF generation for respondent: {0}", respondentId);
+        byte[] pdfData = generateFamilyHistoryPdf(respondentId);
+        String pdfFileName = baseName + ".pdf";
+        Log.infov("PDF generated successfully for respondent {0} ({1} bytes)", respondentId, pdfData.length);
 
         // Generate XML metadata
-        Log.infov("Generating XML metadata for respondent: {0}", status.getRespondentId());
+        Log.infov("Generating XML metadata for respondent: {0}", respondentId);
         String xmlMetadata = generateXmlMetadata(status);
-        String xmlFileName = status.getXid() + "-index.xml";
-        Log.infov("XML metadata generated successfully: {0} ({1} bytes)", xmlFileName, xmlMetadata.length());
+        String xmlFileName = baseName + "-index.xml";
+        Log.infov("XML metadata generated successfully for respondent {0} ({1} characters)",
+                respondentId, xmlMetadata.length());
 
 
         // Upload files to SFTP server
-        Log.infov("Starting SFTP upload for files: {0} and {1}", pdfFileName, xmlFileName);
+        Log.infov("Starting SFTP upload of the PDF and XML metadata for respondent {0}", respondentId);
         try {
-            Log.infov("Uploading PDF file: {0}", pdfFileName);
             sftpService.uploadFile(pdfFileName, pdfData);
-            Log.infov("PDF file uploaded successfully: {0}", pdfFileName);
+            Log.infov("PDF file uploaded successfully for respondent {0}", respondentId);
         } catch (Exception e) {
-            Log.errorv(e, "Failed to upload PDF file {0}: {1}", pdfFileName, e.getMessage());
+            Log.errorv(e, "Failed to upload the PDF file for respondent {0}: {1}", respondentId, e.getMessage());
             throw e;
         }
         try {
-            Log.infov("Uploading XML file: {0}", xmlFileName);
             sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
-            Log.infov("XML file uploaded successfully: {0}", xmlFileName);
-            Log.infov("XML content: {0}", xmlMetadata);
+            Log.infov("XML metadata file uploaded successfully for respondent {0}", respondentId);
         } catch (Exception e) {
-            Log.errorv(e, "Failed to upload XML file {0}: {1}", xmlFileName, e.getMessage());
+            Log.errorv(e, "Failed to upload the XML metadata file for respondent {0}: {1}", respondentId, e.getMessage());
             throw e;
         }
-        Log.infov("Successfully uploaded family history report files for external ID: {0}", status.getXid());
+        Log.infov("Successfully uploaded family history report files for respondent {0}", respondentId);
+    }
+
+    /**
+     * UC-004 BR-007: the name both delivery files are built from. A usable XID is returned exactly
+     * as it is stored, so the file names of an ordinary XID do not change.
+     *
+     * @param xid the respondent's external ID
+     * @return the XID, unchanged
+     * @throws IllegalStateException if the XID is missing or blank, is {@code .} or {@code ..}, or
+     *                               contains a path separator or a control character; the message
+     *                               names the rule and never the value
+     */
+    static String deliveryBaseName(String xid) {
+        if (xid == null || xid.isBlank() || !SftpService.isPlainFileName(xid)) {
+            throw new IllegalStateException(INVALID_XID_MESSAGE);
+        }
+        return xid;
     }
 
     /**
@@ -495,9 +526,9 @@ public class FamilyHistoryReportService {
      * The resulting XML contains document metadata that accompanies the PDF
      * report when uploaded to the SFTP server.</p>
      * 
-     * <p>The method performs string replacement for all supported placeholders
-     * defined in the XML template. Each placeholder is replaced with the
-     * corresponding value from the status object.</p>
+     * <p>The method replaces all supported placeholders defined in the XML template
+     * in a single pass. Each placeholder is replaced with the corresponding value
+     * from the status object.</p>
      * 
      * @param status the status record containing all the data needed for
      *               placeholder substitution in the XML template
@@ -506,28 +537,33 @@ public class FamilyHistoryReportService {
      * @see #xmlTemplate
      */
     private String generateXmlMetadata(Status status) {
-        Log.debugv("Generating XML metadata for respondent: {0} with external ID: {1}",
-                status.getRespondentId(), status.getXid());
+        Log.debugv("Generating XML metadata for respondent: {0}", status.getRespondentId());
 
-        String xmlDoc = xmlTemplate;
         // Any value in the status document can be included in the xml.
-        // Use null-safe replacements to handle missing/null values
-        xmlDoc = xmlDoc.replace("{Xid}", nullSafe(status.getXid()));
-        xmlDoc = xmlDoc.replace("{RespondentId}", Long.toString(status.getRespondentId()));
-        xmlDoc = xmlDoc.replace("{SurveyId}", Long.toString(status.getSurveyId()));
-        xmlDoc = xmlDoc.replace("{FirstName}", nullSafe(status.getFirstName()));
-        xmlDoc = xmlDoc.replace("{LastName}", nullSafe(status.getLastName()));
-        xmlDoc = xmlDoc.replace("{MiddleName}", nullSafe(status.getMiddleName()));
-        xmlDoc = xmlDoc.replace("{Dob}", status.getDob() != null ? status.getDob().toString() : "");
-        xmlDoc = xmlDoc.replace("{Email}", nullSafe(status.getEmail()));
-        xmlDoc = xmlDoc.replace("{Phone}", nullSafe(status.getPhone()));
-        xmlDoc = xmlDoc.replace("{DepartmentName}", nullSafe(status.getDepartmentName()));
-        xmlDoc = xmlDoc.replace("{DepartmentID}", Long.toString(status.getDepartmentId()));
-        xmlDoc = xmlDoc.replace("{AccessCode}", nullSafe(status.getAccessCode()));
-        xmlDoc = xmlDoc.replace("{Status}", nullSafe(status.getStatus()));
-        xmlDoc = xmlDoc.replace("{Created}", nullSafe(status.getCreated()));
-        xmlDoc = xmlDoc.replace("{Finalized}", nullSafe(status.getFinalized()));
-        return xmlDoc;
+        // Use null-safe values to handle missing/null values
+        Map<String, String> values = new HashMap<>();
+        values.put("Xid", nullSafe(status.getXid()));
+        values.put("RespondentId", Long.toString(status.getRespondentId()));
+        values.put("SurveyId", Long.toString(status.getSurveyId()));
+        values.put("FirstName", nullSafe(status.getFirstName()));
+        values.put("LastName", nullSafe(status.getLastName()));
+        values.put("MiddleName", nullSafe(status.getMiddleName()));
+        values.put("Dob", status.getDob() != null ? status.getDob().toString() : "");
+        values.put("Email", nullSafe(status.getEmail()));
+        values.put("Phone", nullSafe(status.getPhone()));
+        values.put("DepartmentName", nullSafe(status.getDepartmentName()));
+        values.put("DepartmentID", Long.toString(status.getDepartmentId()));
+        values.put("AccessCode", nullSafe(status.getAccessCode()));
+        values.put("Status", nullSafe(status.getStatus()));
+        values.put("Created", nullSafe(status.getCreated()));
+        values.put("Finalized", nullSafe(status.getFinalized()));
+
+        // UC-004 BR-005: one pass over the template. A value is placed as it is and is never read
+        // again, so placeholder text inside a value stays literal; an unknown placeholder is kept.
+        return PLACEHOLDER.matcher(xmlTemplate).replaceAll(match -> {
+            String value = values.get(match.group(1));
+            return Matcher.quoteReplacement(value != null ? value : match.group());
+        });
     }
     
     /**
