@@ -82,7 +82,7 @@ SFTP delivery is disabled unless configuration enables it; while disabled, no co
 
 ### BR-004: Report Composition Is Configuration-Driven
 
-The set of reports assembled into the combined PDF is determined by the survey's configured report list, not hardcoded in FHHS. The default configuration composes the Proband (UC-001), Cancer Summary (UC-002), and Pedigree (UC-003) reports, in that order. Each report is invoked at the address its definition carries. FHHS presents the service token on that call only when the address's origin is one the deployment trusts (`elicit.service.trusted-origins`, UC-006 BR-006), follows no redirect, and with no token configured does not make the call; the report's section then carries the error, as for any report that could not be obtained.
+The set of reports assembled into the combined PDF is determined by the survey's configured report list, not hardcoded in FHHS. The default configuration composes the Proband (UC-001), Cancer Summary (UC-002), and Pedigree (UC-003) reports, in that order. Each report is invoked at the address its definition carries. FHHS presents the service token on that call only when the address's origin is one the deployment trusts (`elicit.service.trusted-origins`, UC-006 BR-006), follows no redirect, and with no token configured does not make the call; the report's section then carries the error, as for any report that could not be obtained. The call waits at most 5 seconds for the connection and 60 seconds for the answer (NFR-013); a report that does not answer in time is one that could not be obtained.
 
 ### BR-005: XML Metadata Placeholders
 

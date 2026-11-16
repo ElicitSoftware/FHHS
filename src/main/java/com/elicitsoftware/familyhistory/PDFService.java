@@ -50,11 +50,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service for generating PDF documents and reports.
@@ -128,6 +130,19 @@ public class PDFService {
      * Margin within table cells.
      */
     private static final float CELL_MARGIN = 2;
+
+    /** How long a report service may take to accept the connection (NFR-013). */
+    static final Duration REPORT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
+
+    /**
+     * How long a report service may take to answer (NFR-013). The delivery runs in the
+     * background, so a service that never answers must become an error section rather than
+     * hold the delivery (UC-004 BR-004).
+     */
+    static final Duration REPORT_READ_TIMEOUT = Duration.ofSeconds(60);
+
+    /** The read timeout in use; a field so PDFServiceCallReportTest can exercise a short one. */
+    Duration reportReadTimeout = REPORT_READ_TIMEOUT;
 
     /**
      * The PDF document being constructed.
@@ -840,7 +855,8 @@ public class PDFService {
      *
      * <p>UC-004 BR-004: the address comes with the survey definition, so the service token goes
      * with the call only when the address's origin is one the deployment trusts (UC-006 BR-006).
-     * No redirect is followed, and with no token configured the call is not made.</p>
+     * No redirect is followed, and with no token configured the call is not made. The call is
+     * bounded by {@link #REPORT_CONNECT_TIMEOUT} and the read timeout (NFR-013).</p>
      *
      * @param rpt the report definition containing the service URL
      * @param respondentId the respondent ID for the report
@@ -857,7 +873,9 @@ public class PDFService {
             URI uri = new URI(rpt.url);
             RestClientBuilder builder = RestClientBuilder.newBuilder()
                     .baseUri(uri)
-                    .followRedirects(false);
+                    .followRedirects(false)
+                    .connectTimeout(REPORT_CONNECT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+                    .readTimeout(reportReadTimeout.toMillis(), TimeUnit.MILLISECONDS);
             String authorization = serviceToken.authorizationFor(uri).orElse(null);
             if (authorization != null) {
                 // Sent, never recorded: nothing here logs the request or its headers.
