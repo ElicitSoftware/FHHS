@@ -11,6 +11,7 @@ package com.elicitsoftware.proband;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.test.ServiceCalls;
 import com.elicitsoftware.model.CancerHistoryRepository;
 import com.elicitsoftware.model.FamilyHistoryRecord;
 import com.elicitsoftware.request.ReportRequest;
@@ -102,6 +103,7 @@ class ServiceTest {
     private Service newService(CancerHistoryRepository repo) {
         Service service = new Service();
         service.cancerHistoryRepository = repo;
+        service.respondentScope = ServiceCalls.anyRespondent();
         return service;
     }
 

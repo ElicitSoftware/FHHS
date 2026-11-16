@@ -14,6 +14,7 @@ package com.elicitsoftware.familyhistory;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.request.ReportRequest;
 import jakarta.enterprise.context.RequestScoped;
+import com.elicitsoftware.common.security.RespondentScope;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -58,6 +59,10 @@ public class FamilyHistoryService {
     @Inject
     FamilyHistoryReportService reportService;
 
+    /** Lets through only a respondent of the Family History Survey (UC-006 BR-009). */
+    @Inject
+    RespondentScope respondentScope;
+
     /** UC-004 BR-009: what a caller is told when the request could not be started. */
     static final String START_FAILED_MESSAGE = "Failed to start the family history report";
 
@@ -77,6 +82,7 @@ public class FamilyHistoryService {
      * @return HTTP response indicating success or failure:
      *         <ul>
      *         <li>200 OK - Report generation successfully initiated</li>
+     *         <li>404 Not Found - the respondent is not one of the Family History Survey (UC-004 A5)</li>
      *         <li>400 Bad Request - No body, a respondent ID that is not positive (UC-004 A4),
      *             or no status record for the respondent</li>
      *         <li>500 Internal Server Error - Unexpected error during processing; the body is a
@@ -92,6 +98,8 @@ public class FamilyHistoryService {
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
     public Response generateFamilyHistoryReport(@Valid @NotNull ReportRequest request) {
+        // Outside the try: the 404 is the answer, not a failure to start the delivery.
+        respondentScope.require("/familyhistory/generate", request.id);
         try {
             Log.infov("Received family history report generation request for respondent: {0}", request.id);
 

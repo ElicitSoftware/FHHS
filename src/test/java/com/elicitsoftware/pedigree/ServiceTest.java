@@ -49,6 +49,7 @@ class ServiceTest {
     private Service newService(FamilyManager familyManager) {
         Service service = new Service();
         service.familyManager = familyManager;
+        service.respondentScope = ServiceCalls.anyRespondent();
         return service;
     }
 

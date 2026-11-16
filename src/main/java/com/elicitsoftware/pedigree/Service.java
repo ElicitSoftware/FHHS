@@ -20,6 +20,7 @@ import com.elicitsoftware.response.pdf.Content;
 import com.elicitsoftware.response.pdf.PDFDocument;
 import com.elicitsoftware.response.pdf.Style;
 import jakarta.enterprise.context.RequestScoped;
+import com.elicitsoftware.common.security.RespondentScope;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -89,6 +90,10 @@ public class Service {
     @Inject
     FamilyManager familyManager;
 
+    /** Lets through only a respondent of the Family History Survey (UC-006 BR-009). */
+    @Inject
+    RespondentScope respondentScope;
+
     /**
      * Injected OpenTelemetry tracer for distributed tracing.
      * <p>
@@ -145,6 +150,7 @@ public class Service {
     @Produces("application/json")
     @Transactional()
     public ReportResponse report(@Valid @NotNull ReportRequest req) {
+        respondentScope.require("/pedigree/report", req.id);
         Log.debugf("Generating pedigree report for respondent id=%d", req.id);
 
         Family family = familyManager.getFamily(req.id);

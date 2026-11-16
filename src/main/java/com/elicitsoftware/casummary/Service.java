@@ -24,6 +24,7 @@ import com.elicitsoftware.response.pdf.PDFDocument;
 import com.elicitsoftware.response.pdf.Style;
 import com.elicitsoftware.response.pdf.Table;
 import jakarta.enterprise.context.RequestScoped;
+import com.elicitsoftware.common.security.RespondentScope;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -70,6 +71,10 @@ public class Service {
     @Inject
     CancerHistoryRepository cancerHistoryRepository;
 
+    /** Lets through only a respondent of the Family History Survey (UC-006 BR-009). */
+    @Inject
+    RespondentScope respondentScope;
+
     /**
      * Default constructor.
      */
@@ -98,6 +103,7 @@ public class Service {
     @Produces("application/json")
     @Transactional
     public ReportResponse report(@Valid @NotNull ReportRequest req) {
+        respondentScope.require("/casummary/report", req.id);
         Log.debugf("Generating cancer summary report for respondent id=%d", req.id);
 
         Table table = new Table();
