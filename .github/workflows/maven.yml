@@ -22,6 +22,11 @@ on:
 jobs:
   test:
     name: Run tests
+    # Runs only for a release tag. Pull requests and branch pushes still trigger the workflow so
+    # that the ruleset's required check reports, but the job is skipped there, and a skipped job
+    # satisfies a required check. Actions minutes are spent once per release, not on every change. A manual run
+    # still tests, since the release build below needs this job.
+    if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
     runs-on: ubuntu-latest
 
     steps:
