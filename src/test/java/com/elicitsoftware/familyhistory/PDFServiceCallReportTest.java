@@ -126,29 +126,32 @@ class PDFServiceCallReportTest {
         assertNull(response.pdf);
     }
 
+    // UC-004 BR-004, NFR-010: the section names the report and the status, never what the service answered.
     @Test
-    void callReport_errorResponseWithEntityBody_usesResponseBodyAsErrorMessage() throws Exception {
-        String url = startServer(500, "text/plain", "database connection refused");
+    void callReport_errorResponseWithEntityBody_givesTheStatusNotTheBody() throws Exception {
+        String url = startServer(500, "text/plain", "database connection refused at db.internal:5432");
 
-        ReportResponse response = invokeCallReport(url, 42L);
+        try (LogCapture log = LogCapture.start()) {
+            ReportResponse response = invokeCallReport(url, 42L);
 
-        assertEquals("Error: Cancer Summary", response.title);
-        assertEquals("database connection refused", response.innerHTML);
-        assertNotNull(response.pdf);
-        assertEquals("Error: Cancer Summary", response.pdf.title);
-        assertEquals(1, response.pdf.content.length);
-        assertTrue(response.pdf.content[0].text.contains("database connection refused"));
+            assertEquals("Error: Cancer Summary", response.title);
+            assertEquals("The Cancer Summary report could not be generated (HTTP 500).", response.innerHTML);
+            assertNotNull(response.pdf);
+            assertEquals("Error: Cancer Summary", response.pdf.title);
+            assertEquals(1, response.pdf.content.length);
+            assertEquals("The Cancer Summary report could not be generated (HTTP 500).", response.pdf.content[0].text);
+            assertFalse(log.contains("db.internal"), "NFR-009: the service's answer is not logged either");
+        }
     }
 
     @Test
-    void callReport_forbiddenResponseWithoutEntity_usesLicenseErrorMessage() throws Exception {
+    void callReport_forbiddenResponseWithoutEntity_givesTheStatus() throws Exception {
         String url = startServer(403, null, "");
 
         ReportResponse response = invokeCallReport(url, 42L);
 
         assertEquals("Error: Cancer Summary", response.title);
-        assertTrue(response.innerHTML.contains("Access forbidden") || response.innerHTML.contains("HTTP 403"),
-                "expected a 403-specific message, got: " + response.innerHTML);
+        assertEquals("The Cancer Summary report could not be generated (HTTP 403).", response.innerHTML);
     }
 
     @Test
@@ -160,7 +163,9 @@ class PDFServiceCallReportTest {
 
         assertEquals("Error: Cancer Summary", response.title);
         assertNotNull(response.pdf);
-        assertTrue(response.pdf.content[0].text.startsWith("Error generating Cancer Summary report:"));
+        assertEquals("The Cancer Summary report could not be generated (the service did not answer).",
+                response.pdf.content[0].text);
+        assertFalse(response.innerHTML.contains("invalid"), "NFR-010: no exception message reaches the report");
     }
 
     private static final String OK_BODY = "{\"title\":\"Cancer Summary\",\"innerHTML\":\"<p>ok</p>\"}";
@@ -280,7 +285,8 @@ class PDFServiceCallReportTest {
             assertEquals(1, calls.get());
             assertEquals("Error: Cancer Summary", response.title);
             assertNotNull(response.pdf);
-            assertTrue(response.pdf.content[0].text.startsWith("Error generating Cancer Summary report:"));
+            assertEquals("The Cancer Summary report could not be generated (the service did not answer).",
+                    response.pdf.content[0].text);
         } finally {
             release.countDown();
         }
