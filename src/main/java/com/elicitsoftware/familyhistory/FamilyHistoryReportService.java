@@ -178,7 +178,7 @@ public class FamilyHistoryReportService {
     static final String INVALID_XID_MESSAGE =
             "The respondent's external ID is missing or cannot be used as a file name";
 
-        /**
+    /**
      * Injected SFTP service for file upload operations.
      */
     @Inject
@@ -333,7 +333,7 @@ public class FamilyHistoryReportService {
                 }
             }
         } else {
-            Log.warn("No Post Survey Action found with name 'Generate Family History Report'");
+            Log.warn("No post-survey action found for family.history.upload.psa.key; failed uploads are not retried");
         }
     }
 
