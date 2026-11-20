@@ -11,6 +11,7 @@ package com.elicitsoftware.model;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.test.LogCapture;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -25,9 +26,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * FamilyManager builds the entire pedigree tree by matching {@code FamilyHistoryRecord.step}
  * against hardcoded string literals ("Mother", "Sibling", "Mother's Sibling", ...). These
  * literals originate from {@code dim_step.value} via {@code fact_sections_view}. Under
- * Survey's planned Kimball Type 2 migration, {@code dim_step.value} is updated in place
- * (SCD Type 1) whenever a step is renamed in the Author Tool - see
- * {@code research/Kimball_type2.md} section 3. These tests lock down the current behavior
+ * Survey's Kimball Type 2 schema (Survey UC-002 BR-009), {@code dim_step.value} is updated
+ * in place (SCD Type 1) whenever a step is renamed in the Author Tool, so a rename changes
+ * these labels in every historical report. These tests lock down the current behavior
  * so that any refactor (or any future step rename) that changes this matching is caught
  * immediately instead of silently dropping family members from reports.
  */
@@ -552,5 +553,25 @@ class FamilyManagerTest {
         List<FamilyHistoryRecord> result = manager.findByRespondentid(7L);
 
         assertSame(stubbed, result);
+    }
+
+    // ------------------------------------------------------------------
+    // NFR-009: building the family writes no answers to the log
+    // ------------------------------------------------------------------
+
+    @Test
+    void addFamily_probandWithCancer_logsNoAnswers() {
+        FamilyManager manager = newManager();
+
+        try (LogCapture log = LogCapture.start()) {
+            manager.addFamily(List.of(
+                    rec("Proband", "Female", 30, "alive").breastCancer("true", 87, "false")
+                            .otherCancer("true", 61, "Zzyzx-Marker", "false").build()));
+
+            assertNotNull(findByName(manager.getFamily(), "Respondent"));
+            assertFalse(log.contains("Proband cancer mapping"), log.text());
+            assertFalse(log.contains("Zzyzx-Marker"), log.text());
+            assertFalse(log.contains("87"), log.text());
+        }
     }
 }

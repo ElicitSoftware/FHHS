@@ -11,6 +11,7 @@ package com.elicitsoftware.familyhistory;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.common.security.ServiceToken;
 import com.elicitsoftware.model.ReportDefinition;
 import com.elicitsoftware.model.Respondent;
 import com.elicitsoftware.request.ReportRequest;
@@ -24,11 +25,13 @@ import io.quarkus.logging.Log;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer;
 import jakarta.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.client.ClientRequestFilter;
+import jakarta.ws.rs.core.HttpHeaders;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory;
 import org.apache.batik.bridge.BridgeContext;
 import org.apache.batik.bridge.GVTBuilder;
-import org.apache.batik.bridge.UserAgentAdapter;
 import org.apache.batik.gvt.GraphicsNode;
 import org.apache.batik.util.XMLResourceDescriptor;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -47,11 +50,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service for generating PDF documents and reports.
@@ -126,6 +131,19 @@ public class PDFService {
      */
     private static final float CELL_MARGIN = 2;
 
+    /** How long a report service may take to accept the connection (NFR-013). */
+    static final Duration REPORT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
+
+    /**
+     * How long a report service may take to answer (NFR-013). The delivery runs in the
+     * background, so a service that never answers must become an error section rather than
+     * hold the delivery (UC-004 BR-004).
+     */
+    static final Duration REPORT_READ_TIMEOUT = Duration.ofSeconds(60);
+
+    /** The read timeout in use; a field so PDFServiceCallReportTest can exercise a short one. */
+    Duration reportReadTimeout = REPORT_READ_TIMEOUT;
+
     /**
      * The PDF document being constructed.
      */
@@ -163,6 +181,12 @@ public class PDFService {
     String baseUrl;
 
     /**
+     * The platform service token, presented to a report at a trusted origin (UC-004 BR-004).
+     */
+    @Inject
+    ServiceToken serviceToken;
+
+    /**
      * Generates a PDF report for a specific respondent.
      *
      * @param respondentId the ID of the respondent
@@ -198,11 +222,11 @@ public class PDFService {
                     continue;
                 }
 
-                Log.debugv("FHHS PDFService.generatePDF - Processing response: {}", response.title);
-                Log.debugv("  response.pdf is null: {}", (response.pdf == null));
+                Log.debugv("FHHS PDFService.generatePDF - Processing response: {0}", response.title);
+                Log.debugv("  response.pdf is null: {0}", (response.pdf == null));
                 if (response.pdf != null) {
-                    Log.debugv("  response.pdf.title: {}", response.pdf.title);
-                    Log.debugv("  response.pdf.content length: {}", (response.pdf.content != null ? response.pdf.content.length : "null"));
+                    Log.debugv("  response.pdf.title: {0}", response.pdf.title);
+                    Log.debugv("  response.pdf.content length: {0}", (response.pdf.content != null ? response.pdf.content.length : "null"));
                 }
 
                 // If the PDF payload is missing, render a safe error block instead of crashing
@@ -368,7 +392,7 @@ public class PDFService {
 
             // Build GVT
             GVTBuilder builder = new GVTBuilder();
-            BridgeContext ctx = new BridgeContext(new UserAgentAdapter());
+            BridgeContext ctx = new BridgeContext(new NoExternalResourcesUserAgent());
             GraphicsNode graphicsNode = builder.build(ctx, svgDocument);
 
             // Use actual computed bounds that include all rendered content
@@ -829,6 +853,11 @@ public class PDFService {
     /**
      * Calls a report service endpoint to generate report content.
      *
+     * <p>UC-004 BR-004: the address comes with the survey definition, so the service token goes
+     * with the call only when the address's origin is one the deployment trusts (UC-006 BR-006).
+     * No redirect is followed, and with no token configured the call is not made. The call is
+     * bounded by {@link #REPORT_CONNECT_TIMEOUT} and the read timeout (NFR-013).</p>
+     *
      * @param rpt the report definition containing the service URL
      * @param respondentId the respondent ID for the report
      * @return the report response containing generated content
@@ -837,71 +866,71 @@ public class PDFService {
         try {
             ReportRequest request = new ReportRequest();
             request.id = respondentId;
-            ReportService reportService = RestClientBuilder.newBuilder()
-                    .baseUri(new URI(rpt.url))
-                    .build(ReportService.class);
+            if (!serviceToken.isConfigured()) {
+                // UC-006 A3: never an unauthenticated call "to see"; the report's section says why.
+                throw new IllegalStateException(ServiceToken.NOT_CONFIGURED);
+            }
+            URI uri = new URI(rpt.url);
+            RestClientBuilder builder = RestClientBuilder.newBuilder()
+                    .baseUri(uri)
+                    .followRedirects(false)
+                    .connectTimeout(REPORT_CONNECT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+                    .readTimeout(reportReadTimeout.toMillis(), TimeUnit.MILLISECONDS);
+            String authorization = serviceToken.authorizationFor(uri).orElse(null);
+            if (authorization != null) {
+                // Sent, never recorded: nothing here logs the request or its headers.
+                builder.register((ClientRequestFilter) context ->
+                        context.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, authorization));
+            } else {
+                // UC-006 A7: the origin is configuration and definition data, not respondent data.
+                Log.warnv("The {0} report is called without the service token: its origin {1} is not trusted. "
+                                + "List it in {2} if it is a service of this platform.", rpt.name,
+                        ServiceToken.originOf(uri).orElse("(not an http or https address)"),
+                        ServiceToken.ORIGINS_VARIABLE);
+            }
+            ReportService reportService = builder.build(ReportService.class);
             ReportResponse reportResponse = reportService.callReport(request);
             return reportResponse;
         } catch (jakarta.ws.rs.WebApplicationException e) {
-            // Extract detailed service error message
-            String errorMessage = "Service error: " + e.getMessage();
-            if (e.getResponse() != null) {
-                int status = e.getResponse().getStatus();
-                if (e.getResponse().hasEntity()) {
-                    try {
-                        String responseBody = e.getResponse().readEntity(String.class);
-                        if (responseBody != null && !responseBody.trim().isEmpty()) {
-                            errorMessage = responseBody;
-                        } else {
-                            errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
-                        }
-                    } catch (Exception readException) {
-                        errorMessage = (status == 403)
-                                ? "Access forbidden - License validation may have failed. Please check your license configuration."
-                                : "Service error (HTTP " + status + "): " + e.getMessage();
-                    }
-                } else {
-                    errorMessage = (status == 403)
-                            ? "Access forbidden - License validation may have failed. Please check your license configuration."
-                            : "Service error (HTTP " + status + "): " + e.getMessage();
-                }
-            }
-
-            ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = "Error: " + rpt.name;
-            reportResponse.innerHTML = errorMessage;
-
-            // Initialize PDF document with detailed error message
-            com.elicitsoftware.response.pdf.PDFDocument pdfDoc = new com.elicitsoftware.response.pdf.PDFDocument();
-            pdfDoc.title = "Error: " + rpt.name;
-            pdfDoc.pageBreak = false;
-            Content errorContent = new Content();
-            String cleanErrorMessage = ("Error generating " + rpt.name + " report: " + errorMessage).replaceAll("[\\r\\n\\t]", " ").trim();
-            errorContent.text = cleanErrorMessage;
-            pdfDoc.content = new Content[]{errorContent};
-            reportResponse.pdf = pdfDoc;
-            
-            Log.errorv("FHHS PDFService.callReport - Error for {}", rpt.name);
-            Log.errorv("  Error message: {}", cleanErrorMessage);
-            Log.errorv("  PDF title: {}", pdfDoc.title);
-            Log.errorv("  PDF content length: {}", (pdfDoc.content != null ? pdfDoc.content.length : "null"));
-            Log.errorv("  PDF content[0].text: {}", (pdfDoc.content != null && pdfDoc.content.length > 0 ? pdfDoc.content[0].text : "null"));
-            
-            return reportResponse;
+            // NFR-010: the report gets the status only; what the service answered stays out of it,
+            // and out of the log too (NFR-009: it may be a report payload).
+            String status = e.getResponse() != null ? "HTTP " + e.getResponse().getStatus() : "no response";
+            Log.errorv("FHHS PDFService.callReport - Error for {0} ({1}) for respondent {2}", rpt.name, status,
+                    respondentId);
+            return errorReport(rpt.name, status);
         } catch (Exception e) {
-            // Generic error path
-            ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = "Error: " + rpt.name;
-            reportResponse.innerHTML = e.getMessage();
-
-            com.elicitsoftware.response.pdf.PDFDocument pdfDoc = new com.elicitsoftware.response.pdf.PDFDocument();
-            pdfDoc.title = "Error: " + rpt.name;
-            pdfDoc.pageBreak = false;
-            Content errorContent = new Content();
-            errorContent.text = ("Error generating " + rpt.name + " report: " + (e.getMessage() != null ? e.getMessage() : "Unknown error")).replaceAll("[\\r\\n\\t]", " ").trim();
-            pdfDoc.content = new Content[]{errorContent};
-            reportResponse.pdf = pdfDoc;
-            return reportResponse;
+            // UC-006 A3: with no token the section says so; any other cause is logged, not shown.
+            boolean noToken = e instanceof IllegalStateException && ServiceToken.NOT_CONFIGURED.equals(e.getMessage());
+            if (!noToken) {
+                Log.errorv("FHHS PDFService.callReport - {0} for {1} for respondent {2}", e.getClass().getSimpleName(),
+                        rpt.name, respondentId);
+            }
+            return errorReport(rpt.name, noToken ? ServiceToken.NOT_CONFIGURED : "the service did not answer");
         }
+    }
+
+    /**
+     * UC-004 BR-004, NFR-010: the section of a report that could not be obtained. It carries a
+     * fixed sentence naming the report and the reason, never an exception message or the body
+     * the service answered with.
+     *
+     * @param name   the report's name, from its definition
+     * @param reason the HTTP status, "the service did not answer" or the missing-token reason
+     * @return the error section, for the page and the PDF alike
+     */
+    static ReportResponse errorReport(String name, String reason) {
+        String sentence = "The " + name + " report could not be generated (" + reason + ").";
+        ReportResponse reportResponse = new ReportResponse();
+        reportResponse.title = "Error: " + name;
+        reportResponse.innerHTML = sentence;
+
+        com.elicitsoftware.response.pdf.PDFDocument pdfDoc = new com.elicitsoftware.response.pdf.PDFDocument();
+        pdfDoc.title = "Error: " + name;
+        pdfDoc.pageBreak = false;
+        Content errorContent = new Content();
+        errorContent.text = sentence.replaceAll("[\\r\\n\\t]", " ").trim();
+        pdfDoc.content = new Content[]{errorContent};
+        reportResponse.pdf = pdfDoc;
+        return reportResponse;
     }
 }

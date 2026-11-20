@@ -20,7 +20,9 @@ import io.quarkus.logging.Log;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * Service for handling SFTP file transfers using JSch library.
@@ -83,6 +85,21 @@ public class SftpService {
     Optional<String> sftpPrivateKey;
     
     /**
+     * The SFTP server's host key: one or more known_hosts lines (as printed by
+     * {@code ssh-keyscan -p <port> <host>}) or the path of a known_hosts file. The connection is
+     * refused without it, unless {@link #sftpStrictHostKeyChecking} is false.
+     */
+    @ConfigProperty(name = "family.history.sftp.knownHosts")
+    Optional<String> sftpKnownHosts;
+
+    /**
+     * false accepts any host key, so the server's identity is not verified. Only for the bundled
+     * test SFTP server, which makes a new host key every time it starts.
+     */
+    @ConfigProperty(name = "family.history.sftp.strictHostKeyChecking", defaultValue = "true")
+    boolean sftpStrictHostKeyChecking;
+
+    /**
      * Remote path on SFTP server where files are uploaded. Only required when family.history.sftp.enabled=true.
      */
     @ConfigProperty(name = "family.history.sftp.path")
@@ -126,6 +143,20 @@ public class SftpService {
     }
 
     /**
+     * UC-004 BR-007: whether a name stays inside the directory it is written to. A plain name is
+     * not empty, is not {@code .} or {@code ..}, and has no path separator and no control character.
+     *
+     * @param fileName the name to check
+     * @return {@code true} if the name is a plain file name
+     */
+    static boolean isPlainFileName(String fileName) {
+        if (fileName == null || fileName.isEmpty() || fileName.equals(".") || fileName.equals("..")) {
+            return false;
+        }
+        return fileName.chars().noneMatch(c -> c == '/' || c == '\\' || Character.isISOControl(c));
+    }
+
+    /**
      * Uploads a file to the configured SFTP server using JSch library.
      * 
      * <p>Establishes a secure SFTP connection to the configured server and uploads
@@ -134,21 +165,28 @@ public class SftpService {
      * 
      * @param fileName the name of the file to upload
      * @param fileData the content of the file as byte array
+     * @throws IllegalArgumentException if the file name is not a plain name in the configured
+     *                                  directory (UC-004 BR-007); nothing is connected or written
      * @throws RuntimeException if upload fails due to connection issues or I/O errors
      */
     public void uploadFile(String fileName, byte[] fileData) {
+        if (!isPlainFileName(fileName)) {
+            throw new IllegalArgumentException("The file name is not a plain name in the upload directory");
+        }
+
         Session session = null;
         ChannelSftp sftpChannel = null;
         
         try {
-            Log.debugv("Connecting to SFTP server {}:{} for file upload: {}", sftpHost, sftpPort, fileName);
+            // UC-004 BR-008: the file name is built from the XID, so records carry the size instead.
+            Log.debugv("Connecting to SFTP server {0}:{1} for a file upload ({2} bytes)", sftpHost, sftpPort, fileData.length);
             
             // Create JSch session with authentication
             session = createAuthenticatedSession();
             
             // Connect to the session
             session.connect();
-            Log.debugv("SSH session connected to {}:{}", sftpHost, sftpPort);
+            Log.debugv("SSH session connected to {0}:{1}", sftpHost, sftpPort);
             
             // Open SFTP channel
             sftpChannel = (ChannelSftp) session.openChannel("sftp");
@@ -166,17 +204,17 @@ public class SftpService {
                 sftpChannel.put(inputStream, fileName, ChannelSftp.OVERWRITE);
             }
             
-            Log.infov("Successfully uploaded file: {} ({} bytes) to SFTP server {}:{}{}",
-                     fileName, fileData.length, sftpHost, sftpPort, sftpPath);
+            Log.infov("Successfully uploaded a file ({0} bytes) to SFTP server {1}:{2}{3}",
+                     fileData.length, sftpHost, sftpPort, sftpPath);
             
         } catch (JSchException e) {
-            Log.errorv(e, "SFTP connection failed for file {}: {}", fileName, e.getMessage());
+            Log.errorv(e, "SFTP connection failed for a file upload ({0} bytes): {1}", fileData.length, e.getMessage());
             throw new RuntimeException("Failed to connect to SFTP server", e);
         } catch (SftpException e) {
-            Log.errorv(e, "SFTP operation failed for file {}: {}", fileName, e.getMessage());
+            Log.errorv(e, "SFTP operation failed for a file upload ({0} bytes): {1}", fileData.length, e.getMessage());
             throw new RuntimeException("Failed to upload file to SFTP server", e);
         } catch (IOException e) {
-            Log.errorv(e, "I/O error during file upload {}: {}", fileName, e.getMessage());
+            Log.errorv(e, "I/O error during a file upload ({0} bytes): {1}", fileData.length, e.getMessage());
             throw new RuntimeException("I/O error during file upload", e);
         } finally {
             // Clean up resources
@@ -203,10 +241,10 @@ public class SftpService {
         try {
             // Try to change to the directory - if it exists, this will succeed
             sftpChannel.cd(remotePath);
-            Log.debugv("Remote directory exists: {}", remotePath);
+            Log.debugv("Remote directory exists: {0}", remotePath);
         } catch (SftpException e) {
             // Directory doesn't exist, create it
-            Log.debugv("Creating remote directory: {}", remotePath);
+            Log.debugv("Creating remote directory: {0}", remotePath);
             
             // Split the path and create directories recursively
             String[] pathParts = remotePath.split("/");
@@ -223,7 +261,7 @@ public class SftpService {
                 } catch (SftpException ex) {
                     // Directory doesn't exist, create it
                     sftpChannel.mkdir(dirToCreate);
-                    Log.debugv("Created remote directory: {}", dirToCreate);
+                    Log.debugv("Created remote directory: {0}", dirToCreate);
                     sftpChannel.cd(dirToCreate);
                 }
             }
@@ -243,7 +281,7 @@ public class SftpService {
         ChannelSftp sftpChannel = null;
         
         try {
-            Log.debugv("Testing SFTP connection to {}:{}", sftpHost, sftpPort);
+            Log.debugv("Testing SFTP connection to {0}:{1}", sftpHost, sftpPort);
             
             // Create JSch session with authentication
             session = createAuthenticatedSession();
@@ -269,19 +307,19 @@ public class SftpService {
             boolean writable = (permissions & 0200) != 0; // Check owner write permission
             
             if (!writable) {
-                Log.warnv("SFTP directory {} is not writable (permissions: {})", sftpPath,
+                Log.warnv("SFTP directory {0} is not writable (permissions: {1})", sftpPath,
                         Integer.toOctalString(permissions));
                 return false;
             }
 
-            Log.infov("SFTP connection test successful to {}:{}{} (writable)", sftpHost, sftpPort, sftpPath);
+            Log.infov("SFTP connection test successful to {0}:{1}{2} (writable)", sftpHost, sftpPort, sftpPath);
             return true;
 
         } catch (JSchException e) {
-            Log.errorv(e, "SFTP connection test failed - connection error: {}", e.getMessage());
+            Log.errorv(e, "SFTP connection test failed - connection error: {0}", e.getMessage());
             return false;
         } catch (SftpException e) {
-            Log.errorv(e, "SFTP connection test failed - SFTP operation error: {}", e.getMessage());
+            Log.errorv(e, "SFTP connection test failed - SFTP operation error: {0}", e.getMessage());
             return false;
         } finally {
             // Clean up resources
@@ -311,7 +349,7 @@ public class SftpService {
         if (sftpPrivateKey.isPresent() && !sftpPrivateKey.get().trim().isEmpty()) {
             // Use SSH key authentication
             String privateKeyValue = sftpPrivateKey.get().trim();
-            Log.debugv("Using SSH key authentication with key: {}",
+            Log.debugv("Using SSH key authentication with key: {0}",
                      privateKeyValue.startsWith("-----BEGIN") ? "private key content" : privateKeyValue);
             
             try {
@@ -334,11 +372,11 @@ public class SftpService {
                     }
                     
                     jsch.addIdentity(keyFile.getAbsolutePath());
-                    Log.debugv("Successfully loaded SSH private key from: {}", keyFile.getAbsolutePath());
+                    Log.debugv("Successfully loaded SSH private key from: {0}", keyFile.getAbsolutePath());
                 }
 
             } catch (JSchException e) {
-                Log.errorv("Failed to load SSH private key: {}", e.getMessage());
+                Log.errorv("Failed to load SSH private key: {0}", e.getMessage());
                 throw e;
             }
 
@@ -351,10 +389,45 @@ public class SftpService {
             throw new JSchException("No authentication method configured. Please set either family.history.sftp.password or family.history.sftp.privateKey");
         }
         
-        // Disable strict host key checking for Docker environment
-        session.setConfig("StrictHostKeyChecking", "no");
+        configureHostKeyChecking(jsch, session);
         session.setTimeout(sftpTimeout);
         
         return session;
+    }
+
+    /** A known_hosts line: hosts, key type, key; hashed hosts (|1|...) included. */
+    private static final Pattern KNOWN_HOSTS_LINE =
+            Pattern.compile("(?m)^\\s*(@\\S+\\s+)?\\S+\\s+(ssh-|ecdsa-|sk-)\\S+\\s+\\S+");
+
+    /**
+     * Verifies the server's host key against {@link #sftpKnownHosts}, so a report carrying PHI is
+     * never handed to a server that merely claims the configured address. Without known hosts the
+     * session is refused, unless host key checking was turned off explicitly.
+     */
+    void configureHostKeyChecking(JSch jsch, Session session) throws JSchException {
+        String knownHosts = sftpKnownHosts == null ? "" : sftpKnownHosts.map(String::trim).orElse("");
+        if (!knownHosts.isEmpty()) {
+            if (KNOWN_HOSTS_LINE.matcher(knownHosts).find()) {
+                jsch.setKnownHosts(new ByteArrayInputStream(knownHosts.getBytes(StandardCharsets.UTF_8)));
+            } else {
+                File file = new File(knownHosts);
+                if (!file.isAbsolute()) {
+                    file = new File(System.getProperty("user.dir"), knownHosts);
+                }
+                if (!file.isFile()) {
+                    throw new JSchException("Known hosts file not found: " + file.getAbsolutePath());
+                }
+                jsch.setKnownHosts(file.getAbsolutePath());
+            }
+            session.setConfig("StrictHostKeyChecking", "yes");
+        } else if (sftpStrictHostKeyChecking) {
+            throw new JSchException("No SFTP host key configured. Set family.history.sftp.knownHosts to the "
+                    + "server's known_hosts line(s) (ssh-keyscan -p " + sftpPort + " " + sftpHost
+                    + ") or to a known_hosts file");
+        } else {
+            Log.warnv("SFTP host key checking is off: the identity of {0} is not verified "
+                    + "(family.history.sftp.strictHostKeyChecking=false)", sftpHost);
+            session.setConfig("StrictHostKeyChecking", "no");
+        }
     }
 }

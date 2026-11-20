@@ -39,6 +39,9 @@ class SftpServiceAuthSelectionTest {
         setField(service, "sftpPrivateKey", Optional.ofNullable(privateKey));
         setField(service, "sftpPort", 22);
         setField(service, "sftpTimeout", 30000);
+        // Host key checking is covered by SftpServiceHostKeyTest; these tests only pick an auth method.
+        setField(service, "sftpKnownHosts", Optional.empty());
+        setField(service, "sftpStrictHostKeyChecking", false);
         return service;
     }
 

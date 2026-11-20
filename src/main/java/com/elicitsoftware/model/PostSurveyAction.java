@@ -14,6 +14,7 @@ package com.elicitsoftware.model;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.json.bind.annotation.JsonbTransient;
 import jakarta.persistence.*;
+import java.util.UUID;
 
 /**
  * The PostSurveyAction class represents an entity in the "post_survey_actions" table
@@ -64,6 +65,10 @@ public class PostSurveyAction extends PanacheEntityBase {
     /**
      * Name of the action.
      */
+    /** The action's stable identity across sites; the id is whatever the import minted (UC-005 BR-004). */
+    @Column(name = "post_survey_action_key", nullable = false)
+    public UUID postSurveyActionKey;
+
     @Column(name = "name")
     public String name;
 

@@ -2,23 +2,19 @@
 -- ***LICENSE_START***
 -- Elicit FHHS
 -- %%
--- Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+-- Copyright (C) 2025 - 2026 The Regents of the University of Michigan - Rogel Cancer Center
 -- %%
 -- PolyForm Noncommercial License 1.0.0
 -- <https://polyformproject.org/licenses/noncommercial/1.0.0>
 -- ***LICENSE_END***
 ---
-
--- The tripple negative breast cancer question was added at the end of the section.
--- Reorder the questions to move it up. 
--- Move the questions down, making room for the triple negative question
-UPDATE survey.sections_questions
-set display_order = display_order + 1
-where section_id = 14
-  and display_order > 7;
-
--- Insert the triple negative question under breast cancer
-UPDATE survey.sections_questions
-set display_order = 8
-where section_id = 14
-  and id = 125;
+-- Intentionally empty on the greenfield track.
+--
+-- On the released V2.x track this version moved the Triple Negative breast cancer question
+-- up to display_order 8 in the Cancers section by hardcoded surrogate id. On this track
+-- V0.0.1 seeds the section in that final order (see its identity rules), so there is
+-- nothing left to reorder.
+--
+-- The file is kept so the version numbers line up with db/migration-v3: after a V2.x
+-- database has been upgraded through that track, ManualSchemaMigrator.repair() realigns
+-- its history against these files, and every version it has applied must exist here.

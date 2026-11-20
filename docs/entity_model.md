@@ -28,6 +28,8 @@ A configured questionnaire (owned by Elicit Survey) that respondents complete; F
 | description          | Description of the survey                              | String    | 500               | Optional                |
 | initialDisplayKey    | Display key of the survey's first step                | String    | 255               | Optional                |
 | postSurveyURL        | Legacy single post-survey callback URL                 | String    | 255               | Optional                |
+| surveyKey            | Cross-instance-portable identity; `family.history.survey.key` names the survey FHHS serves (UC-005 BR-001) | UUID | — | Not Null, Unique |
+| reportSchema         | The survey's own reporting schema at this site, named by Survey's first build and read by FHHS at request time (UC-005 BR-006); null until built | String | 63 | Optional, read-only here |
 
 ### RESPONDENT
 
@@ -42,7 +44,7 @@ An individual who completed (or is completing) a FHHS survey; the subject every 
 | active        | Whether the respondent record is active            | Boolean   | 1                 | Not Null                             |
 | logins        | Number of times the respondent has logged in        | Integer   | 10                | Not Null                             |
 | survey        | Survey this respondent is completing               | Long      | 19                | Not Null, Foreign Key (SURVEY.id)    |
-| token         | Access token issued to the respondent              | String    | 255               | Optional                             |
+| access_code   | Access code issued to the respondent               | String    | 255               | Optional                             |
 
 ### REPORT_DEFINITION
 
@@ -105,7 +107,7 @@ A denormalized view of a respondent's identity, department, and current family-h
 | phone           | Respondent phone number                      | String    | 50                | Optional                              |
 | departmentName  | Study department/site name                   | String    | 255               | Optional                              |
 | departmentId    | Study department/site identifier             | String    | 255               | Optional                              |
-| token           | Respondent's survey access token             | String    | 255               | Optional                              |
+| access_code     | Respondent's survey access code              | String    | 255               | Optional                              |
 | status          | Current family-history report status         | String    | 50                | Not Null                              |
 | createdDt       | When this status row was created             | DateTime  | -                 | Not Null                              |
 | finalizedDt     | When the respondent finalized the survey     | DateTime  | -                 | Optional                              |

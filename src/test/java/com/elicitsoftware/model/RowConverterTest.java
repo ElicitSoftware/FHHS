@@ -79,6 +79,23 @@ class RowConverterTest {
         assertEquals("Multiple Sarcomas", rows.get(1).getLabel());
     }
 
+    /** UC-001 BR-002, UC-002 BR-002: the typed name is encoded in the HTML of both rows, not in the labels. */
+    @Test
+    void otherCancer_nameWithMarkup_isEncodedInHtmlAndRawInLabels() {
+        String typed = "<img src=x onerror=alert(1)>";
+        FamilyHistoryRecord r = new FhrBuilder("Mother").other("true", 60, typed, "true").build();
+
+        List<Row> rows = RowConverter.toRows(r);
+
+        assertEquals(2, rows.size());
+        assertEquals(typed, rows.get(0).getLabel());
+        assertEquals("Multiple " + typed + "s", rows.get(1).getLabel());
+        for (Row row : rows) {
+            assertFalse(row.getHTML().contains("<img"), row.getHTML());
+            assertTrue(row.getHTML().contains("&lt;img src=x onerror=alert(1)&gt;"), row.getHTML());
+        }
+    }
+
     @Test
     void otherCancer_withNoNameFallsBackToOtherCancerLabel() {
         FamilyHistoryRecord r = new FhrBuilder("Mother").other("true", 60, null, "false").build();

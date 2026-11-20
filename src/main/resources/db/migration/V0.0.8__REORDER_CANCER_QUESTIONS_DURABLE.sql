@@ -1,0 +1,21 @@
+---
+-- ***LICENSE_START***
+-- Elicit FHHS
+-- %%
+-- Copyright (C) 2025 - 2026 The Regents of the University of Michigan - Rogel Cancer Center
+-- %%
+-- PolyForm Noncommercial License 1.0.0
+-- <https://polyformproject.org/licenses/noncommercial/1.0.0>
+-- ***LICENSE_END***
+---
+-- Intentionally empty on the greenfield track.
+--
+-- On the released V2.x track this version re-applied V0.0.5's Triple Negative reordering
+-- through the Kimball Type 2 close-and-insert protocol, for databases where V0.0.5's
+-- hardcoded surrogate ids had matched nothing. On this track V0.0.1 seeds the Cancers
+-- section in its final order (see its identity rules), so there is nothing to re-apply.
+-- CancerQuestionReorderMigrationTest asserts that seeded order.
+--
+-- The file is kept so the version numbers line up with db/migration-v3: after a V2.x
+-- database has been upgraded through that track, ManualSchemaMigrator.repair() realigns
+-- its history against these files, and every version it has applied must exist here.

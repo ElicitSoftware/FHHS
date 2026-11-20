@@ -27,11 +27,16 @@ import io.quarkus.logging.Log;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Service for generating family history reports as PDF and XML metadata files
@@ -88,10 +93,11 @@ public class FamilyHistoryReportService {
     /**
      * Whether the SFTP upload feature is enabled.
      * Configured via the {@code family.history.sftp.enabled} property.
-     * Defaults to {@code true}. When {@code false}, no connection test,
+     * Defaults to {@code false}: a deployment opts in to SFTP delivery once it
+     * has an SFTP target to point at. When {@code false}, no connection test,
      * report generation/upload, or retry processing is performed.
      */
-    @ConfigProperty(name = "family.history.sftp.enabled", defaultValue = "true")
+    @ConfigProperty(name = "family.history.sftp.enabled", defaultValue = "false")
     boolean sftpEnabled;
 
     /**
@@ -103,12 +109,38 @@ public class FamilyHistoryReportService {
     int asyncThreads;
 
     /**
-     * Post survey action ID for tracking upload status.
-     * Configured via the {@code family.history.upload.psa.id} property.
-     * Defaults to 1 if not specified.
+     * The post-survey action FHHS records its uploads against, found by its key
+     * ({@code family.history.upload.psa.key}) because its id is whatever the import minted
+     * (UC-005 BR-004). {@code family.history.upload.psa.id}, if set, overrides the lookup.
      */
-    @ConfigProperty(name = "family.history.upload.psa.id", defaultValue = "1")
-    int psaId;
+    @ConfigProperty(name = "family.history.upload.psa.key")
+    String psaKey;
+
+    /** An explicit id, for a deployment that prefers to pin it; wins over the key. */
+    @ConfigProperty(name = "family.history.upload.psa.id")
+    Optional<Integer> configuredPsaId;
+
+    /** The resolved id, remembered once found; {@code -1} until then. */
+    private volatile int resolvedPsaId = -1;
+
+    /**
+     * The id of the post-survey action to record against, or {@code 0} when it cannot be
+     * found -- in which case no execution record is written, as before (UC-004).
+     */
+    int psaId() {
+        if (configuredPsaId.isPresent()) {
+            return configuredPsaId.get();
+        }
+        if (resolvedPsaId < 0) {
+            PostSurveyAction action = PostSurveyAction.find("postSurveyActionKey = ?1", UUID.fromString(psaKey)).firstResult();
+            if (action == null) {
+                // Not remembered: the survey (and its action) may be imported later.
+                return 0;
+            }
+            resolvedPsaId = action.id;
+        }
+        return resolvedPsaId;
+    }
 
     /**
      * XML template used for generating metadata files.
@@ -125,13 +157,13 @@ public class FamilyHistoryReportService {
      * <li>{Email}, {Phone} - Contact information</li>
      * <li>{DepartmentName}, {DepartmentID} - Department details</li>
      * <li>{SurveyId} - Survey identifier</li>
-     * <li>{Token} - Authentication token</li>
+     * <li>{AccessCode} - The respondent's survey access code</li>
      * <li>{Status} - Current status</li>
      * <li>{Created} - Creation date</li>
      * </ul>
      */
     @ConfigProperty(name = "family.history.sftp.xml.template", defaultValue = """
-            "<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <pdf>
                 <externalSourceId>{RespondentId}</externalSourceId>
                 <mrn>{Xid}</mrn>
@@ -139,7 +171,14 @@ public class FamilyHistoryReportService {
             """)
     String xmlTemplate;
 
-        /**
+    /** UC-004 BR-005: a placeholder in the XML template, such as {@code {Xid}}. */
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\{(\\w+)\\}");
+
+    /** UC-004 BR-007: the error recorded when the XID cannot name the delivery files. */
+    static final String INVALID_XID_MESSAGE =
+            "The respondent's external ID is missing or cannot be used as a file name";
+
+    /**
      * Injected SFTP service for file upload operations.
      */
     @Inject
@@ -166,7 +205,7 @@ public class FamilyHistoryReportService {
             return t;
         });
         
-        Log.infov("Family History Report Service initialized with SFTP host: {} and {} async threads (SFTP enabled: {})",
+        Log.infov("Family History Report Service initialized with SFTP host: {0} and {1} async threads (SFTP enabled: {2})",
                 sftpHost.orElse("<not configured>"), asyncThreads, sftpEnabled);
 
         if (!sftpEnabled) {
@@ -183,7 +222,7 @@ public class FamilyHistoryReportService {
                 Log.warn("SFTP connection test failed during service initialization - file uploads may fail");
             }
         } catch (Exception e) {
-            Log.errorv(e, "SFTP connection test threw exception during service initialization: {}", e.getMessage());
+            Log.errorv(e, "SFTP connection test threw exception during service initialization: {0}", e.getMessage());
         }
     }
 
@@ -225,7 +264,7 @@ public class FamilyHistoryReportService {
      */
     public CompletableFuture<Void> generateAndUploadFamilyHistoryReport(Status status) {
         if (!sftpEnabled) {
-            Log.infov("SFTP upload is disabled via family.history.sftp.enabled=false - skipping report generation for respondent {}",
+            Log.infov("SFTP upload is disabled via family.history.sftp.enabled=false - skipping report generation for respondent {0}",
                     status.getRespondentId());
             return CompletableFuture.completedFuture(null);
         }
@@ -235,7 +274,7 @@ public class FamilyHistoryReportService {
             try {
                 doGenerateAndUploadFamilyHistoryReport(status);
             } catch (Exception e) {
-                Log.errorv(e, "Failed to generate and upload family history report for respondent {}: {}",
+                Log.errorv(e, "Failed to generate and upload family history report for respondent {0}: {1}",
                         status.getRespondentId(), e.getMessage());
                 throw new RuntimeException("Failed to process family history report", e);
             }
@@ -265,17 +304,17 @@ public class FamilyHistoryReportService {
             return;
         }
 
-        if (psaId != 0) {
+        if (psaId() != 0) {
             // Get RespondentPSA records that have failed (status = FAILED and uploadedDt is null)
             // and haven't exceeded retry limits (tries < 50)
             List<RespondentPSA> unsentPSAs = RespondentPSA.find("psaId = ?1 AND status = ?2 AND uploadedDt IS NULL AND tries < ?3",
-                    psaId, "FAILED", 50).list();
+                    psaId(), "FAILED", 50).list();
             
-            Log.infov("Found {} unsent uploads to retry", unsentPSAs.size());
+            Log.infov("Found {0} unsent uploads to retry", unsentPSAs.size());
 
             for (RespondentPSA respondentPSA : unsentPSAs) {
                 try {
-                    Log.infov("Retrying upload for respondent {} (attempt {})",
+                    Log.infov("Retrying upload for respondent {0} (attempt {1})",
                             respondentPSA.respondentId, respondentPSA.tries + 1);
                     
                     // Get the status for this respondent
@@ -286,7 +325,7 @@ public class FamilyHistoryReportService {
                         // Update the RespondentPSA with no error
                         updateRespondentPSAStatus(respondentPSA.respondentId, null);
                     } else {
-                        Log.warnv("No status record found for respondent {}, skipping retry", respondentPSA.respondentId);
+                        Log.warnv("No status record found for respondent {0}, skipping retry", respondentPSA.respondentId);
                     }
                 } catch (Exception e) {
                     // Update the RespondentPSA with the new failure
@@ -294,7 +333,7 @@ public class FamilyHistoryReportService {
                 }
             }
         } else {
-            Log.warn("No Post Survey Action found with name 'Generate Family History Report'");
+            Log.warn("No post-survey action found for family.history.upload.psa.key; failed uploads are not retried");
         }
     }
 
@@ -307,42 +346,62 @@ public class FamilyHistoryReportService {
      */
     @Transactional
     public void doGenerateAndUploadFamilyHistoryReport(Status status) throws Exception {
-        Log.infov("Generating family history report for respondent {} with external ID {}",
-                status.getRespondentId(), status.getXid());
+        long respondentId = status.getRespondentId();
+
+        // UC-004 BR-007: an XID that cannot name a file fails here, before any work is done.
+        String baseName = deliveryBaseName(status.getXid());
+
+        // UC-004 BR-008: records below name the respondent ID, the kind of file and its size.
+        Log.infov("Generating family history report for respondent {0}", respondentId);
 
         // Generate PDF report
-        Log.infov("Starting PDF generation for respondent: {}", status.getRespondentId());
-        byte[] pdfData = generateFamilyHistoryPdf(status.getRespondentId());
-        String pdfFileName = status.getXid() + ".pdf";
-        Log.infov("PDF generated successfully: {} ({} bytes)", pdfFileName, pdfData.length);
+        Log.infov("Starting PDF generation for respondent: {0}", respondentId);
+        byte[] pdfData = generateFamilyHistoryPdf(respondentId);
+        String pdfFileName = baseName + ".pdf";
+        Log.infov("PDF generated successfully for respondent {0} ({1} bytes)", respondentId, pdfData.length);
 
         // Generate XML metadata
-        Log.infov("Generating XML metadata for respondent: {}", status.getRespondentId());
+        Log.infov("Generating XML metadata for respondent: {0}", respondentId);
         String xmlMetadata = generateXmlMetadata(status);
-        String xmlFileName = status.getXid() + "-index.xml";
-        Log.infov("XML metadata generated successfully: {} ({} bytes)", xmlFileName, xmlMetadata.length());
+        String xmlFileName = baseName + "-index.xml";
+        Log.infov("XML metadata generated successfully for respondent {0} ({1} characters)",
+                respondentId, xmlMetadata.length());
 
 
         // Upload files to SFTP server
-        Log.infov("Starting SFTP upload for files: {} and {}", pdfFileName, xmlFileName);
+        Log.infov("Starting SFTP upload of the PDF and XML metadata for respondent {0}", respondentId);
         try {
-            Log.infov("Uploading PDF file: {}", pdfFileName);
             sftpService.uploadFile(pdfFileName, pdfData);
-            Log.infov("PDF file uploaded successfully: {}", pdfFileName);
+            Log.infov("PDF file uploaded successfully for respondent {0}", respondentId);
         } catch (Exception e) {
-            Log.errorv(e, "Failed to upload PDF file {}: {}", pdfFileName, e.getMessage());
+            Log.errorv(e, "Failed to upload the PDF file for respondent {0}: {1}", respondentId, e.getMessage());
             throw e;
         }
         try {
-            Log.infov("Uploading XML file: {}", xmlFileName);
             sftpService.uploadFile(xmlFileName, xmlMetadata.getBytes(StandardCharsets.UTF_8));
-            Log.infov("XML file uploaded successfully: {}", xmlFileName);
-            Log.infov("XML content: {}", xmlMetadata);
+            Log.infov("XML metadata file uploaded successfully for respondent {0}", respondentId);
         } catch (Exception e) {
-            Log.errorv(e, "Failed to upload XML file {}: {}", xmlFileName, e.getMessage());
+            Log.errorv(e, "Failed to upload the XML metadata file for respondent {0}: {1}", respondentId, e.getMessage());
             throw e;
         }
-        Log.infov("Successfully uploaded family history report files for external ID: {}", status.getXid());
+        Log.infov("Successfully uploaded family history report files for respondent {0}", respondentId);
+    }
+
+    /**
+     * UC-004 BR-007: the name both delivery files are built from. A usable XID is returned exactly
+     * as it is stored, so the file names of an ordinary XID do not change.
+     *
+     * @param xid the respondent's external ID
+     * @return the XID, unchanged
+     * @throws IllegalStateException if the XID is missing or blank, is {@code .} or {@code ..}, or
+     *                               contains a path separator or a control character; the message
+     *                               names the rule and never the value
+     */
+    static String deliveryBaseName(String xid) {
+        if (xid == null || xid.isBlank() || !SftpService.isPlainFileName(xid)) {
+            throw new IllegalStateException(INVALID_XID_MESSAGE);
+        }
+        return xid;
     }
 
     /**
@@ -363,35 +422,35 @@ public class FamilyHistoryReportService {
     public void updateRespondentPSAStatus(Long respondentId, Throwable throwable) {
         try {
             // Skip if psaId is null or 0 to avoid foreign key constraint violations
-            if (this.psaId == 0) {
-                Log.warnv("Skipping RespondentPSA status update for respondent {} - invalid psaId: {}",
-                        respondentId, psaId);
+            if (psaId() == 0) {
+                Log.warnv("Skipping RespondentPSA status update for respondent {0} - invalid psaId: {1}",
+                        respondentId, psaId());
                 return;
             }
 
             // Verify the post-survey action exists before creating RespondentPSA record
-            Long psaCount = PostSurveyAction.count("id = ?1", psaId);
+            Long psaCount = PostSurveyAction.count("id = ?1", psaId());
             if (psaCount == 0) {
-                Log.warnv("Skipping RespondentPSA status update for respondent {} - " +
-                        "post-survey action {} does not exist", respondentId, psaId);
+                Log.warnv("Skipping RespondentPSA status update for respondent {0} - " +
+                        "post-survey action {1} does not exist", respondentId, psaId());
                 return;
             }
 
             // Find or create RespondentPSA record to track execution status
             RespondentPSA respondentPSA = RespondentPSA.find("respondentId = ?1 and psaId = ?2",
-                    respondentId, psaId).firstResult();
+                    respondentId, psaId()).firstResult();
 
             if (respondentPSA == null) {
                 respondentPSA = new RespondentPSA();
                 respondentPSA.respondentId = respondentId;
-                respondentPSA.psaId = psaId;
+                respondentPSA.psaId = psaId();
                 respondentPSA.status = "STARTED";
-                Log.debugv("Created new RespondentPSA record for respondent {} and PSA {}",
-                        respondentId, psaId);
+                Log.debugv("Created new RespondentPSA record for respondent {0} and PSA {1}",
+                        respondentId, psaId());
             }
 
             if (throwable != null) {
-                Log.errorv(throwable, "CompletableFuture completed exceptionally for respondent {}: {}",
+                Log.errorv(throwable, "CompletableFuture completed exceptionally for respondent {0}: {1}",
                         respondentId, throwable.getMessage());
 
                 // Update RespondentPSA with error status
@@ -399,7 +458,7 @@ public class FamilyHistoryReportService {
                 respondentPSA.error = throwable.getMessage();
 
             } else {
-                Log.infov("CompletableFuture completed successfully for respondent {}", respondentId);
+                Log.infov("CompletableFuture completed successfully for respondent {0}", respondentId);
 
                 // Update RespondentPSA with success status
                 respondentPSA.status = "COMPLETED";
@@ -409,12 +468,12 @@ public class FamilyHistoryReportService {
             // Increment the tries value
             respondentPSA.tries = respondentPSA.tries + 1;
             respondentPSA.persist();
-            Log.debugv("Updated RespondentPSA status to {} for respondent {} and PSA {}",
-                    respondentPSA.status, respondentId, psaId);
+            Log.debugv("Updated RespondentPSA status to {0} for respondent {1} and PSA {2}",
+                    respondentPSA.status, respondentId, psaId());
 
         } catch (Exception e) {
-            Log.errorv(e, "Failed to update RespondentPSA status for respondent {} and PSA {}: {}",
-                    respondentId, psaId, e.getMessage());
+            Log.errorv(e, "Failed to update RespondentPSA status for respondent {0} and PSA {1}: {2}",
+                    respondentId, psaId(), e.getMessage());
             // Don't rethrow - this is a status tracking operation that shouldn't fail the main process
         }
     }
@@ -440,7 +499,7 @@ public class FamilyHistoryReportService {
      */
     @Transactional
     public byte[] generateFamilyHistoryPdf(Long respondentId) {
-        Log.debugv("Generating PDF for respondent: {}", respondentId);
+        Log.debugv("Generating PDF for respondent: {0}", respondentId);
 
         // Activate request context for calling request-scoped beans
         ManagedContext requestContext = Arc.container().requestContext();
@@ -467,9 +526,9 @@ public class FamilyHistoryReportService {
      * The resulting XML contains document metadata that accompanies the PDF
      * report when uploaded to the SFTP server.</p>
      * 
-     * <p>The method performs string replacement for all supported placeholders
-     * defined in the XML template. Each placeholder is replaced with the
-     * corresponding value from the status object.</p>
+     * <p>The method replaces all supported placeholders defined in the XML template
+     * in a single pass. Each placeholder is replaced with the corresponding value
+     * from the status object, XML-escaped (UC-004 BR-005).</p>
      * 
      * @param status the status record containing all the data needed for
      *               placeholder substitution in the XML template
@@ -478,27 +537,71 @@ public class FamilyHistoryReportService {
      * @see #xmlTemplate
      */
     private String generateXmlMetadata(Status status) {
-        Log.debugv("Generating XML metadata for respondent: {} with external ID: {}", status);
+        Log.debugv("Generating XML metadata for respondent: {0}", status.getRespondentId());
 
-        String xmlDoc = xmlTemplate;
         // Any value in the status document can be included in the xml.
-        // Use null-safe replacements to handle missing/null values
-        xmlDoc = xmlDoc.replace("{Xid}", nullSafe(status.getXid()));
-        xmlDoc = xmlDoc.replace("{RespondentId}", Long.toString(status.getRespondentId()));
-        xmlDoc = xmlDoc.replace("{SurveyId}", Long.toString(status.getSurveyId()));
-        xmlDoc = xmlDoc.replace("{FirstName}", nullSafe(status.getFirstName()));
-        xmlDoc = xmlDoc.replace("{LastName}", nullSafe(status.getLastName()));
-        xmlDoc = xmlDoc.replace("{MiddleName}", nullSafe(status.getMiddleName()));
-        xmlDoc = xmlDoc.replace("{Dob}", status.getDob() != null ? status.getDob().toString() : "");
-        xmlDoc = xmlDoc.replace("{Email}", nullSafe(status.getEmail()));
-        xmlDoc = xmlDoc.replace("{Phone}", nullSafe(status.getPhone()));
-        xmlDoc = xmlDoc.replace("{DepartmentName}", nullSafe(status.getDepartmentName()));
-        xmlDoc = xmlDoc.replace("{DepartmentID}", Long.toString(status.getDepartmentId()));
-        xmlDoc = xmlDoc.replace("{Token}", nullSafe(status.getToken()));
-        xmlDoc = xmlDoc.replace("{Status}", nullSafe(status.getStatus()));
-        xmlDoc = xmlDoc.replace("{Created}", nullSafe(status.getCreated()));
-        xmlDoc = xmlDoc.replace("{Finalized}", nullSafe(status.getFinalized()));
-        return xmlDoc;
+        // Use null-safe values to handle missing/null values
+        Map<String, String> values = new HashMap<>();
+        values.put("Xid", nullSafe(status.getXid()));
+        values.put("RespondentId", Long.toString(status.getRespondentId()));
+        values.put("SurveyId", Long.toString(status.getSurveyId()));
+        values.put("FirstName", nullSafe(status.getFirstName()));
+        values.put("LastName", nullSafe(status.getLastName()));
+        values.put("MiddleName", nullSafe(status.getMiddleName()));
+        values.put("Dob", status.getDob() != null ? status.getDob().toString() : "");
+        values.put("Email", nullSafe(status.getEmail()));
+        values.put("Phone", nullSafe(status.getPhone()));
+        values.put("DepartmentName", nullSafe(status.getDepartmentName()));
+        values.put("DepartmentID", Long.toString(status.getDepartmentId()));
+        values.put("AccessCode", nullSafe(status.getAccessCode()));
+        values.put("Status", nullSafe(status.getStatus()));
+        values.put("Created", nullSafe(status.getCreated()));
+        values.put("Finalized", nullSafe(status.getFinalized()));
+
+        // UC-004 BR-005: one pass over the template. A value is XML-escaped as it is placed and is
+        // never read again, so placeholder text inside a value stays literal; an unknown placeholder
+        // is kept.
+        return PLACEHOLDER.matcher(xmlTemplate).replaceAll(match -> {
+            String value = values.get(match.group(1));
+            return Matcher.quoteReplacement(value != null ? xmlEscape(value) : match.group());
+        });
+    }
+
+    /**
+     * Makes a value safe to place in the XML template as text, in an element or in an attribute
+     * quoted either way (UC-004 BR-005): the five markup characters become entity references, and a
+     * character XML 1.0 does not allow is left out.
+     *
+     * @param value the value as recorded
+     * @return the value as XML text
+     */
+    static String xmlEscape(String value) {
+        StringBuilder out = new StringBuilder(value.length() + 16);
+        for (int i = 0; i < value.length(); ) {
+            int c = value.codePointAt(i);
+            i += Character.charCount(c);
+            switch (c) {
+                case '&' -> out.append("&amp;");
+                case '<' -> out.append("&lt;");
+                case '>' -> out.append("&gt;");
+                case '"' -> out.append("&quot;");
+                case '\'' -> out.append("&apos;");
+                default -> {
+                    if (allowedInXml(c)) {
+                        out.appendCodePoint(c);
+                    }
+                }
+            }
+        }
+        return out.toString();
+    }
+
+    /** The Char production of XML 1.0: tab, line feed, carriage return and the legal ranges. */
+    private static boolean allowedInXml(int c) {
+        return c == 0x9 || c == 0xA || c == 0xD
+                || (c >= 0x20 && c <= 0xD7FF)
+                || (c >= 0xE000 && c <= 0xFFFD)
+                || (c >= 0x10000 && c <= 0x10FFFF);
     }
     
     /**

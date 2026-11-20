@@ -91,9 +91,30 @@ This project was built with <a href="http://docker.com">Docker</a> and can be ru
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any token (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
+After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any access code (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
 <div align="center"><image src="images/samplePedigree.png" height=600></div>
 
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- TESTING -->
+## Testing
+
+Run all unit and booted tests (needs Docker for the `@QuarkusTest` classes):
+
+```shell
+./mvnw test
+```
+
+Run Pitest mutation testing over the plain unit tests
+(`target/pit-reports/index.html`; about a minute, no Docker):
+
+```shell
+./mvnw test-compile pitest:mutationCoverage
+```
+
+Booted `@QuarkusTest` classes are left out because they cannot see Pitest's mutants. The
+plugin's `targetTests` in `pom.xml` lists the plain tests by name, so add a new one there.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

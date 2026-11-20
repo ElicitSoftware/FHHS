@@ -66,15 +66,16 @@ The migration file is located at:
 
 ### Generate Family History Report
 
-**POST** `/api/familyhistory/generate`
+**POST** `/familyhistory/generate`
 
-Triggers family history report generation for a respondent.
+Triggers family history report generation for a respondent. Like every FHHS endpoint it
+requires the platform service token (`Authorization: Bearer <ELICIT_SERVICE_TOKEN>`,
+UC-006); a request without it is answered 401.
 
 **Request Body:**
 ```json
 {
-  "respondentId": 12345,
-  "externalId": "STUDY_001_PARTICIPANT_001"
+  "id": 12345
 }
 ```
 
@@ -86,11 +87,11 @@ Triggers family history report generation for a respondent.
 }
 ```
 
-### Health Check
+### Health
 
-**GET** `/api/familyhistory/health`
-
-Returns the health status of the family history service.
+Liveness and readiness are the standard probes, `GET /q/health/live` and
+`GET /q/health/ready`. They need no token. Readiness names what is missing: the
+service token, the database, or the Family History Survey.
 
 ## File Output
 
@@ -131,15 +132,16 @@ The service integrates with the survey system through post-survey actions:
 You can test the service manually by calling the endpoint:
 
 ```bash
-curl -X POST http://localhost:8082/api/familyhistory/generate \
+curl -X POST http://localhost:8082/familyhistory/generate \
+  -H "Authorization: Bearer $ELICIT_SERVICE_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"respondentId": 1, "externalId": "TEST_001"}'
+  -d '{"id": 1}'
 ```
 
-### Health Check
+### Health
 
 ```bash
-curl http://localhost:8082/api/familyhistory/health
+curl http://localhost:8082/q/health/ready
 ```
 
 ## Development Notes
@@ -179,7 +181,7 @@ The service includes comprehensive error handling and logging. Monitor the logs 
 ## Security Considerations
 
 1. **SFTP Credentials**: Store SFTP credentials securely (consider using Quarkus Vault extension)
-2. **Access Control**: The endpoints currently use `@PermitAll` - implement proper security
+2. **Access Control**: Every endpoint requires the platform service token (UC-006). Supply `ELICIT_SERVICE_TOKEN` (at least 32 characters, the same value for every module) from the deployment's secret store, and keep FHHS on a private network as well
 3. **Data Encryption**: Consider encrypting sensitive data in transit and at rest
 4. **Audit Logging**: Implement audit trails for report generation activities
 

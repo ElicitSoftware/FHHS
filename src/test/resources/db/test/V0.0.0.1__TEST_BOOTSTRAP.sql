@@ -14,7 +14,8 @@
 -- =============================================================================
 -- FHHS's db/migration scripts are NOT self-contained: they INSERT/UPDATE objects
 -- owned by the Survey module (surveys, questions, sections_questions, ...) and
--- read from surveyreport.fact_sections_view, which is populated by Survey's ETL —
+-- read from the survey's own reporting schema's fact_sections_view, which Survey's ETL
+-- creates and populates (Survey UC-008; here report_family_history_survey) —
 -- none of that exists on a throwaway test container. On the shared production
 -- database these objects already exist. This script creates the minimal set
 -- needed for db/migration to apply cleanly and for the @QuarkusTest suite to
@@ -27,32 +28,12 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. Roles. The Testcontainers `postgres` user is a superuser, so CREATE ROLE
---    works. PostgreSQL has no CREATE ROLE IF NOT EXISTS, so guard each one.
+-- 1, 2. Roles and the survey and surveyreport schemas: created by
+--    db/testcontainers-init.sql, as the container's superuser, before this
+--    script. Nothing here needs one. The survey's own reporting schema is
+--    created here by the schema owner, as Survey creates it on a site.
 -- -----------------------------------------------------------------------------
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'surveyadmin_user') THEN
-        CREATE ROLE surveyadmin_user;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'survey_user') THEN
-        CREATE ROLE survey_user;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'elicit_owner') THEN
-        CREATE ROLE elicit_owner;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'surveyreport_user') THEN
-        CREATE ROLE surveyreport_user;
-    END IF;
-END
-$$;
-
--- -----------------------------------------------------------------------------
--- 2. Schemas. `survey` is also auto-created by quarkus.flyway.owner.schemas, so
---    guard it; `surveyreport` is not managed by Flyway and must be created here.
--- -----------------------------------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS survey;
-CREATE SCHEMA IF NOT EXISTS surveyreport;
+CREATE SCHEMA IF NOT EXISTS report_family_history_survey;
 
 -- -----------------------------------------------------------------------------
 -- 3. survey.surveys — FK target for reports/respondents/sections_questions/etc.
@@ -63,13 +44,20 @@ CREATE SEQUENCE IF NOT EXISTS survey.surveys_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.surveys
 (
     id                  bigint NOT NULL,
+    -- Cross-instance-portable identity (Survey V001); V0.0.1 supplies a fixed literal.
+    survey_key          uuid NOT NULL,
     display_order       integer,
     name                character varying(255),
     title               character varying(255),
     description         character varying(2000),
     initial_display_key character varying(255),
     post_survey_url     character varying(2000),
-    CONSTRAINT surveys_pk PRIMARY KEY (id)
+    -- The survey's own reporting schema at this site (Survey V021); FHHS resolves it
+    -- at request time (UC-005 BR-006). The fixture survey row sets it.
+    report_schema       character varying(63),
+    CONSTRAINT surveys_pk PRIMARY KEY (id),
+    CONSTRAINT surveys_survey_key_un UNIQUE (survey_key),
+    CONSTRAINT surveys_report_schema_un UNIQUE (report_schema)
 );
 
 -- -----------------------------------------------------------------------------
@@ -87,7 +75,7 @@ CREATE TABLE IF NOT EXISTS survey.respondents
     active          boolean DEFAULT true,
     logins          integer DEFAULT 0,
     survey_id       bigint NOT NULL,
-    token           character varying(255),
+    access_code     character varying(255),
     CONSTRAINT respondents_pk PRIMARY KEY (id),
     CONSTRAINT respondents_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id)
 );
@@ -106,6 +94,8 @@ CREATE TABLE IF NOT EXISTS survey.reports
     description   character varying(2000),
     url           character varying(2000),
     display_order integer,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    report_key            uuid NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT reports_pk PRIMARY KEY (id),
     CONSTRAINT reports_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id)
 );
@@ -118,11 +108,24 @@ CREATE TABLE IF NOT EXISTS survey.reports
 --    verbatim from the Survey module's schema (same source Admin's bootstrap
 --    uses), since FHHS's INSERTs reference every column below.
 -- -----------------------------------------------------------------------------
+-- Durable-id sequences (Survey V001). V0.0.1 sets every durable id explicitly and then
+-- moves these past the seeded ids; V0.0.9 does the same idempotently.
+CREATE SEQUENCE IF NOT EXISTS survey.select_groups_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.select_items_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.questions_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.sections_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.steps_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.steps_sections_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.sections_questions_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.relationships_durable_seq START WITH 1 INCREMENT BY 1;
+
 CREATE SEQUENCE IF NOT EXISTS survey.dimensions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.dimensions
 (
     id   integer NOT NULL DEFAULT NEXTVAL('survey.dimensions_seq'),
     name character varying(50),
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    dimension_key uuid NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT dimensions_pk PRIMARY KEY (id),
     CONSTRAINT dimensions_un UNIQUE (name)
 );
@@ -135,6 +138,8 @@ CREATE TABLE IF NOT EXISTS survey.ontology
     name      character varying(255) NOT NULL,
     tag       character varying(255) NOT NULL,
     dimension integer,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    ontology_key uuid                NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT ontology_pk PRIMARY KEY (id),
     CONSTRAINT ontology_dimensions_fk FOREIGN KEY (dimension) REFERENCES survey.dimensions (id),
     CONSTRAINT ontology_un UNIQUE (name, tag)
@@ -143,14 +148,29 @@ CREATE TABLE IF NOT EXISTS survey.ontology
 CREATE SEQUENCE IF NOT EXISTS survey.select_groups_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.select_groups
 (
-    id          integer NOT NULL,
-    survey_id   integer NOT NULL,
-    name        character varying(255),
-    description character varying(255),
-    data_type   character varying(50) NOT NULL DEFAULT 'Text',
+    id               integer NOT NULL,
+    survey_id        integer NOT NULL,
+    name             character varying(255),
+    description      character varying(255),
+    data_type        character varying(50) NOT NULL DEFAULT 'Text',
+    -- Kimball Type 2 SCD column -- see survey.questions comment above.
+    select_group_id  integer,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    select_group_key uuid NOT NULL,
     CONSTRAINT select_groups_pk PRIMARY KEY (id),
     CONSTRAINT select_groups_name_un UNIQUE (survey_id, name)
 );
+CREATE OR REPLACE FUNCTION survey.set_select_group_durable_id() RETURNS trigger AS $BODY$
+BEGIN
+    NEW.select_group_id := NEW.id;
+    RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS select_groups_durable_id_trg ON survey.select_groups;
+CREATE TRIGGER select_groups_durable_id_trg
+    BEFORE INSERT ON survey.select_groups
+    FOR EACH ROW WHEN (NEW.select_group_id IS NULL)
+    EXECUTE FUNCTION survey.set_select_group_durable_id();
 
 CREATE SEQUENCE IF NOT EXISTS survey.question_types_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.question_types
@@ -174,48 +194,114 @@ ON CONFLICT (id) DO NOTHING;
 CREATE SEQUENCE IF NOT EXISTS survey.questions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.questions
 (
-    id              integer NOT NULL,
-    survey_id       integer NOT NULL,
-    type_id         integer NOT NULL,
-    text            character varying(8000) NOT NULL,
-    short_text      character varying(100),
-    tool_tip        character varying(255),
-    required        boolean NOT NULL DEFAULT false,
-    min_value       integer,
-    max_value       integer,
-    validation_text character varying(255),
-    select_group_id integer,
-    mask            character varying(255),
-    placeholder     character varying(255),
-    default_value   character varying(255),
-    variant         character varying(255),
+    id                integer NOT NULL,
+    survey_id         integer NOT NULL,
+    type_id           integer NOT NULL,
+    text              character varying(8000) NOT NULL,
+    short_text        character varying(100),
+    tool_tip          character varying(255),
+    required          boolean NOT NULL DEFAULT false,
+    min_value         integer,
+    max_value         integer,
+    validation_text   character varying(255),
+    select_group_id   integer,
+    mask              character varying(255),
+    placeholder       character varying(255),
+    default_value     character varying(255),
+    variant           character varying(255),
+    -- Kimball Type 2 SCD columns (Survey's V010__Kimball_Type2_SCD.sql / V001 greenfield).
+    -- question_id is the durable key that survives re-versioning; id remains the
+    -- per-version surrogate PK. See V0.0.8__REORDER_CANCER_QUESTIONS_DURABLE.sql.
+    question_id       integer,
+    version           integer NOT NULL DEFAULT 0,
+    effective_from    timestamptz NOT NULL DEFAULT '1970-01-01 00:00:00+00',
+    effective_to      timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
+    published_by      text,
+    published_comment text,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    question_key      uuid NOT NULL,
     CONSTRAINT questions_pk PRIMARY KEY (id),
     CONSTRAINT select_groups_fk FOREIGN KEY (select_group_id)
         REFERENCES survey.select_groups (id),
     CONSTRAINT type_fk FOREIGN KEY (type_id)
         REFERENCES survey.question_types (id)
 );
+-- Fixture rows (inserted by V0.0.1__POPULATE_FHHS_DATA.sql) never set question_id
+-- explicitly, since that migration predates Kimball Type 2. Default it to the row's own
+-- surrogate id so fixture data looks post-Kimball (durable id == surrogate id) without
+-- having to change V0.0.1 itself. V0.0.8's own inserts always set question_id explicitly,
+-- so this trigger is a no-op for them.
+CREATE OR REPLACE FUNCTION survey.set_question_durable_id() RETURNS trigger AS $BODY$
+BEGIN
+    NEW.question_id := NEW.id;
+    RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS questions_durable_id_trg ON survey.questions;
+CREATE TRIGGER questions_durable_id_trg
+    BEFORE INSERT ON survey.questions
+    FOR EACH ROW WHEN (NEW.question_id IS NULL)
+    EXECUTE FUNCTION survey.set_question_durable_id();
+CREATE UNIQUE INDEX IF NOT EXISTS questions_id_version_un ON survey.questions (question_id, version);
+CREATE UNIQUE INDEX IF NOT EXISTS questions_one_current_un ON survey.questions (question_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
 
 CREATE SEQUENCE IF NOT EXISTS survey.sections_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.sections
 (
-    id             integer NOT NULL,
-    survey_id      integer NOT NULL,
-    display_order  integer NOT NULL,
-    name           character varying(255),
-    dimension_name character varying(50) NOT NULL,
-    description    character varying(255),
+    id                integer NOT NULL,
+    survey_id         integer NOT NULL,
+    display_order     numeric NOT NULL,
+    name              character varying(255),
+    dimension_name    character varying(50) NOT NULL,
+    description       character varying(255),
+    -- Kimball Type 2 SCD columns -- see survey.questions comment above.
+    section_id        integer,
+    version           integer NOT NULL DEFAULT 0,
+    effective_from    timestamptz NOT NULL DEFAULT '1970-01-01 00:00:00+00',
+    effective_to      timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
+    published_by      text,
+    published_comment text,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    section_key       uuid NOT NULL,
     CONSTRAINT sections_pk PRIMARY KEY (id)
 );
+CREATE OR REPLACE FUNCTION survey.set_section_durable_id() RETURNS trigger AS $BODY$
+BEGIN
+    NEW.section_id := NEW.id;
+    RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS sections_durable_id_trg ON survey.sections;
+CREATE TRIGGER sections_durable_id_trg
+    BEFORE INSERT ON survey.sections
+    FOR EACH ROW WHEN (NEW.section_id IS NULL)
+    EXECUTE FUNCTION survey.set_section_durable_id();
+CREATE UNIQUE INDEX IF NOT EXISTS sections_id_version_un ON survey.sections (section_id, version);
+CREATE UNIQUE INDEX IF NOT EXISTS sections_one_current_un ON survey.sections (section_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
 
 CREATE SEQUENCE IF NOT EXISTS survey.sections_questions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.sections_questions
 (
-    id            integer NOT NULL,
-    survey_id     integer NOT NULL,
-    question_id   integer NOT NULL,
-    section_id    integer NOT NULL,
-    display_order integer NOT NULL,
+    id                  integer NOT NULL,
+    survey_id           integer NOT NULL,
+    question_id         integer NOT NULL,
+    section_id          integer NOT NULL,
+    display_order       numeric NOT NULL,
+    -- Kimball Type 2 SCD columns -- see survey.questions comment above. question_id and
+    -- section_id above hold the durable ids (retargeted from surrogate by the real Kimball
+    -- migration); question_version/section_version are pinned to 0 by Survey's own schema.
+    sections_question_id integer,
+    version              integer NOT NULL DEFAULT 0,
+    effective_from       timestamptz NOT NULL DEFAULT '1970-01-01 00:00:00+00',
+    effective_to         timestamptz NOT NULL DEFAULT '9999-12-31 23:59:59+00',
+    published_by         text,
+    published_comment    text,
+    question_version     integer NOT NULL DEFAULT 0,
+    section_version      integer NOT NULL DEFAULT 0,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    sections_question_key uuid NOT NULL,
     CONSTRAINT sections_questions_pk PRIMARY KEY (id),
     CONSTRAINT sections_questions_question_fk FOREIGN KEY (question_id)
         REFERENCES survey.questions (id),
@@ -224,6 +310,22 @@ CREATE TABLE IF NOT EXISTS survey.sections_questions
     CONSTRAINT sections_questions_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id)
 );
+CREATE OR REPLACE FUNCTION survey.set_sections_questions_durable_id() RETURNS trigger AS $BODY$
+BEGIN
+    NEW.sections_question_id := NEW.id;
+    RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS sections_questions_durable_id_trg ON survey.sections_questions;
+CREATE TRIGGER sections_questions_durable_id_trg
+    BEFORE INSERT ON survey.sections_questions
+    FOR EACH ROW WHEN (NEW.sections_question_id IS NULL)
+    EXECUTE FUNCTION survey.set_sections_questions_durable_id();
+CREATE UNIQUE INDEX IF NOT EXISTS sections_questions_id_version_un
+    ON survey.sections_questions (sections_question_id, version);
+CREATE UNIQUE INDEX IF NOT EXISTS sections_questions_one_current_un
+    ON survey.sections_questions (sections_question_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
 
 CREATE SEQUENCE IF NOT EXISTS survey.steps_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.steps
@@ -234,8 +336,26 @@ CREATE TABLE IF NOT EXISTS survey.steps
     name           character varying(255),
     dimension_name character varying(50) NOT NULL,
     description    character varying(255),
+    -- Kimball Type 2 SCD column -- see survey.questions comment above. Fixed V0.0.1 (the
+    -- greenfield track) now sets this explicitly (currval() alongside the surrogate id's
+    -- nextval()), so the trigger below is a no-op for it; kept for parity with
+    -- sections/questions and for any other fixture that inserts without setting it.
+    step_id        integer,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    step_key       uuid NOT NULL,
     CONSTRAINT steps_pk PRIMARY KEY (id)
 );
+CREATE OR REPLACE FUNCTION survey.set_step_durable_id() RETURNS trigger AS $BODY$
+BEGIN
+    NEW.step_id := NEW.id;
+    RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS steps_durable_id_trg ON survey.steps;
+CREATE TRIGGER steps_durable_id_trg
+    BEFORE INSERT ON survey.steps
+    FOR EACH ROW WHEN (NEW.step_id IS NULL)
+    EXECUTE FUNCTION survey.set_step_durable_id();
 
 CREATE SEQUENCE IF NOT EXISTS survey.steps_sections_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.steps_sections
@@ -247,6 +367,9 @@ CREATE TABLE IF NOT EXISTS survey.steps_sections
     section_id            integer               NOT NULL,
     section_display_order integer               NOT NULL,
     display_key           character varying(34) NOT NULL,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    steps_sections_id     integer,
+    steps_sections_key    uuid                  NOT NULL,
     CONSTRAINT steps_sections_pk PRIMARY KEY (id),
     CONSTRAINT steps_sections_fk FOREIGN KEY (section_id)
         REFERENCES survey.sections (id),
@@ -259,21 +382,25 @@ CREATE TABLE IF NOT EXISTS survey.steps_sections
 CREATE SEQUENCE IF NOT EXISTS survey.metadata_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.metadata
 (
-    id                   integer NOT NULL,
-    survey_id            integer NOT NULL,
-    step_section_id      integer,
-    question_id          integer,
-    section_question_id  integer,
-    ontology_id          integer NOT NULL,
-    value                character varying(255),
+    id                    integer NOT NULL,
+    survey_id             integer NOT NULL,
+    -- Kimball Type 2 SCD rename (Survey's V010__Kimball_Type2_SCD.sql / V001 greenfield):
+    -- step_section_id -> steps_sections_id, section_question_id -> sections_question_id.
+    steps_sections_id     integer,
+    question_id           integer,
+    sections_question_id  integer,
+    ontology_id           integer NOT NULL,
+    value                 character varying(255),
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    metadata_key          uuid NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT metadata_pk PRIMARY KEY (id),
     CONSTRAINT metadata_ontology_fk FOREIGN KEY (ontology_id)
         REFERENCES survey.ontology (id),
     CONSTRAINT metadata_question_fk FOREIGN KEY (question_id)
         REFERENCES survey.questions (id),
-    CONSTRAINT metadata_sect_quest_fk FOREIGN KEY (section_question_id)
+    CONSTRAINT metadata_sect_quest_fk FOREIGN KEY (sections_question_id)
         REFERENCES survey.sections_questions (id),
-    CONSTRAINT metadata_section_fk FOREIGN KEY (step_section_id)
+    CONSTRAINT metadata_section_fk FOREIGN KEY (steps_sections_id)
         REFERENCES survey.steps_sections (id),
     CONSTRAINT metadata_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id)
@@ -282,14 +409,18 @@ CREATE TABLE IF NOT EXISTS survey.metadata
 CREATE SEQUENCE IF NOT EXISTS survey.select_items_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.select_items
 (
-    id            integer NOT NULL,
-    survey_id     integer NOT NULL,
-    group_id      integer NOT NULL,
-    display_text  character varying(255),
-    display_order integer NOT NULL,
-    coded_value   character varying(255),
+    id               integer NOT NULL,
+    survey_id        integer NOT NULL,
+    -- Kimball Type 2 SCD rename -- see survey.metadata comment above (group_id -> select_group_id).
+    select_group_id  integer NOT NULL,
+    display_text     character varying(255),
+    display_order    integer NOT NULL,
+    coded_value      character varying(255),
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    select_item_id   integer,
+    select_item_key  uuid NOT NULL,
     CONSTRAINT select_items_pk PRIMARY KEY (id),
-    CONSTRAINT select_items_group_fk FOREIGN KEY (group_id)
+    CONSTRAINT select_items_group_fk FOREIGN KEY (select_group_id)
         REFERENCES survey.select_groups (id)
 );
 
@@ -337,7 +468,8 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     upstream_step_id         integer,
     upstream_sq_id           integer NOT NULL,
     downstream_step_id       integer,
-    downstream_s_id          integer,
+    -- Kimball Type 2 SCD rename -- see survey.metadata comment above.
+    downstream_ss_id         integer,
     downstream_sq_id         integer,
     operator_id              integer NOT NULL,
     action_id                integer NOT NULL,
@@ -346,10 +478,13 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     reference_value          character varying(255),
     default_upstream_value   character varying(255),
     override_upstream_value  character varying(255),
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    relationship_id          integer,
+    relationship_key         uuid NOT NULL,
     CONSTRAINT relationships_pk PRIMARY KEY (id),
     CONSTRAINT action_fk FOREIGN KEY (action_id)
         REFERENCES survey.action_types (id),
-    CONSTRAINT downstream_s_fk FOREIGN KEY (downstream_s_id)
+    CONSTRAINT downstream_s_fk FOREIGN KEY (downstream_ss_id)
         REFERENCES survey.steps_sections (id),
     CONSTRAINT downstream_sq_fk FOREIGN KEY (downstream_sq_id)
         REFERENCES survey.sections_questions (id),
@@ -387,6 +522,8 @@ CREATE TABLE IF NOT EXISTS survey.post_survey_actions
     description     character varying(1000),
     url             character varying(500)  NOT NULL,
     execution_order integer                 NOT NULL DEFAULT 1,
+    -- Cross-instance-portable identity (Survey V001 / V015); V0.0.1 supplies fixed literals.
+    post_survey_action_key uuid              NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT post_survey_actions_pk PRIMARY KEY (id),
     CONSTRAINT post_survey_actions_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id)
@@ -414,18 +551,18 @@ CREATE TABLE IF NOT EXISTS survey.respondent_psa
 );
 
 -- -----------------------------------------------------------------------------
--- 7. surveyreport.dim_step / dim_section — Kimball dimension tables. V0.0.6's
---    indexes reference these directly; fact_sections_view's step/section
---    columns come from a join against them in the real ETL.
+-- 7. report_family_history_survey.dim_step / dim_section — the survey schema's
+--    Kimball dimension tables; fact_sections_view's step/section columns come
+--    from a join against them in the real ETL.
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.dim_step
+CREATE TABLE IF NOT EXISTS report_family_history_survey.dim_step
 (
     id    integer NOT NULL,
     value character varying(255),
     CONSTRAINT dim_step_pk PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS surveyreport.dim_section
+CREATE TABLE IF NOT EXISTS report_family_history_survey.dim_section
 (
     id    integer NOT NULL,
     value character varying(255),
@@ -433,10 +570,10 @@ CREATE TABLE IF NOT EXISTS surveyreport.dim_section
 );
 
 -- -----------------------------------------------------------------------------
--- 8. surveyreport.fact_sections — base fact table V0.0.6's indexes are built
---    on. Columns limited to what those indexes reference.
+-- 8. report_family_history_survey.fact_sections — the base fact table, as
+--    Survey's per-schema template creates it (fixed columns only).
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.fact_sections
+CREATE TABLE IF NOT EXISTS report_family_history_survey.fact_sections
 (
     id               bigint NOT NULL,
     survey_id        integer,
@@ -450,9 +587,10 @@ CREATE TABLE IF NOT EXISTS surveyreport.fact_sections
 );
 
 -- -----------------------------------------------------------------------------
--- 9. surveyreport.fact_respondents — GRANT + index target (V0.0.6).
+-- 9. report_family_history_survey.fact_respondents — a view in the real schema;
+--    a table stands in for it here.
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.fact_respondents
+CREATE TABLE IF NOT EXISTS report_family_history_survey.fact_respondents
 (
     respondent_id bigint,
     survey_id     integer,
@@ -461,14 +599,13 @@ CREATE TABLE IF NOT EXISTS surveyreport.fact_respondents
 );
 
 -- -----------------------------------------------------------------------------
--- 10. surveyreport.fact_sections_view — stands in for the real ETL-populated,
---    dim_step/dim_section-joined view. CancerHistoryRepository reads every
---    demographic/cancer column below directly; V0.0.3__CREATE_FHHS_FACT_VIEW.sql
---    (still applied, then dropped by V0.0.7 later in the same migration run)
---    additionally needs id, step_key, section_key. A plain table works exactly
---    like a view for SELECT purposes, so tests can just INSERT fixture rows.
+-- 10. report_family_history_survey.fact_sections_view — stands in for the real
+--    ETL-populated, dim_step/dim_section-joined view. CancerHistoryRepository
+--    reads every demographic/cancer column below directly, in the schema it
+--    resolves from survey.surveys.report_schema. A plain table works exactly like
+--    a view for SELECT purposes, so tests can just INSERT fixture rows.
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.fact_sections_view
+CREATE TABLE IF NOT EXISTS report_family_history_survey.fact_sections_view
 (
     id                                       bigint NOT NULL,
     respondent_id                            bigint NOT NULL,
@@ -551,8 +688,68 @@ CREATE TABLE IF NOT EXISTS surveyreport.fact_sections_view
 );
 
 -- -----------------------------------------------------------------------------
--- 11. Let the application roles use the schemas (postgres owns every object
---    here, so the later per-object GRANTs in db/migration succeed regardless).
+-- 11. The grants a site's database carries on these objects before FHHS's own
+--    migrations run: the ones Survey's migrations give survey_user on its
+--    tables and sequences (Survey V001 and later), and the ones Survey's
+--    reporting schema build gives on the survey's star. FHHS connects as
+--    survey_user, so anything missing from here and from db/migration is
+--    refused in a test as it would be on a site.
 -- -----------------------------------------------------------------------------
-GRANT USAGE ON SCHEMA survey TO survey_user, surveyadmin_user;
-GRANT USAGE ON SCHEMA surveyreport TO survey_user, surveyadmin_user, surveyreport_user;
+GRANT USAGE ON SCHEMA report_family_history_survey TO survey_user, surveyreport_user;
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.surveys TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.respondents TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.reports TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.dimensions TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.ontology TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.select_groups TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.question_types TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.questions TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.sections TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.sections_questions TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.steps TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.steps_sections TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.metadata TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.select_items TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.operator_types TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.action_types TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.relationships TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.post_survey_actions TO survey_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE survey.respondent_psa TO survey_user;
+
+GRANT USAGE ON SEQUENCE survey.surveys_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.respondents_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.reports_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.select_groups_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.select_items_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.questions_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.sections_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.steps_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.steps_sections_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.sections_questions_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.relationships_durable_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.dimensions_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.ontology_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.select_groups_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.question_types_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.questions_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.sections_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.sections_questions_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.steps_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.steps_sections_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.metadata_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.select_items_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.operator_types_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.action_types_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.relationships_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.post_survey_actions_seq TO survey_user;
+GRANT USAGE ON SEQUENCE survey.respondent_psa_seq TO survey_user;
+
+GRANT INSERT, SELECT, UPDATE ON report_family_history_survey.dim_step TO survey_user;
+GRANT SELECT ON report_family_history_survey.dim_step TO surveyreport_user;
+GRANT INSERT, SELECT, UPDATE ON report_family_history_survey.dim_section TO survey_user;
+GRANT SELECT ON report_family_history_survey.dim_section TO surveyreport_user;
+GRANT INSERT, SELECT, UPDATE ON report_family_history_survey.fact_sections TO survey_user;
+GRANT SELECT ON report_family_history_survey.fact_sections TO surveyreport_user;
+GRANT SELECT ON report_family_history_survey.fact_respondents TO survey_user, surveyreport_user;
+GRANT SELECT ON report_family_history_survey.fact_sections_view TO survey_user, surveyreport_user;

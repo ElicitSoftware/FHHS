@@ -11,9 +11,11 @@ package com.elicitsoftware.familyhistory;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.common.security.RespondentScope;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.request.ReportRequest;
 import com.elicitsoftware.test.PostgresTestResource;
+import com.elicitsoftware.test.ServiceCalls;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
@@ -23,15 +25,16 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests for {@code FamilyHistoryService}'s three endpoints - {@code /generate}, {@code /health},
- * and {@code /debug/status/{id}} - the REST entry point the Survey Platform calls per UC-004
+ * Tests for {@code FamilyHistoryService}'s two endpoints - {@code /generate} and {@code /health}
+ * - the REST entry point the Survey Platform calls per UC-004
  * step 1. Run as a full {@code @QuarkusTest} (over HTTP via RestAssured), because
  * {@code Status.find(...)} is a Panache active-record static finder: it only exists once
  * Quarkus's build-time entity enhancement has run, and {@code survey.status} is itself a
@@ -46,6 +49,10 @@ class FamilyHistoryServiceTest {
 
     @InjectMock
     FamilyHistoryReportService reportService;
+
+    /** Accepts every respondent: these tests are about the delivery, RespondentScopeTest about the scope. */
+    @InjectMock
+    RespondentScope respondentScope;
 
     @BeforeEach
     void setUp() {
@@ -72,14 +79,39 @@ class FamilyHistoryServiceTest {
 
     @Test
     void generateFamilyHistoryReport_missingRespondentId_returnsBadRequestWithoutStartingGeneration() {
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .body(requestFor(0))
                 .when().post("/familyhistory/generate")
                 .then()
-                .statusCode(400)
-                .body("success", equalTo(false))
-                .body("message", equalTo("Missing respondent ID"));
+                .statusCode(400);
+
+        verifyNoInteractions(reportService);
+    }
+
+    /** UC-004 A4: no body at all. */
+    @Test
+    void generateFamilyHistoryReport_noBody_returnsBadRequestWithoutStartingGeneration() {
+        ServiceCalls.given()
+                .contentType(ContentType.JSON)
+                .when().post("/familyhistory/generate")
+                .then()
+                .statusCode(400);
+
+        verifyNoInteractions(reportService);
+    }
+
+    /** UC-004 A4: a body without a respondent ID, and one that is not positive. */
+    @Test
+    void generateFamilyHistoryReport_emptyOrNegativeRespondentId_returnsBadRequest() {
+        for (String body : new String[] {"{}", "{\"id\":-1}"}) {
+            ServiceCalls.given()
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when().post("/familyhistory/generate")
+                    .then()
+                    .statusCode(400);
+        }
 
         verifyNoInteractions(reportService);
     }
@@ -88,7 +120,7 @@ class FamilyHistoryServiceTest {
     void generateFamilyHistoryReport_noStatusRecordFound_returnsBadRequest() {
         stubStatusFind(42L, null);
 
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .body(requestFor(42L))
                 .when().post("/familyhistory/generate")
@@ -107,7 +139,7 @@ class FamilyHistoryServiceTest {
         status.setXid("EXT-1");
         stubStatusFind(42L, status);
 
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .body(requestFor(42L))
                 .when().post("/familyhistory/generate")
@@ -119,78 +151,35 @@ class FamilyHistoryServiceTest {
         verify(reportService).generateAndUploadFamilyHistoryReport(argThat(s -> s.getRespondentId() == 42L));
     }
 
+    /** UC-004 BR-009: the caller gets a fixed sentence; the cause stays in the log. */
     @Test
-    void generateFamilyHistoryReport_reportServiceThrows_returnsInternalServerError() {
+    void generateFamilyHistoryReport_reportServiceThrows_returnsInternalServerErrorWithAFixedMessage() {
         Status status = new Status();
         status.setRespondentId(42L);
         stubStatusFind(42L, status);
-        when(reportService.generateAndUploadFamilyHistoryReport(any())).thenThrow(new RuntimeException("boom"));
+        when(reportService.generateAndUploadFamilyHistoryReport(any())).thenThrow(new RuntimeException("jdbc:postgresql://db:5432/survey cause-marker"));
 
-        given()
+        ServiceCalls.given()
                 .contentType(ContentType.JSON)
                 .body(requestFor(42L))
                 .when().post("/familyhistory/generate")
                 .then()
                 .statusCode(500)
                 .body("success", equalTo(false))
-                .body("message", equalTo("Failed to generate report: boom"));
+                .body("message", equalTo(FamilyHistoryService.START_FAILED_MESSAGE))
+                .body(not(containsString("jdbc")))
+                .body(not(containsString("cause-marker")));
     }
 
     // ------------------------------------------------------------------
-    // healthCheck
+    // NFR-008: no diagnostic endpoint
     // ------------------------------------------------------------------
 
     @Test
-    void healthCheck_alwaysReturnsOk() {
-        given()
-                .when().get("/familyhistory/health")
-                .then()
-                .statusCode(200)
-                .body("success", equalTo(true))
-                .body("message", equalTo("Family History Service is healthy"));
-    }
-
-    // ------------------------------------------------------------------
-    // debugStatus
-    // ------------------------------------------------------------------
-
-    @Test
-    void debugStatus_noStatusRecordFound_returnsOkWithFailureFlag() {
-        stubStatusFind(99L, null);
-
-        given()
+    void statusLookupPath_isNotServed() {
+        ServiceCalls.given()
                 .when().get("/familyhistory/debug/status/99")
                 .then()
-                .statusCode(200)
-                .body("success", equalTo(false))
-                .body("message", equalTo("No status record found for respondent 99"));
-    }
-
-    @Test
-    void debugStatus_statusFound_returnsOkWithDetails() {
-        Status status = new Status();
-        status.setId(7L);
-        status.setRespondentId(99L);
-        status.setXid("EXT-99");
-        stubStatusFind(99L, status);
-
-        given()
-                .when().get("/familyhistory/debug/status/99")
-                .then()
-                .statusCode(200)
-                .body("success", equalTo(true))
-                .body("message", equalTo("Status found - ID: 7, XID: EXT-99, RespondentId: 99"));
-    }
-
-    @Test
-    void debugStatus_lookupThrows_returnsInternalServerError() {
-        when(Status.<Status>find("respondentId", 99L)).thenThrow(new RuntimeException("db down"));
-
-        given()
-                .when().get("/familyhistory/debug/status/99")
-                .then()
-                .statusCode(500)
-                .body("success", equalTo(false))
-                .body("message", equalTo("Error checking status: db down"));
+                .statusCode(404);
     }
 }

@@ -11,6 +11,7 @@ package com.elicitsoftware.pedigree;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.common.security.ServiceToken;
 import com.elicitsoftware.model.Family;
 import com.elicitsoftware.model.FamilyManager;
 import com.elicitsoftware.request.ReportRequest;
@@ -19,8 +20,11 @@ import com.elicitsoftware.response.pdf.Content;
 import com.elicitsoftware.response.pdf.PDFDocument;
 import com.elicitsoftware.response.pdf.Style;
 import jakarta.enterprise.context.RequestScoped;
+import com.elicitsoftware.common.security.RespondentScope;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import io.opentelemetry.api.trace.Span;
@@ -65,6 +69,8 @@ public class Service {
         private static final HttpClient PEDIGREE_HTTP_CLIENT = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(2))
+            // UC-003 BR-003: the call carries the service token, so a redirect is never followed.
+            .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
     /**
@@ -84,6 +90,10 @@ public class Service {
     @Inject
     FamilyManager familyManager;
 
+    /** Lets through only a respondent of the Family History Survey (UC-006 BR-009). */
+    @Inject
+    RespondentScope respondentScope;
+
     /**
      * Injected OpenTelemetry tracer for distributed tracing.
      * <p>
@@ -91,6 +101,12 @@ public class Service {
      */
     @Inject
     Tracer tracer;
+
+    /**
+     * The platform service token, presented to the pedigree service on every call (UC-003 BR-003).
+     */
+    @Inject
+    ServiceToken serviceToken;
 
     /**
      * URL for the external pedigree generation service.
@@ -109,6 +125,12 @@ public class Service {
     private static String TITLE = "Pedigree";
 
     /**
+     * UC-003 BR-001: what the report shows in place of the diagram, in the HTML and in the PDF.
+     * The cause is logged and recorded on the span, never placed in the report.
+     */
+    static final String DIAGRAM_UNAVAILABLE = "Pedigree diagram unavailable.";
+
+    /**
      * Generates a comprehensive pedigree report including family tree visualization.
      * <p>
      * This endpoint creates a detailed family pedigree chart showing:
@@ -121,22 +143,23 @@ public class Service {
      *
      * @param req the report request containing the respondent ID
      * @return a ReportResponse containing the title, HTML content, and PDF document
-     * @throws jakarta.ws.rs.WebApplicationException if the user lacks proper authorization
      */
     @Path("/report")
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces("application/json")
     @Transactional()
-    public ReportResponse report(ReportRequest req) {
+    public ReportResponse report(@Valid @NotNull ReportRequest req) {
+        respondentScope.require("/pedigree/report", req.id);
         Log.debugf("Generating pedigree report for respondent id=%d", req.id);
 
         Family family = familyManager.getFamily(req.id);
         Log.debugf("Loaded family data for respondent id=%d", req.id);
 
-        String response = callPedigree(family.toString());
+        String response = callPedigree(family.toString(), family.family.size());
 
-        String innerHTML = response;
+        // UC-003 A1: no answer from the drawing service leaves the fixed placeholder.
+        String innerHTML = response != null ? response : DIAGRAM_UNAVAILABLE;
 
         PDFDocument pdf = new PDFDocument();
         pdf.pageBreak = true;
@@ -151,27 +174,6 @@ public class Service {
     }
 
     /**
-     * Retrieves family information in a textual format for the specified report request.
-     * <p>
-     * This endpoint returns a string representation of the family's cancer history and
-     * relationships for the given respondent ID. It is primarily used for debugging
-     * and verification purposes.
-     * </p>
-     *
-     * @param req the report request containing the respondent ID
-     * @return a string representation of the family data
-     */
-    @Path("/family")
-    @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces("text/plain")
-    @Transactional
-    public String getFamily(ReportRequest req) {
-        Family family = familyManager.getFamily(req.id);
-        return family.toString();
-    }
-
-    /**
      * Calls the external pedigree service to generate the pedigree chart.
      * <p>
      * This method handles the communication with the external service, including
@@ -179,9 +181,18 @@ public class Service {
      * </p>
      *
      * @param family the string representation of the family data
-     * @return the SVG content of the generated pedigree chart
+     * @param rows the number of family members in it, for the log (UC-003 BR-002)
+     * @return the service's answer, or {@code null} when the call failed (UC-003 A1)
      */
-    private String callPedigree(String family) {
+    private String callPedigree(String family, int rows) {
+        // UC-003 BR-003: pedigree.url is deployment configuration, so the token always goes with
+        // the call; without a token the call is not made at all (UC-006 A3).
+        String authorization = serviceToken.authorization().orElse(null);
+        if (authorization == null) {
+            Log.warnf("The pedigree service was not called: %s", ServiceToken.NOT_CONFIGURED);
+            return null;
+        }
+
         URI endpoint = URI.create(pedigreeURL);
         int endpointPort = resolvePort(endpoint);
 
@@ -198,7 +209,8 @@ public class Service {
         span.setAttribute("pedigree.payload.length", family.length());
 
         try (Scope ignored = span.makeCurrent()) {
-            Log.infof("Sending pedigree payload to %s:%n%s", pedigreeURL, family);
+            // UC-003 BR-002: the table is sent, not recorded - its size is.
+            Log.infof("Calling the pedigree service at %s (%d rows, %d characters)", pedigreeURL, rows, family.length());
 
             String boundary = "----ElicitBoundary" + UUID.randomUUID();
             byte[] requestBody = buildMultipartBody(boundary, "ped", family);
@@ -206,6 +218,8 @@ public class Service {
             HttpRequest request = HttpRequest.newBuilder(endpoint)
                     .timeout(Duration.ofSeconds(15))
                     .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    // Sent, never recorded: the span and the log carry no request header.
+                    .header("Authorization", authorization)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(requestBody))
                     .build();
 
@@ -222,18 +236,19 @@ public class Service {
                 return response.body();
             }
 
-            String error = "Server returned non-OK status: " + statusCode;
-            span.setStatus(StatusCode.ERROR, error);
-            return error;
+            span.setStatus(StatusCode.ERROR, "Server returned non-OK status: " + statusCode);
+            return null;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             span.recordException(e);
             span.setStatus(StatusCode.ERROR, "Interrupted while calling pedigree service");
-            return "Interrupted while calling pedigree service";
+            Log.warn("Interrupted while calling the pedigree service");
+            return null;
         } catch (IOException e) {
             span.recordException(e);
             span.setStatus(StatusCode.ERROR, e.getMessage());
-            return e.getMessage();
+            Log.warnf("The pedigree service could not be reached: %s", e.getMessage());
+            return null;
         } finally {
             span.end();
         }
@@ -317,7 +332,7 @@ public class Service {
      * </ul>
      * <p>
      * If the SVG content is invalid (e.g., an error message from the pedigree service),
-     * the method will display an error message in the PDF instead of failing.
+     * the method shows the fixed placeholder in the PDF instead of failing (UC-003 BR-001).
      *
      * @param svg the SVG content representing the family pedigree
      * @param multipleCancers indicates whether any family members have multiple cancer diagnoses
@@ -340,8 +355,8 @@ public class Service {
         if (isValidSvg(svg)) {
             svgContent.svg = svg;
         } else {
-            // The pedigree service returned an error or invalid response
-            svgContent.text = "Pedigree diagram unavailable: " + (svg != null ? svg : "No response from pedigree service");
+            // The pedigree service returned an error or invalid response; its text is not repeated
+            svgContent.text = DIAGRAM_UNAVAILABLE;
         }
         content[0] = svgContent;
 

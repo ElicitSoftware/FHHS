@@ -15,6 +15,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Represents a survey entity in the system. Each survey contains metadata such as name, title,
@@ -55,6 +56,10 @@ public class Survey extends PanacheEntityBase {
     /**
      * Internal name of the survey.
      */
+    /** The survey's stable identity across sites and revisions; FHHS serves exactly one (UC-005). */
+    @Column(name = "survey_key", nullable = false)
+    public UUID surveyKey;
+
     @Column(name = "name")
     public String name;
 
@@ -81,6 +86,14 @@ public class Survey extends PanacheEntityBase {
      */
     @Column(name = "post_survey_url")
     public String postSurveyURL;
+
+    /**
+     * The survey's own reporting schema at this site (Survey V021; Survey UC-008 BR-006):
+     * assigned by Survey's first build of the survey, changed by a rename, cleared by a drop,
+     * and null until built. FHHS reads it at request time and never writes it (UC-005 BR-006).
+     */
+    @Column(name = "report_schema", length = 63, insertable = false, updatable = false)
+    public String reportSchema;
 
     /**
      * Set of report definitions associated with this survey.

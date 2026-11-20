@@ -57,6 +57,7 @@ class StatusTest {
         status.setStatus("COMPLETED");
         status.setDepartmentId(9L);
         status.setDepartmentName("Oncology");
+        status.setAccessCode("Bx7kQ2mNp");
 
         assertEquals(1L, status.getId());
         assertEquals(2L, status.getRespondentId());
@@ -68,5 +69,6 @@ class StatusTest {
         assertEquals("COMPLETED", status.getStatus());
         assertEquals(9L, status.getDepartmentId());
         assertEquals("Oncology", status.getDepartmentName());
+        assertEquals("Bx7kQ2mNp", status.getAccessCode());
     }
 }

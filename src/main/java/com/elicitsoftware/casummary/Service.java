@@ -23,10 +23,12 @@ import com.elicitsoftware.response.pdf.Content;
 import com.elicitsoftware.response.pdf.PDFDocument;
 import com.elicitsoftware.response.pdf.Style;
 import com.elicitsoftware.response.pdf.Table;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
+import com.elicitsoftware.common.security.RespondentScope;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -69,6 +71,10 @@ public class Service {
     @Inject
     CancerHistoryRepository cancerHistoryRepository;
 
+    /** Lets through only a respondent of the Family History Survey (UC-006 BR-009). */
+    @Inject
+    RespondentScope respondentScope;
+
     /**
      * Default constructor.
      */
@@ -90,15 +96,14 @@ public class Service {
      *
      * @param req the report request containing the respondent ID
      * @return a ReportResponse containing the title, HTML content, and PDF document
-     * @throws jakarta.ws.rs.WebApplicationException if the user lacks proper authorization
      */
     @Path("/report")
     @POST
-    @RolesAllowed("cssummary-user")
     @Consumes("application/json")
     @Produces("application/json")
     @Transactional
-    public ReportResponse report(ReportRequest req) {
+    public ReportResponse report(@Valid @NotNull ReportRequest req) {
+        respondentScope.require("/casummary/report", req.id);
         Log.debugf("Generating cancer summary report for respondent id=%d", req.id);
 
         Table table = new Table();
