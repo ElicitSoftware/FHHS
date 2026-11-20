@@ -388,7 +388,6 @@
                         <param>com.elicitsoftware.model.RowConverterTest</param>
                         <param>com.elicitsoftware.model.RowTest</param>
                         <param>com.elicitsoftware.model.StatusTest</param>
-                        <param>com.elicitsoftware.pedigree.MultipartUtilityTest</param>
                         <param>com.elicitsoftware.pedigree.ServiceTest</param>
                         <param>com.elicitsoftware.proband.ServiceTest</param>
                         <param>com.elicitsoftware.response.pdfbox.ColumnTest</param>

@@ -31,40 +31,45 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// TEMPORARY — DO NOT CARRY THIS FORWARD INDEFINITELY.
-// This class exists solely to support upgrading existing pre-Kimball ("V2.x") FHHS
-// deployments to V3.0.0 (Kimball Type 2 SCD) via db/migration-v3. Once every real FHHS
-// deployment has been upgraded to V3 (confirmed by every environment's flyway_fhhs_history
-// having converged onto db/migration — see the repair() call below), this class,
-// db/migration-v3/, src/test/resources/db/test-legacy/, and
-// ManualSchemaMigratorUpgradeTest.java should ALL be deleted, and
-// quarkus.flyway.owner.migrate-at-start should revert to the plain Quarkus-managed
-// auto-migration this class replaced (see application.properties). Tracked in the
-// repo-root DeploymentScript.md — check it before removing, and update it when this
-// class is actually deleted.
-//
-// Runs Flyway manually against a database-detected brownfield/greenfield/converged location,
-// replacing Quarkus's migrate-at-start (deliberately disabled — see the comment on
-// quarkus.flyway.owner.migrate-at-start in application.properties for why a
-// FlywayConfigurationCustomizer cannot do this: Quarkus resolves classpath: migration locations
-// at BUILD time, so mutating FluentConfiguration.locations() at runtime has no effect on which
-// files actually get executed). This is the same mechanism the sibling Survey app uses
-// (com.elicitsoftware.flyway.ManualSchemaMigrator there) — ported here because FHHS's own
-// foundational V0.0.1__POPULATE_FHHS_DATA.sql referenced pre-Kimball column names
-// (survey.metadata's step_section_id/section_question_id, survey.relationships'
-// downstream_s_id) that don't exist on Survey's greenfield Kimball schema.
-//
-// Tries db/migration (the greenfield, Kimball-column-aware schema) first. If it validates
-// cleanly there — either a genuinely fresh database, or a v2.x database that has already been
-// through the upgrade-and-repair cycle below on a prior boot — it stays there permanently; every
-// future migration only ever needs to exist in this one location. (src/test/resources/db/test's
-// test-only data fixtures live in a separate Flyway location layered on top of this one only
-// under the %test profile.) If db/migration's checksums DON'T match (a v2.x database that hasn't
-// been upgraded yet), it migrates via db/migration-v3 (the frozen, pre-Kimball-column-name
-// history) instead, then immediately repairs its history against db/migration so the NEXT boot's
-// validate() against db/migration succeeds and this database converges onto it for good.
-// The two locations are siblings, not nested — Flyway's classpath location scanning is recursive,
-// so db/migration-v3 must NOT live under db/migration.
+/**
+ * Migrates the {@code owner} datasource's schema at startup, choosing between the greenfield and
+ * the upgrade migration location by what the database already holds.
+ * <p>
+ * TEMPORARY — DO NOT CARRY THIS FORWARD INDEFINITELY.
+ * This class exists solely to support upgrading existing pre-Kimball ("V2.x") FHHS
+ * deployments to V3.0.0 (Kimball Type 2 SCD) via db/migration-v3. Once every real FHHS
+ * deployment has been upgraded to V3 (confirmed by every environment's flyway_fhhs_history
+ * having converged onto db/migration — see the repair() call below), this class,
+ * db/migration-v3/, src/test/resources/db/test-legacy/, and
+ * ManualSchemaMigratorUpgradeTest.java should ALL be deleted, and
+ * quarkus.flyway.owner.migrate-at-start should revert to the plain Quarkus-managed
+ * auto-migration this class replaced (see application.properties). Tracked in the
+ * repo-root DeploymentScript.md — check it before removing, and update it when this
+ * class is actually deleted.
+ * <p>
+ * Runs Flyway manually against a database-detected brownfield/greenfield/converged location,
+ * replacing Quarkus's migrate-at-start (deliberately disabled — see the comment on
+ * quarkus.flyway.owner.migrate-at-start in application.properties for why a
+ * FlywayConfigurationCustomizer cannot do this: Quarkus resolves classpath: migration locations
+ * at BUILD time, so mutating FluentConfiguration.locations() at runtime has no effect on which
+ * files actually get executed). This is the same mechanism the sibling Survey app uses
+ * (com.elicitsoftware.flyway.ManualSchemaMigrator there) — ported here because FHHS's own
+ * foundational V0.0.1__POPULATE_FHHS_DATA.sql referenced pre-Kimball column names
+ * (survey.metadata's step_section_id/section_question_id, survey.relationships'
+ * downstream_s_id) that don't exist on Survey's greenfield Kimball schema.
+ * <p>
+ * Tries db/migration (the greenfield, Kimball-column-aware schema) first. If it validates
+ * cleanly there — either a genuinely fresh database, or a v2.x database that has already been
+ * through the upgrade-and-repair cycle below on a prior boot — it stays there permanently; every
+ * future migration only ever needs to exist in this one location. (src/test/resources/db/test's
+ * test-only data fixtures live in a separate Flyway location layered on top of this one only
+ * under the %test profile.) If db/migration's checksums DON'T match (a v2.x database that hasn't
+ * been upgraded yet), it migrates via db/migration-v3 (the frozen, pre-Kimball-column-name
+ * history) instead, then immediately repairs its history against db/migration so the NEXT boot's
+ * validate() against db/migration succeeds and this database converges onto it for good.
+ * The two locations are siblings, not nested — Flyway's classpath location scanning is recursive,
+ * so db/migration-v3 must NOT live under db/migration.
+ */
 @ApplicationScoped
 public class ManualSchemaMigrator {
 
