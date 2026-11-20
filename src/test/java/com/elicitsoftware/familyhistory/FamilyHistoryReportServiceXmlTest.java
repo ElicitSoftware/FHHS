@@ -17,7 +17,11 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -197,8 +201,9 @@ class FamilyHistoryReportServiceXmlTest {
     }
 
     /**
-     * NFR-012: for ordinary values the file is byte for byte what substituting the placeholders
-     * one after another produces - the reference below is that sequential substitution.
+     * NFR-012: for ordinary values (no XML markup character, no placeholder text) the file is byte
+     * for byte what substituting the placeholders one after another produces - the reference below
+     * is that sequential substitution.
      */
     @Test
     void generateXmlMetadata_ordinaryValues_matchSequentialSubstitutionByteForByte() throws Exception {
@@ -216,11 +221,11 @@ class FamilyHistoryReportServiceXmlTest {
                 </pdf>
                 """;
         Status status = statusWith(42L, "12345678", "Mary-Jane");
-        status.setLastName("O'Brien");
+        status.setLastName("Obrien-Smith");
         status.setMiddleName("Q.");
         status.setEmail("mj@example.org");
         status.setPhone("(734) 555-0100");
-        status.setDepartmentName("Genetics & Oncology");
+        status.setDepartmentName("Genetics and Oncology");
         status.setAccessCode("Bx7kQ2mNp");
         status.setStatus("Finalized");
 
@@ -229,12 +234,12 @@ class FamilyHistoryReportServiceXmlTest {
                 .replace("{RespondentId}", "42")
                 .replace("{SurveyId}", "9")
                 .replace("{FirstName}", "Mary-Jane")
-                .replace("{LastName}", "O'Brien")
+                .replace("{LastName}", "Obrien-Smith")
                 .replace("{MiddleName}", "Q.")
                 .replace("{Dob}", status.getDob() != null ? status.getDob().toString() : "")
                 .replace("{Email}", "mj@example.org")
                 .replace("{Phone}", "(734) 555-0100")
-                .replace("{DepartmentName}", "Genetics & Oncology")
+                .replace("{DepartmentName}", "Genetics and Oncology")
                 .replace("{DepartmentID}", "3")
                 .replace("{AccessCode}", "Bx7kQ2mNp")
                 .replace("{Status}", "Finalized")
@@ -257,5 +262,76 @@ class FamilyHistoryReportServiceXmlTest {
         String xml = invokeGenerateXmlMetadata(newService(defaultTemplate), statusWith(42L, "12345678", "Jane"));
         assertTrue(xml.contains("<externalSourceId>42</externalSourceId>"), xml);
         assertTrue(xml.contains("<mrn>12345678</mrn>"), xml);
+    }
+
+    // ------------------------------------------------------------------
+    // UC-004 BR-005: every value is XML-escaped as it is placed
+    // ------------------------------------------------------------------
+
+    private static final String TEMPLATE = """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <pdf><name first="{FirstName}" last='{LastName}'>{FirstName} {LastName}</name>\
+            <department>{DepartmentName}</department><mrn>{Xid}</mrn></pdf>\
+            """;
+
+    /** Parses the file as the receiving system would, refusing any document type. */
+    private static Document parse(String xml) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        return factory.newDocumentBuilder().parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    /** Markup characters in a value arrive at the receiving system as the value, in text and in attributes of either quote. */
+    @Test
+    void generateXmlMetadata_markupCharactersInValues_areReadBackExactly() throws Exception {
+        Status status = statusWith(1L, "X<1>", "Ann \"Jo\" & <Bea>");
+        status.setLastName("O'Brien");
+        status.setDepartmentName("Genetics & Oncology");
+
+        String xml = invokeGenerateXmlMetadata(newService(TEMPLATE), status);
+        Document doc = parse(xml);
+
+        org.w3c.dom.Element name = (org.w3c.dom.Element) doc.getElementsByTagName("name").item(0);
+        assertEquals("Ann \"Jo\" & <Bea>", name.getAttribute("first"));
+        assertEquals("O'Brien", name.getAttribute("last"));
+        assertEquals("Ann \"Jo\" & <Bea> O'Brien", name.getTextContent());
+        assertEquals("Genetics & Oncology", doc.getElementsByTagName("department").item(0).getTextContent());
+        assertEquals("X<1>", doc.getElementsByTagName("mrn").item(0).getTextContent());
+        assertTrue(xml.contains("first=\"Ann &quot;Jo&quot; &amp; &lt;Bea&gt;\""), xml);
+        assertTrue(xml.contains("last='O&apos;Brien'"), xml);
+    }
+
+    /** A value that closes its element and opens another adds nothing to the file. */
+    @Test
+    void generateXmlMetadata_aValueWritingElements_staysText() throws Exception {
+        Status status = statusWith(1L, "X", "Jane");
+        status.setDepartmentName("</department><mrn>OTHER</mrn><department>");
+
+        Document doc = parse(invokeGenerateXmlMetadata(newService(TEMPLATE), status));
+
+        assertEquals(1, doc.getElementsByTagName("mrn").getLength());
+        assertEquals("X", doc.getElementsByTagName("mrn").item(0).getTextContent());
+        assertEquals("</department><mrn>OTHER</mrn><department>",
+                doc.getElementsByTagName("department").item(0).getTextContent());
+    }
+
+    /** A character XML 1.0 forbids is left out, so the file still parses; everything else is kept. */
+    @Test
+    void generateXmlMetadata_charactersXmlForbids_areLeftOut() throws Exception {
+        Status status = statusWith(1L, "X", "A\u0000B\u0007C\uD800D\uFFFEE");
+        status.setLastName("tab\there \uD83D\uDE00 \u00E9");
+
+        Document doc = parse(invokeGenerateXmlMetadata(newService(TEMPLATE), status));
+
+        org.w3c.dom.Element name = (org.w3c.dom.Element) doc.getElementsByTagName("name").item(0);
+        assertEquals("ABCDE", name.getAttribute("first"));
+        assertEquals("ABCDE tab\there \uD83D\uDE00 \u00E9", name.getTextContent());
+    }
+
+    @Test
+    void xmlEscape_leavesOrdinaryTextAndBracesAlone() {
+        assertEquals("Mary-Jane {AccessCode} $1 \\ 42", FamilyHistoryReportService.xmlEscape("Mary-Jane {AccessCode} $1 \\ 42"));
+        assertEquals("&amp;&lt;&gt;&quot;&apos;", FamilyHistoryReportService.xmlEscape("&<>\"'"));
     }
 }
