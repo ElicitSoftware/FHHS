@@ -74,7 +74,10 @@ class FamilyHistoryReportServiceDeliveryTest {
     // BR-007: file names
     // ------------------------------------------------------------------
 
-    /** NFR-012: for an ordinary XID the two names and the metadata bytes are what they always were. */
+    /**
+     * NFR-012: for an ordinary XID the two names are what they always were. Inside the metadata the
+     * XID is XML-escaped (UC-004 BR-005), so it is the same bytes unless it has a markup character.
+     */
     @ParameterizedTest
     @ValueSource(strings = {"12345678", "A-1_b.2", "MRN 0042", "XID-99", ".hidden", "-rf", "O'Brien&Co"})
     void ordinaryXid_namesBothFilesExactlyAfterIt(String xid) throws Exception {
@@ -85,7 +88,7 @@ class FamilyHistoryReportServiceDeliveryTest {
         order.verify(sftp).uploadFile(eq(xid + ".pdf"), eq(PDF));
         order.verify(sftp).uploadFile(eq(xid + "-index.xml"), xml.capture());
         verifyNoMoreInteractions(sftp);
-        assertEquals("<pdf><externalSourceId>42</externalSourceId><mrn>" + xid + "</mrn></pdf>",
+        assertEquals("<pdf><externalSourceId>42</externalSourceId><mrn>" + FamilyHistoryReportService.xmlEscape(xid) + "</mrn></pdf>",
                 new String(xml.getValue(), StandardCharsets.UTF_8));
     }
 
@@ -165,5 +168,17 @@ class FamilyHistoryReportServiceDeliveryTest {
         assertFalse(log.contains("Zzyzx"), log.text());
         assertFalse(log.contains("AccessMarker1"), log.text());
         assertFalse(log.contains("<pdf>"), log.text());
+    }
+
+    /** UC-004 BR-005: an XID with markup characters names the files as it is and is escaped inside the metadata. */
+    @Test
+    void xidWithMarkupCharacters_isEscapedInTheMetadataOnly() throws Exception {
+        newService().doGenerateAndUploadFamilyHistoryReport(status(42L, "O'Brien&Co"));
+
+        ArgumentCaptor<byte[]> xml = ArgumentCaptor.forClass(byte[].class);
+        verify(sftp).uploadFile(eq("O'Brien&Co.pdf"), eq(PDF));
+        verify(sftp).uploadFile(eq("O'Brien&Co-index.xml"), xml.capture());
+        assertEquals("<pdf><externalSourceId>42</externalSourceId><mrn>O&apos;Brien&amp;Co</mrn></pdf>",
+                new String(xml.getValue(), StandardCharsets.UTF_8));
     }
 }

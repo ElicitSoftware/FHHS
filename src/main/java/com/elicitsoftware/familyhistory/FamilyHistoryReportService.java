@@ -528,7 +528,7 @@ public class FamilyHistoryReportService {
      * 
      * <p>The method replaces all supported placeholders defined in the XML template
      * in a single pass. Each placeholder is replaced with the corresponding value
-     * from the status object.</p>
+     * from the status object, XML-escaped (UC-004 BR-005).</p>
      * 
      * @param status the status record containing all the data needed for
      *               placeholder substitution in the XML template
@@ -558,12 +558,50 @@ public class FamilyHistoryReportService {
         values.put("Created", nullSafe(status.getCreated()));
         values.put("Finalized", nullSafe(status.getFinalized()));
 
-        // UC-004 BR-005: one pass over the template. A value is placed as it is and is never read
-        // again, so placeholder text inside a value stays literal; an unknown placeholder is kept.
+        // UC-004 BR-005: one pass over the template. A value is XML-escaped as it is placed and is
+        // never read again, so placeholder text inside a value stays literal; an unknown placeholder
+        // is kept.
         return PLACEHOLDER.matcher(xmlTemplate).replaceAll(match -> {
             String value = values.get(match.group(1));
-            return Matcher.quoteReplacement(value != null ? value : match.group());
+            return Matcher.quoteReplacement(value != null ? xmlEscape(value) : match.group());
         });
+    }
+
+    /**
+     * Makes a value safe to place in the XML template as text, in an element or in an attribute
+     * quoted either way (UC-004 BR-005): the five markup characters become entity references, and a
+     * character XML 1.0 does not allow is left out.
+     *
+     * @param value the value as recorded
+     * @return the value as XML text
+     */
+    static String xmlEscape(String value) {
+        StringBuilder out = new StringBuilder(value.length() + 16);
+        for (int i = 0; i < value.length(); ) {
+            int c = value.codePointAt(i);
+            i += Character.charCount(c);
+            switch (c) {
+                case '&' -> out.append("&amp;");
+                case '<' -> out.append("&lt;");
+                case '>' -> out.append("&gt;");
+                case '"' -> out.append("&quot;");
+                case '\'' -> out.append("&apos;");
+                default -> {
+                    if (allowedInXml(c)) {
+                        out.appendCodePoint(c);
+                    }
+                }
+            }
+        }
+        return out.toString();
+    }
+
+    /** The Char production of XML 1.0: tab, line feed, carriage return and the legal ranges. */
+    private static boolean allowedInXml(int c) {
+        return c == 0x9 || c == 0xA || c == 0xD
+                || (c >= 0x20 && c <= 0xD7FF)
+                || (c >= 0xE000 && c <= 0xFFFD)
+                || (c >= 0x10000 && c <= 0x10FFFF);
     }
     
     /**
