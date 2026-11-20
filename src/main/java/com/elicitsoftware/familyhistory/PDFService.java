@@ -892,63 +892,45 @@ public class PDFService {
             ReportResponse reportResponse = reportService.callReport(request);
             return reportResponse;
         } catch (jakarta.ws.rs.WebApplicationException e) {
-            // Extract detailed service error message
-            String errorMessage = "Service error: " + e.getMessage();
-            if (e.getResponse() != null) {
-                int status = e.getResponse().getStatus();
-                if (e.getResponse().hasEntity()) {
-                    try {
-                        String responseBody = e.getResponse().readEntity(String.class);
-                        if (responseBody != null && !responseBody.trim().isEmpty()) {
-                            errorMessage = responseBody;
-                        } else {
-                            errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
-                        }
-                    } catch (Exception readException) {
-                        errorMessage = (status == 403)
-                                ? "Access forbidden - License validation may have failed. Please check your license configuration."
-                                : "Service error (HTTP " + status + "): " + e.getMessage();
-                    }
-                } else {
-                    errorMessage = (status == 403)
-                            ? "Access forbidden - License validation may have failed. Please check your license configuration."
-                            : "Service error (HTTP " + status + "): " + e.getMessage();
-                }
-            }
-
-            ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = "Error: " + rpt.name;
-            reportResponse.innerHTML = errorMessage;
-
-            // Initialize PDF document with detailed error message
-            com.elicitsoftware.response.pdf.PDFDocument pdfDoc = new com.elicitsoftware.response.pdf.PDFDocument();
-            pdfDoc.title = "Error: " + rpt.name;
-            pdfDoc.pageBreak = false;
-            Content errorContent = new Content();
-            String cleanErrorMessage = ("Error generating " + rpt.name + " report: " + errorMessage).replaceAll("[\\r\\n\\t]", " ").trim();
-            errorContent.text = cleanErrorMessage;
-            pdfDoc.content = new Content[]{errorContent};
-            reportResponse.pdf = pdfDoc;
-            
-            // NFR-009: the report's name and the status, not what the service answered with.
-            Log.errorv("FHHS PDFService.callReport - Error for {0} (HTTP {1}) for respondent {2}", rpt.name,
-                    e.getResponse() != null ? String.valueOf(e.getResponse().getStatus()) : "no response", respondentId);
-            
-            return reportResponse;
+            // NFR-010: the report gets the status only; what the service answered stays out of it,
+            // and out of the log too (NFR-009: it may be a report payload).
+            String status = e.getResponse() != null ? "HTTP " + e.getResponse().getStatus() : "no response";
+            Log.errorv("FHHS PDFService.callReport - Error for {0} ({1}) for respondent {2}", rpt.name, status,
+                    respondentId);
+            return errorReport(rpt.name, status);
         } catch (Exception e) {
-            // Generic error path
-            ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = "Error: " + rpt.name;
-            reportResponse.innerHTML = e.getMessage();
-
-            com.elicitsoftware.response.pdf.PDFDocument pdfDoc = new com.elicitsoftware.response.pdf.PDFDocument();
-            pdfDoc.title = "Error: " + rpt.name;
-            pdfDoc.pageBreak = false;
-            Content errorContent = new Content();
-            errorContent.text = ("Error generating " + rpt.name + " report: " + (e.getMessage() != null ? e.getMessage() : "Unknown error")).replaceAll("[\\r\\n\\t]", " ").trim();
-            pdfDoc.content = new Content[]{errorContent};
-            reportResponse.pdf = pdfDoc;
-            return reportResponse;
+            // UC-006 A3: with no token the section says so; any other cause is logged, not shown.
+            boolean noToken = e instanceof IllegalStateException && ServiceToken.NOT_CONFIGURED.equals(e.getMessage());
+            if (!noToken) {
+                Log.errorv("FHHS PDFService.callReport - {0} for {1} for respondent {2}", e.getClass().getSimpleName(),
+                        rpt.name, respondentId);
+            }
+            return errorReport(rpt.name, noToken ? ServiceToken.NOT_CONFIGURED : "the service did not answer");
         }
+    }
+
+    /**
+     * UC-004 BR-004, NFR-010: the section of a report that could not be obtained. It carries a
+     * fixed sentence naming the report and the reason, never an exception message or the body
+     * the service answered with.
+     *
+     * @param name   the report's name, from its definition
+     * @param reason the HTTP status, "the service did not answer" or the missing-token reason
+     * @return the error section, for the page and the PDF alike
+     */
+    static ReportResponse errorReport(String name, String reason) {
+        String sentence = "The " + name + " report could not be generated (" + reason + ").";
+        ReportResponse reportResponse = new ReportResponse();
+        reportResponse.title = "Error: " + name;
+        reportResponse.innerHTML = sentence;
+
+        com.elicitsoftware.response.pdf.PDFDocument pdfDoc = new com.elicitsoftware.response.pdf.PDFDocument();
+        pdfDoc.title = "Error: " + name;
+        pdfDoc.pageBreak = false;
+        Content errorContent = new Content();
+        errorContent.text = sentence.replaceAll("[\\r\\n\\t]", " ").trim();
+        pdfDoc.content = new Content[]{errorContent};
+        reportResponse.pdf = pdfDoc;
+        return reportResponse;
     }
 }
