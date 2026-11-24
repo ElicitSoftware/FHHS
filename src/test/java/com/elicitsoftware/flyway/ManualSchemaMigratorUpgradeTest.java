@@ -4,7 +4,7 @@ package com.elicitsoftware.flyway;
  * ***LICENSE_START***
  * Elicit FHHS
  * %%
- * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * Copyright (C) 2025 - 2026 Elicit Software LLC
  * %%
  * PolyForm Noncommercial License 1.0.0
  * <https://polyformproject.org/licenses/noncommercial/1.0.0>
@@ -114,6 +114,38 @@ class ManualSchemaMigratorUpgradeTest {
         // present, and its metadata/relationships tables must still be shaped the way
         // db/migration-v3's (old-column-name) migrations left them -- proving this fix doesn't
         // require, or silently trigger, any rewrite of an existing deployment's live data.
+        assertPreExistingLegacyDataUntouched();
+    }
+
+    /**
+     * The V2-to-V3 upgrade (DeploymentScript.md) on a database whose history was recorded before
+     * 3.0.0 rewrote the copyright header of every migration. The header is part of a migration's
+     * checksum, so a real V2 database disagrees with db/migration-v3's files although their SQL is
+     * unchanged. {@link ManualSchemaMigrator} repairs against db/migration-v3 before it migrates
+     * there; without that repair the upgrade stops at validation.
+     */
+    @Test
+    void upgradeTrack_historyRecordedBeforeTheHeaderChange_isRepairedThenUpgrades() throws SQLException {
+        String upgradeTrack = "classpath:db/test-legacy,classpath:db/migration-v3";
+        flywayFor(upgradeTrack).migrate();
+        try (Connection conn = DriverManager.getConnection(container.getJdbcUrl(), OWNER_USER, PASSWORD);
+             PreparedStatement ps = conn.prepareStatement(
+                     "UPDATE survey.flyway_fhhs_history SET checksum = checksum + 1 WHERE checksum IS NOT NULL")) {
+            assertEquals(true, ps.executeUpdate() > 0, "the seeded history must hold applied migrations");
+        }
+
+        assertThrows(FlywayValidateException.class,
+                () -> flywayFor(upgradeTrack).migrate(),
+                "A history with the old headers' checksums must not pass validation unrepaired -- "
+                        + "otherwise this test proves nothing about the repair");
+
+        // ManualSchemaMigrator's upgrade branch, in its order.
+        flywayFor(upgradeTrack).repair();
+        flywayFor(upgradeTrack).migrate();
+        flywayFor("classpath:db/migration").repair();
+
+        assertDoesNotThrow(() -> flywayFor("classpath:db/migration").validate(),
+                "The repaired and upgraded database must converge on db/migration");
         assertPreExistingLegacyDataUntouched();
     }
 

@@ -22,7 +22,7 @@
     <img src="images/stacked.png" alt="Logo" width="15%" >
   </a>
 <h3 align="center">Family Health History Survey (FHHS)</h3>
-  <p>Copyright © 2025 The Regents of the University of Michigan</p>
+  <p>Copyright © 2025-2026 Elicit Software LLC</p>
 </div>
 <!-- TABLE OF CONTENTS -->
 <details>
@@ -158,7 +158,7 @@ Don't forget to give the project a star! Thank you!
 <!-- LICENSE -->
 ## License
 
-Distributed under the PolyForm Noncommercial License 1.0.0. See `LICENSE.txt` for more information.
+Distributed under the PolyForm Noncommercial License 1.0.0. See [`LICENSE.MD`](LICENSE.MD) for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -177,7 +177,6 @@ Project link: [https://github.com/ElicitSoftware/FHHS](https://github.com/Elicit
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-<!-- <a href="https://www.michiganmedicine.org"><img src="images/Rogel-Cancer_Logo-Horizontal-CMYK.png" height="30"></a><br/> -->
 <br/>
 <a href="https://info.mightstudy.org"><img src="images/MiGHT-shortlogo.png" height="50"></a><br/>
 <br/>
@@ -197,7 +196,7 @@ Project link: [https://github.com/ElicitSoftware/FHHS](https://github.com/Elicit
 [issues-shield]: https://img.shields.io/github/issues/ElicitSoftware/FHHS.svg?style=for-the-badge
 [issues-url]: https://github.com/ElicitSoftware/FHHS/issues
 [license-shield]: https://img.shields.io/github/license/ElicitSoftware/FHHS.svg?style=for-the-badge
-[license-url]: https://github.com/ElicitSoftware/FHHS/blob/master/LICENSE.txt
+[license-url]: LICENSE.MD
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username
 [product-screenshot]: images/screenshot.png

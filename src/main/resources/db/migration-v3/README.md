@@ -6,7 +6,10 @@ upgrade an existing, already-deployed pre-Kimball ("V2.x") FHHS database, whose
 `flyway_fhhs_history` already has these exact files' checksums recorded.
 
 **Never edit these files.** Any change invalidates the checksum match against real deployed
-databases, defeating the entire point of this directory.
+databases, defeating the entire point of this directory. The one edit they have had is the
+copyright header, rewritten for 3.0.0 with every other file's; `ManualSchemaMigrator` repairs the
+recorded checksums against this directory before it migrates, which is what makes a header change
+safe and nothing else.
 
 **Delete this directory once every real FHHS deployment has upgraded to V3** (i.e. once every
 environment's `flyway_fhhs_history` has converged onto `db/migration` — `ManualSchemaMigrator`
