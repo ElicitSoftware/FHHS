@@ -2,11 +2,9 @@ package com.elicitsoftware.model;
 
 /*-
  * ***LICENSE_START***
- *     * </ul>
-     *
-     * @return a formatted string representation suitable for pedigree toolscit FHHS
+ * Elicit FHHS
  * %%
- * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * Copyright (C) 2025 - 2026 Elicit Software LLC
  * %%
  * PolyForm Noncommercial License 1.0.0
  * <https://polyformproject.org/licenses/noncommercial/1.0.0>

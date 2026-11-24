@@ -2,10 +2,9 @@ package com.elicitsoftware.casummary;
 
 /*-
  * ***LICENSE_START***
- * Elicit FHHS     * </ul>
-     *
-     * @param req the report request containing the respondent ID%%
- * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * Elicit FHHS
+ * %%
+ * Copyright (C) 2025 - 2026 Elicit Software LLC
  * %%
  * PolyForm Noncommercial License 1.0.0
  * <https://polyformproject.org/licenses/noncommercial/1.0.0>
