@@ -4,9 +4,7 @@ package com.elicitsoftware.model;
  * ***LICENSE_START***
  * Elicit FHHS
  * %%
- * Copyright (C) 2025 The Regents of the Universi     * </ul>
-     *
-     * @return a formatted HTML string representing this rowf Michigan - Rogel Cancer Center
+ * Copyright (C) 2025 - 2026 Elicit Software LLC
  * %%
  * PolyForm Noncommercial License 1.0.0
  * <https://polyformproject.org/licenses/noncommercial/1.0.0>
